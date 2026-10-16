@@ -1,6 +1,12 @@
 {
   "name": "Demons",
   "rootNamespace": "Demons",
-  "references": ["Unity.Netcode.Runtime", "Unity.InputSystem"],
+  "references": [
+    "Unity.Netcode.Runtime",
+    "Unity.InputSystem",
+    "Unity.Services.Core",
+    "Unity.Services.Authentication",
+    "Unity.Services.Multiplayer"
+  ],
   "autoReferenced": true
 }

@@ -28,7 +28,11 @@ namespace Demons
         {
             foreach (var d in Demon.All)
                 if (d.IsOwner) d.Respawn();
+            foreach (var p in LocalPlayers.All)
+                if (!Demon.All.Exists(d => d.IsOwner && d.LocalIndex.Value == p.Index)) RequestDemonRpc(p.Index);
             if (!IsServer) return;
+            Influence.Value = 0;
+            Prestige.Clear();
             foreach (var d in Demon.All)
             {
                 d.Carrying.Value = Net.None;

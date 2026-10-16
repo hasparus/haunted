@@ -242,6 +242,7 @@ namespace Demons.Editor
             var netGo = new GameObject("Network");
             var nm = netGo.AddComponent<NetworkManager>();
             nm.NetworkConfig = new NetworkConfig { NetworkTransport = netGo.AddComponent<OfflineTransport>() };
+            netGo.AddComponent<Unity.Netcode.Transports.UTP.UnityTransport>().UseWebSockets = true;
             nm.NetworkConfig.Prefabs.NetworkPrefabsLists.Add(prefabs);
             netGo.AddComponent<NetBootstrap>();
             netGo.AddComponent<LocalPlayers>();

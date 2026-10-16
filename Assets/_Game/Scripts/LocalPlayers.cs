@@ -30,7 +30,7 @@ namespace Demons
         void Update()
         {
             var net = NetworkManager.Singleton;
-            if (!net || !net.IsListening || !GameState.Instance || !GameState.Instance.IsSpawned) return;
+            if (!net || !net.IsListening || NetBootstrap.TypingCode || !GameState.Instance || !GameState.Instance.IsSpawned) return;
 
             var kb = Keyboard.current;
             if (kb != null)
