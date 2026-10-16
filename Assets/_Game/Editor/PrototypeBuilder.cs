@@ -136,7 +136,7 @@ namespace Demons.Editor
 
         static void BuildOffice(Pebble pebble, Demon demon, NetworkPrefabsList prefabs)
         {
-            var cam = NewRoom(pebble, demon, prefabs, new Vector2(8.5f, 5.5f), walls: true);
+            var cam = NewRoom(pebble, demon, prefabs, new Vector2(8.5f, 5.5f), walls: true, beltZ: 4.2f, beltStart: -9.8f, beltEnd: 9.8f);
             foreach (var pos in new[] { new Vector3(-6.5f, 0, -1.5f), new Vector3(-2.2f, 0, 0.6f), new Vector3(2.2f, 0, 0.6f), new Vector3(6.5f, 0, -1.5f) })
                 BuildStation(pos, cam);
             BuildStation(new Vector3(-4.5f, 0, -4f), cam, StationKind.Hammer, Feature.Shell);
@@ -150,15 +150,27 @@ namespace Demons.Editor
 
         static void BuildWorkshop(Pebble pebble, Demon demon, NetworkPrefabsList prefabs)
         {
-            var cam = NewRoom(pebble, demon, prefabs, new Vector2(16f, 10.5f), walls: false);
+            var half = new Vector2(18f, 20f);
+            var spawn = new Vector3(0, 0, 7f);
+            var cam = NewRoom(pebble, demon, prefabs, half, walls: false, beltZ: -1.5f, beltStart: -19.3f, beltEnd: 3f);
+            var rig = cam.gameObject.AddComponent<CameraRig>();
+            rig.Focus = new Vector3(0, 0, 11f);
+            cam.transform.position = spawn + new Vector3(0, 15, -12.5f);
+
             var state = Object.FindFirstObjectByType<GameState>();
+            state.SpawnOrigin = spawn;
             var so = new SerializedObject(state);
             so.FindProperty("startSceneWhenAllFall").stringValue = "Office";
             so.ApplyModifiedPropertiesWithoutUndo();
-            Object.DestroyImmediate(GameObject.Find("EdgeFront"));
-            FloorLabel("↓ FIRST WEEK AT WORK ↓", null, new Vector3(-8f, 0, -10.1f));
-            FloorLabel("↓ INFINITE SURVIVAL  ·  best {best} ↓", null, new Vector3(8f, 0, -10.1f));
-            Prim(PrimitiveType.Cube, "ModeDivider", null, new Vector3(0, 0.01f, -9.9f), new Vector3(0.12f, 0.02f, 1.2f), Mat("Divider", Gray(0.75f)));
+            Object.DestroyImmediate(GameObject.Find("EdgeBack"));
+
+            FloorLabel("FIRST WEEK\nAT WORK", null, new Vector3(-9f, 0, 16.5f), 0.28f);
+            FloorLabel("INFINITE\nSURVIVAL", null, new Vector3(9f, 0, 16.5f), 0.28f);
+            FloorLabel("best here: {best}\n\nTOP SCORES\n{top}", null, new Vector3(9f, 0, 12.6f), 0.13f);
+            FloorLabel("Monday to Sunday,\none new trouble a day", null, new Vector3(-9f, 0, 13.4f), 0.13f);
+            Prim(PrimitiveType.Cube, "ModeDivider", null, new Vector3(0, 0.01f, 16f), new Vector3(0.15f, 0.02f, 8f), Mat("Divider", Gray(0.75f)));
+            FloorLabel("↑  START A LEVEL: EVERYONE JUMPS OFF THE TOP EDGE  ↑", null, new Vector3(0, 0, 10.6f), 0.12f);
+            FloorLabel("↓  LEARN THE MECHANICS  ↓", null, new Vector3(9.5f, 0, 3.5f), 0.12f);
 
             var go = new GameObject("Workshop");
             go.AddComponent<NetworkObject>();
@@ -166,62 +178,64 @@ namespace Demons.Editor
             Set(workshop, "pebblePrefab", pebble);
             var bays = go.transform;
 
-            FloorLabel("{grab}\nTO GRAB & DROP", bays, new Vector3(-13f, 0, 2.5f));
-            Seed(bays, new Vector3(-13.6f, 0, 4.4f));
-            Seed(bays, new Vector3(-12.4f, 0, 4.4f));
-            Seed(bays, new Vector3(-13f, 0, 3.4f));
+            const float a = -6f, b = -11.6f, c = -16.8f;
 
-            var solo = BuildStation(new Vector3(-8f, 0, 4.4f), cam);
-            FloorLabel("HOLD\n{haunt}\nTO HAUNT", bays, new Vector3(-8f, 0, 2.4f));
+            FloorLabel("{grab}\nTO GRAB & DROP", bays, new Vector3(-13f, 0, a - 1.9f));
+            Seed(bays, new Vector3(-13.6f, 0, a));
+            Seed(bays, new Vector3(-12.4f, 0, a));
+            Seed(bays, new Vector3(-13f, 0, a - 1f));
+
+            var solo = BuildStation(new Vector3(-8f, 0, a), cam);
+            FloorLabel("HOLD\n{haunt}\nTO HAUNT", bays, new Vector3(-8f, 0, a - 2f));
             Seed(bays, solo.Slot.position, desk: solo);
 
-            var together = BuildStation(new Vector3(-3f, 0, 4.4f), cam);
-            FloorLabel("HAUNT TOGETHER\nfaster + combo", bays, new Vector3(-3f, 0, 2.8f));
+            var together = BuildStation(new Vector3(-3f, 0, a), cam);
+            FloorLabel("HAUNT TOGETHER\nfaster + combo", bays, new Vector3(-3f, 0, a - 1.6f));
             Seed(bays, together.Slot.position, stamps: 0b0001, desk: together);
 
-            var big = BuildStation(new Vector3(2f, 0, 4.4f), cam);
-            FloorLabel("BIG THOUGHT\nhaunt it together\n3x points", bays, new Vector3(2f, 0, 2.6f));
+            var big = BuildStation(new Vector3(2f, 0, a), cam);
+            FloorLabel("BIG THOUGHT\nhaunt it together\n3x points", bays, new Vector3(2f, 0, a - 1.8f));
             Seed(bays, big.Slot.position, desk: big, kind: PebbleKind.Big);
 
-            FloorLabel("LEFT ALONE\nwings, -influence", bays, new Vector3(7f, 0, 2.8f));
-            Seed(bays, new Vector3(7f, 0, 4.2f), pinned: false);
+            FloorLabel("LEFT ALONE\nwings, -influence", bays, new Vector3(7f, 0, a - 1.6f));
+            Seed(bays, new Vector3(7f, 0, a - 0.2f), pinned: false);
 
-            FloorLabel("PILL\nif it reaches him,\ncontrols flip", bays, new Vector3(12f, 0, 2.6f));
-            Seed(bays, new Vector3(12f, 0, 4.2f), kind: PebbleKind.Pill);
+            FloorLabel("PILL\nif it reaches him,\ncontrols flip", bays, new Vector3(12f, 0, a - 1.8f));
+            Seed(bays, new Vector3(12f, 0, a - 0.2f), kind: PebbleKind.Pill);
 
-            BuildStation(new Vector3(-12f, 0, -0.8f), cam, StationKind.Pot, Feature.Pot);
-            FloorLabel("POT\nhaunts by itself", bays, new Vector3(-12f, 0, -2.6f));
+            BuildStation(new Vector3(-12f, 0, b), cam, StationKind.Pot, Feature.Pot);
+            FloorLabel("POT\nhaunts by itself", bays, new Vector3(-12f, 0, b - 1.8f));
 
-            BuildStation(new Vector3(-7f, 0, -0.8f), cam, StationKind.Hammer, Feature.Shell);
-            FloorLabel("HAMMER: HOLD\n{haunt}\nTO CRACK SHELLS", bays, new Vector3(-7f, 0, -2.8f));
-            Seed(bays, new Vector3(-5.4f, 0, -0.6f), shelled: true);
+            BuildStation(new Vector3(-7f, 0, b), cam, StationKind.Hammer, Feature.Shell);
+            FloorLabel("HAMMER: HOLD\n{haunt}\nTO CRACK SHELLS", bays, new Vector3(-7f, 0, b - 2f));
+            Seed(bays, new Vector3(-5.4f, 0, b + 0.2f), shelled: true);
 
-            FloorLabel("THROW →\n{haunt}\nWHILE HOLDING", bays, new Vector3(1.6f, 0, -3.6f));
-            Seed(bays, new Vector3(1.2f, 0, -1.6f));
-            BuildStation(new Vector3(7.5f, 0, -1.6f), cam);
-            FloorLabel("THROW TARGET", bays, new Vector3(7.5f, 0, -3.1f));
-            FloorLabel("CATCH\nempty hands, in the arc", bays, new Vector3(4.4f, 0, 0.4f));
+            FloorLabel("THROW →\n{haunt}\nWHILE HOLDING", bays, new Vector3(1.6f, 0, b - 2.4f));
+            Seed(bays, new Vector3(1.2f, 0, b - 0.4f));
+            BuildStation(new Vector3(7.5f, 0, b - 0.4f), cam);
+            FloorLabel("THROW TARGET", bays, new Vector3(7.5f, 0, b - 1.9f));
+            FloorLabel("CATCH\nempty hands, in the arc", bays, new Vector3(4.4f, 0, b + 1.6f));
 
-            var phone = BuildStation(new Vector3(13f, 0, -1.2f), cam);
-            FloorLabel("PHONE: HOLD\n{haunt}\nTO ANSWER", bays, new Vector3(13f, 0, -3.2f));
+            var phone = BuildStation(new Vector3(13f, 0, b), cam);
+            FloorLabel("PHONE: HOLD\n{haunt}\nTO ANSWER", bays, new Vector3(13f, 0, b - 2f));
             Set(workshop, "phoneDesk", phone);
 
-            FloorLabel("HAUNTED BY MANY", bays, new Vector3(-12f, 0, -5.5f));
+            FloorLabel("HAUNTED BY MANY", bays, new Vector3(-12f, 0, c + 1.2f));
             byte[] mixes = { 1, 2, 4, 8, 3, 12, 15 };
             for (int i = 0; i < mixes.Length; i++)
-                Seed(bays, new Vector3(-15f + i * 1.0f, 0, -6.7f), stamps: mixes[i]);
+                Seed(bays, new Vector3(-15f + i * 1.0f, 0, c), stamps: mixes[i]);
 
-            var clawDesk = BuildStation(new Vector3(-5.5f, 0, -6.2f), cam);
+            var clawDesk = BuildStation(new Vector3(-5.5f, 0, c), cam);
             Seed(bays, clawDesk.Slot.position, desk: clawDesk, stamps: 0b0010);
-            BuildClaw(new Vector3(-5.5f, 7f, -6.2f), demo: true);
-            FloorLabel("THE HAND\nsave thoughts before it lands", bays, new Vector3(-5.5f, 0, -8.1f));
+            BuildClaw(new Vector3(-5.5f, 7f, c), demo: true);
+            FloorLabel("THE HAND\nsave thoughts before it lands", bays, new Vector3(-5.5f, 0, c - 1.9f));
 
-            BuildPen(new Vector3(2f, 2.2f, -6.8f), demo: true);
-            FloorLabel("THE PEN: MASH\n{haunt}\nTO SHAKE IT OFF", bays, new Vector3(2f, 0, -8.3f));
-            FloorLabel("{dash}\nTO DASH", bays, new Vector3(6.5f, 0, -6.4f));
+            BuildPen(new Vector3(2f, 2.2f, c), demo: true);
+            FloorLabel("THE PEN: MASH\n{haunt}\nTO SHAKE IT OFF", bays, new Vector3(2f, 0, c - 1.6f));
+            FloorLabel("{dash}\nTO DASH", bays, new Vector3(6.5f, 0, c + 0.4f));
 
-            BuildSpotlight(new Vector3(12.5f, 0.02f, -6.4f), demo: true);
-            FloorLabel("THERAPIST'S LIGHT\nlit demons drop things", bays, new Vector3(12.5f, 0, -8.6f));
+            BuildSpotlight(new Vector3(12.5f, 0.02f, c), demo: true);
+            FloorLabel("THERAPIST'S LIGHT\nlit demons drop things", bays, new Vector3(12.5f, 0, c - 2.2f));
 
             SaveScene(WorkshopPath);
         }
@@ -324,7 +338,8 @@ namespace Demons.Editor
             EditorSceneManager.SaveScene(scene);
         }
 
-        static Camera NewRoom(Pebble pebble, Demon demon, NetworkPrefabsList prefabs, Vector2 half, bool walls)
+        static Camera NewRoom(Pebble pebble, Demon demon, NetworkPrefabsList prefabs, Vector2 half, bool walls,
+            float beltZ, float beltStart, float beltEnd)
         {
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             float zoom = half.x / 8.5f;
@@ -344,7 +359,7 @@ namespace Demons.Editor
             sun.transform.rotation = Quaternion.Euler(55, -25, 0);
 
             Prim(PrimitiveType.Cube, "Floor", null, new Vector3(0, -0.1f, 0), new Vector3(half.x * 2, 0.2f, half.y * 2), Mat("Floor", Gray(0.32f)), collider: true);
-            float beltZ = half.y - 1.3f, wx = half.x + 0.25f, wz = half.y + 0.25f;
+            float wx = half.x + 0.25f, wz = half.y + 0.25f;
             if (walls)
             {
                 Prim(PrimitiveType.Cube, "WallBack", null, new Vector3(0, 0.75f, wz), new Vector3(half.x * 2, 1.5f, 0.5f), Mat("Wall", Gray(0.5f)), collider: true);
@@ -376,11 +391,11 @@ namespace Demons.Editor
             beltGo.transform.position = new Vector3(0, 0, beltZ);
             beltGo.AddComponent<NetworkObject>();
             var belt = beltGo.AddComponent<Belt>();
-            Prim(PrimitiveType.Cube, "Conveyor", beltGo.transform, new Vector3(0, 0.25f, 0), new Vector3(half.x * 2 + 3, 0.5f, 1), Mat("Belt", Gray(0.15f)), collider: true);
-            Set(belt, "start", Point("Start", beltGo.transform, new Vector3(-half.x - 1.3f, 0.75f, 0)));
-            Set(belt, "end", Point("End", beltGo.transform, new Vector3(half.x + 1.3f, 0.75f, 0)));
+            Prim(PrimitiveType.Cube, "Conveyor", beltGo.transform, new Vector3((beltStart + beltEnd) / 2, 0.25f, 0), new Vector3(beltEnd - beltStart + 0.4f, 0.5f, 1), Mat("Belt", Gray(0.15f)), collider: true);
+            Set(belt, "start", Point("Start", beltGo.transform, new Vector3(beltStart, 0.75f, 0)));
+            Set(belt, "end", Point("End", beltGo.transform, new Vector3(beltEnd, 0.75f, 0)));
             Set(belt, "pebblePrefab", pebble);
-            Label("THOUGHTS →", beltGo.transform, new Vector3(-half.x + 2, 1.2f, 0), cam);
+            Label("THOUGHTS →", beltGo.transform, new Vector3(Mathf.Max(beltStart, -half.x) + 2, 1.2f, 0), cam);
 
             var netGo = new GameObject("Network");
             var nm = netGo.AddComponent<NetworkManager>();
@@ -452,12 +467,12 @@ namespace Demons.Editor
             return t;
         }
 
-        static void FloorLabel(string text, Transform parent, Vector3 pos)
+        static void FloorLabel(string text, Transform parent, Vector3 pos, float size = 0.115f)
         {
             var t = Point("FloorLabel", parent, new Vector3(pos.x, 0.02f, pos.z));
             t.rotation = Quaternion.Euler(90, 0, 0);
             var tm = TextLabel(t, text);
-            tm.characterSize = 0.115f;
+            tm.characterSize = size;
             tm.alignment = TextAlignment.Center;
             tm.color = Gray(0.85f);
             if (text.Contains("{")) t.gameObject.AddComponent<ControlsLabel>().Template = text;

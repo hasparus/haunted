@@ -132,10 +132,11 @@ namespace Demons
         static Color Mix(byte stamps)
         {
             if (stamps == 0) return new Color(0.85f, 0.85f, 0.85f);
-            var sum = Color.clear;
+            // Lighten blend: averaging blue + yellow gives olive, and green is off-limits in this jam.
+            var mix = Color.black;
             for (int slot = 0; slot < Scoring.MaxDemons; slot++)
-                if ((stamps & (1 << slot)) != 0) sum += Demon.SlotColors[slot];
-            return sum / Scoring.StampCount(stamps);
+                if ((stamps & (1 << slot)) != 0) mix = Vector4.Max(mix, Demon.SlotColors[slot]);
+            return mix;
         }
 
         void Paint()

@@ -1,0 +1,7 @@
+{
+  "name": "my-demons-scores",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "account_id": "d6ab64fe9bdf1199ece48f062c3802da",
+  "kv_namespaces": [{ "binding": "SCORES", "id": "c1bf01af4d5547daa3416cdb21dc7372" }]
+}

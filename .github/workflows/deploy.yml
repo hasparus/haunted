@@ -31,6 +31,14 @@ jobs:
             channel: linux
             path: build/StandaloneLinux64
     steps:
+      - name: Add swap (Unity import can OOM on hosted runners)
+        run: |
+          sudo fallocate -l 8G /extra-swap
+          sudo chmod 600 /extra-swap
+          sudo mkswap /extra-swap
+          sudo swapon /extra-swap
+          free -h
+
       - uses: actions/checkout@v4
 
       - uses: actions/cache@v4

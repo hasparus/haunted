@@ -14,7 +14,9 @@ namespace Demons
         bool loading;
         float firstFallX = float.NaN;
 
-        public static Vector3 SpawnPoint(int slot) => new(-2.25f + slot * 1.5f, 0, -2.5f);
+        public Vector3 SpawnOrigin = new(0, 0, -2.5f);
+
+        public Vector3 SpawnPoint(int slot) => SpawnOrigin + new Vector3(-2.25f + slot * 1.5f, 0, 0);
 
         public NetworkVariable<float> Influence = new();
         public NetworkList<float> Prestige;

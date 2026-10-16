@@ -147,6 +147,7 @@ namespace Demons
                 if (influence < Balance.I.survivalFloor)
                 {
                     PlayerPrefs.Save();
+                    if (Peak.Value > 0 && Bots.All.Count == 0) HighScores.Submit(Peak.Value, Demon.All.Count);
                     End($"HE'S DOING FINE WITHOUT YOU\nPeak influence {Peak.Value:0}  ·  best {Best.Value:0}");
                 }
             }

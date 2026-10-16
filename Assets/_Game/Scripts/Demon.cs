@@ -109,7 +109,7 @@ namespace Demons
             rb.isKinematic = false;
             rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
             rb.linearVelocity = Vector3.zero;
-            var spawn = GameState.SpawnPoint(Slot.Value);
+            var spawn = GameState.Instance.SpawnPoint(Slot.Value);
             rb.position = spawn;
             GetComponent<NetworkTransform>().Teleport(spawn, transform.rotation, transform.localScale);
         }
