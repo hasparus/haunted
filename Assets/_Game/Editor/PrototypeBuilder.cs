@@ -148,6 +148,7 @@ namespace Demons.Editor
             Seed(bays, new Vector3(6f, 0, 0.6f), pinned: false);
 
             FloorLabel("STAMP MIXES", bays, new Vector3(0, 0, -3.7f));
+            FloorLabel("THROW: stamp key while holding\ncatch with empty hands", bays, new Vector3(-5.6f, 0, -2.5f));
             for (byte mask = 1; mask < 16; mask++)
                 Seed(bays, new Vector3(-8 + mask, 0, -4.4f), stamps: mask);
 

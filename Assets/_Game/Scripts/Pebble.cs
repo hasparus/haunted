@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Demons
 {
-    public enum PebbleState : byte { OnBelt, Held, OnStation, Floor, Flying }
+    public enum PebbleState : byte { OnBelt, Held, OnStation, Floor, Flying, Thrown }
 
     public class Pebble : NetworkBehaviour
     {
@@ -21,6 +21,8 @@ namespace Demons
         public NetworkVariable<double> BeltSince = new();
         public NetworkVariable<double> LastTouched = new();
         public NetworkVariable<int> LastHolder = new(-1);
+        public NetworkVariable<Vector3> ThrowFrom = new();
+        public NetworkVariable<double> ThrowSince = new();
 
         [SerializeField] Transform body;
         [SerializeField] Renderer stone;
@@ -33,6 +35,7 @@ namespace Demons
         float BeltDistance => BeltFrom.Value + (float)(Now - BeltSince.Value) * Balance.I.beltSpeed;
         bool Idle => State.Value is PebbleState.Floor or PebbleState.OnStation;
         double ForgetIn => LastTouched.Value + Balance.I.forgetTime - Now;
+        float ThrowT => (float)((Now - ThrowSince.Value) / Balance.I.throwTime);
         public bool IsGrabbable => State.Value is PebbleState.OnBelt or PebbleState.Floor or PebbleState.OnStation;
 
         public override void OnNetworkSpawn()
@@ -60,7 +63,8 @@ namespace Demons
                 if (Time.timeAsDouble - flyStart > b.flyAwayTime) NetworkObject.Despawn();
                 return;
             }
-            if (State.Value == PebbleState.OnBelt && BeltDistance >= Belt.Instance.Length) GameState.Instance.Deliver(this);
+            if (State.Value == PebbleState.Thrown) TickThrow();
+            else if (State.Value == PebbleState.OnBelt && BeltDistance >= Belt.Instance.Length) GameState.Instance.Deliver(this);
             else if (Idle && ForgetIn <= 0) FlyAway();
         }
 
@@ -82,6 +86,10 @@ namespace Demons
                     break;
                 case PebbleState.Flying:
                     transform.position += new Vector3(0.5f, 2.5f, 0.3f) * Time.deltaTime;
+                    break;
+                case PebbleState.Thrown:
+                    float t = Mathf.Clamp01(ThrowT);
+                    transform.position = Vector3.Lerp(ThrowFrom.Value, FloorPos.Value, t) + Vector3.up * (4 * Balance.I.throwArc * t * (1 - t));
                     break;
             }
         }
@@ -129,6 +137,50 @@ namespace Demons
             LastHolder.Value = demon.Slot.Value;
             demon.Carrying.Value = NetworkObjectId;
         }
+
+        public void Throw(Demon thrower)
+        {
+            var from = thrower.Hand.position;
+            var dir = thrower.transform.forward;
+            dir.y = 0;
+            dir.Normalize();
+
+            float distance = Balance.I.throwDistance;
+            foreach (var hit in Physics.RaycastAll(new Vector3(from.x, 1.2f, from.z), dir, distance, ~0, QueryTriggerInteraction.Ignore))
+                if (!hit.rigidbody) distance = Mathf.Min(distance, Mathf.Max(0, hit.distance - 0.4f));
+
+            Release();
+            ThrowFrom.Value = from;
+            var to = new Vector3(from.x, 0.25f, from.z) + dir * distance;
+            // ponytail: hardcoded room bounds; read them from the scene once rooms vary
+            FloorPos.Value = new Vector3(Mathf.Clamp(to.x, -8.2f, 8.2f), to.y, Mathf.Clamp(to.z, -5.2f, 5.2f));
+            ThrowSince.Value = Now;
+            Anchor.Value = thrower.NetworkObjectId;
+            State.Value = PebbleState.Thrown;
+        }
+
+        void TickThrow()
+        {
+            foreach (var d in Demon.All)
+            {
+                bool canCatch = d.Carrying.Value == Net.None && (d.NetworkObjectId != Anchor.Value || ThrowT > 0.5f);
+                if (canCatch && Vector3.Distance(d.Hand.position, transform.position) < Balance.I.catchRadius)
+                {
+                    Hold(d);
+                    return;
+                }
+            }
+            if (ThrowT < 1) return;
+
+            var at = FloorPos.Value;
+            var station = Station.All.Find(s => s.CanTake && Flat(s.Slot.position - at) < 0.9f);
+            var belt = Belt.Instance;
+            if (station) PutOn(station);
+            else if (Flat(belt.ClosestPoint(at) - at) < 0.6f) PutOnBelt(belt.DistanceAt(at));
+            else Drop(at);
+        }
+
+        static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
 
         public void PutOnBelt(float distance)
         {

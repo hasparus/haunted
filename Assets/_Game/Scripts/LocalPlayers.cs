@@ -11,7 +11,7 @@ namespace Demons
         public int Index;
         public string Scheme;
         public InputDevice Device;
-        public InputAction Move, Grab, Use;
+        public InputAction Move, Grab, Use, Dash;
     }
 
     public class LocalPlayers : MonoBehaviour
@@ -35,8 +35,10 @@ namespace Demons
             var kb = Keyboard.current;
             if (kb != null)
             {
-                if (AnyPressed(kb.wKey, kb.aKey, kb.sKey, kb.dKey, kb.qKey, kb.eKey)) TryJoin("KeyboardLeft", kb);
-                if (AnyPressed(kb.iKey, kb.jKey, kb.kKey, kb.lKey, kb.uKey, kb.oKey)) TryJoin("KeyboardRight", kb);
+                if (AnyPressed(kb.upArrowKey, kb.downArrowKey, kb.leftArrowKey, kb.rightArrowKey, kb.rightShiftKey, kb.rightCtrlKey, kb.rightMetaKey, kb.slashKey))
+                    TryJoin("Arrows", kb);
+                if (AnyPressed(kb.wKey, kb.aKey, kb.sKey, kb.dKey, kb.leftShiftKey, kb.leftCtrlKey))
+                    TryJoin("WASD", kb);
             }
             foreach (var pad in Gamepad.all)
                 if (pad.buttonSouth.wasPressedThisFrame) TryJoin("Gamepad", pad);
@@ -67,28 +69,34 @@ namespace Demons
             p.Move = map.AddAction("Move", InputActionType.Value);
             p.Grab = map.AddAction("Grab", InputActionType.Button);
             p.Use = map.AddAction("Use", InputActionType.Button);
+            p.Dash = map.AddAction("Dash", InputActionType.Button);
 
             switch (p.Scheme)
             {
-                case "KeyboardLeft":
+                case "Arrows":
+                    p.Move.AddCompositeBinding("2DVector")
+                        .With("Up", "<Keyboard>/upArrow").With("Down", "<Keyboard>/downArrow")
+                        .With("Left", "<Keyboard>/leftArrow").With("Right", "<Keyboard>/rightArrow");
+                    p.Grab.AddBinding("<Keyboard>/rightShift");
+                    p.Use.AddBinding("<Keyboard>/rightCtrl");
+                    p.Use.AddBinding("<Keyboard>/rightMeta");
+                    p.Use.AddBinding("<Keyboard>/slash");
+                    p.Dash.AddBinding("<Keyboard>/rightAlt");
+                    break;
+                case "WASD":
                     p.Move.AddCompositeBinding("2DVector")
                         .With("Up", "<Keyboard>/w").With("Down", "<Keyboard>/s")
                         .With("Left", "<Keyboard>/a").With("Right", "<Keyboard>/d");
-                    p.Grab.AddBinding("<Keyboard>/e");
-                    p.Use.AddBinding("<Keyboard>/q");
-                    break;
-                case "KeyboardRight":
-                    p.Move.AddCompositeBinding("2DVector")
-                        .With("Up", "<Keyboard>/i").With("Down", "<Keyboard>/k")
-                        .With("Left", "<Keyboard>/j").With("Right", "<Keyboard>/l");
-                    p.Grab.AddBinding("<Keyboard>/o");
-                    p.Use.AddBinding("<Keyboard>/u");
+                    p.Grab.AddBinding("<Keyboard>/leftShift");
+                    p.Use.AddBinding("<Keyboard>/leftCtrl");
+                    p.Dash.AddBinding("<Keyboard>/leftAlt");
                     break;
                 default:
                     p.Move.AddBinding("<Gamepad>/leftStick");
                     p.Move.AddBinding("<Gamepad>/dpad");
                     p.Grab.AddBinding("<Gamepad>/buttonSouth");
                     p.Use.AddBinding("<Gamepad>/buttonWest");
+                    p.Dash.AddBinding("<Gamepad>/buttonEast");
                     break;
             }
 

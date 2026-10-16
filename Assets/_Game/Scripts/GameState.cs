@@ -62,7 +62,7 @@ namespace Demons
             style.normal.textColor = Color.white;
             style.fontSize = 16;
             if (LocalPlayers.All.Count < Scoring.MaxDemons)
-                GUILayout.Label("Join: WASD (E grab, Q use) · IJKL (O grab, U use) · Gamepad A (A grab, X use)", style);
+                GUILayout.Label("Join: Arrows (RShift grab, RCtrl / RCmd / slash stamp+throw, RAlt dash) · WASD (LShift grab, LCtrl stamp+throw, LAlt dash) · Gamepad A (A grab, X stamp+throw, B dash)", style);
             GUILayout.EndArea();
         }
     }

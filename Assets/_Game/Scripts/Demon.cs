@@ -32,6 +32,7 @@ namespace Demons
 
         LocalPlayer input;
         Rigidbody rb;
+        float dashUntil, nextDash;
 
         public byte SlotBit => (byte)(1 << Slot.Value);
         public Color Tint => SlotColors[Slot.Value];
@@ -62,6 +63,11 @@ namespace Demons
             if (input.Grab.WasPressedThisFrame()) GrabRpc();
             if (input.Use.WasPressedThisFrame()) UseRpc(true);
             if (input.Use.WasReleasedThisFrame()) UseRpc(false);
+            if (input.Dash.WasPressedThisFrame() && Time.time >= nextDash)
+            {
+                dashUntil = Time.time + Balance.I.dashTime;
+                nextDash = Time.time + Balance.I.dashCooldown;
+            }
 
             Component target = GrabTarget();
             if (!target && Carrying.Value == Net.None) target = UseTarget();
@@ -76,9 +82,14 @@ namespace Demons
             if (!IsOwner || input == null) return;
             var m = input.Move.ReadValue<Vector2>();
             var want = new Vector3(m.x, 0, m.y) * Balance.I.moveSpeed;
+            if (want.sqrMagnitude > 0.01f) rb.MoveRotation(Quaternion.LookRotation(want));
+            if (Time.time < dashUntil)
+            {
+                rb.linearVelocity = transform.forward * Balance.I.dashSpeed;
+                return;
+            }
             var v = rb.linearVelocity;
             rb.linearVelocity = Vector3.MoveTowards(new Vector3(v.x, 0, v.z), want, Balance.I.acceleration * Time.fixedDeltaTime);
-            if (want.sqrMagnitude > 0.01f) rb.MoveRotation(Quaternion.LookRotation(want));
         }
 
         public Component GrabTarget()
@@ -129,6 +140,10 @@ namespace Demons
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
-        void UseRpc(bool down) => Using = down ? UseTarget() : null;
+        void UseRpc(bool down)
+        {
+            if (down && Net.Find<Pebble>(Carrying.Value) is { } held) held.Throw(this);
+            else Using = down ? UseTarget() : null;
+        }
     }
 }
