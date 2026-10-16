@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 
 namespace Demons
@@ -58,6 +59,7 @@ namespace Demons
             Lit.OnValueChanged += (_, _) => Paint();
             Scribble.OnValueChanged += (_, _) => Paint();
             rb.isKinematic = !IsOwner;
+            if (!IsOwner) rb.interpolation = RigidbodyInterpolation.None;
             if (!IsOwner) return;
             input = LocalPlayers.Find(LocalIndex.Value);
             marker.SetParent(null);
@@ -75,6 +77,7 @@ namespace Demons
 
         public override void OnNetworkDespawn()
         {
+            if (IsServer && Net.Find<Pebble>(Carrying.Value) is { } held) held.Drop(transform.position);
             All.Remove(this);
             if (marker && marker.parent == null) Destroy(marker.gameObject);
         }
@@ -83,9 +86,9 @@ namespace Demons
         {
             if (Scribble.Value > 0) scribble.transform.Rotate(0, 400 * Time.deltaTime, 0);
             if (!IsOwner || input == null) return;
-            if (input.Grab.WasPressedThisFrame()) GrabRpc();
-            if (input.Use.WasPressedThisFrame()) UseRpc(true);
-            if (input.Use.WasReleasedThisFrame()) UseRpc(false);
+            if (input.Grab.WasPressedThisFrame()) GrabRpc(transform.position, transform.forward);
+            if (input.Use.WasPressedThisFrame()) UseRpc(true, transform.position, transform.forward);
+            if (input.Use.WasReleasedThisFrame()) UseRpc(false, transform.position, transform.forward);
             if (input.Dash.WasPressedThisFrame() && Time.time >= nextDash)
             {
                 dashUntil = Time.time + Balance.I.dashTime;
@@ -106,7 +109,17 @@ namespace Demons
             rb.isKinematic = false;
             rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
             rb.linearVelocity = Vector3.zero;
-            rb.position = transform.position = GameState.SpawnPoint(Slot.Value);
+            var spawn = GameState.SpawnPoint(Slot.Value);
+            rb.position = spawn;
+            GetComponent<NetworkTransform>().Teleport(spawn, transform.rotation, transform.localScale);
+        }
+
+        public void ResetForRound()
+        {
+            Carrying.Value = Net.None;
+            Lit.Value = false;
+            Scribble.Value = 0;
+            Using = null;
         }
 
         void FixedUpdate()
@@ -138,56 +151,66 @@ namespace Demons
             rb.linearVelocity = Vector3.MoveTowards(new Vector3(v.x, 0, v.z), want, Balance.I.acceleration * Time.fixedDeltaTime);
         }
 
-        public Component GrabTarget()
+        // Remote owners' transforms lag on the host, so server-side checks get some slack.
+        float Slack => IsOwner ? 0 : 1f;
+
+        public Component GrabTarget() => GrabTarget(transform.position, transform.forward, 0);
+
+        Component GrabTarget(Vector3 from, Vector3 facing, float slack)
         {
-            if (Carrying.Value == Net.None) return Nearest(Pebble.All, p => p.IsGrabbable, p => p.transform.position);
-            var station = Nearest(Station.All, s => s.CanTake, s => s.Slot.position);
+            if (Carrying.Value == Net.None) return Nearest(Pebble.All, p => p.IsGrabbable, p => p.transform.position, from, facing, slack);
+            var station = Nearest(Station.All, s => s.CanTake, s => s.Slot.position, from, facing, slack);
             if (station) return station;
             var belt = Belt.Instance;
-            return InReach(belt.ClosestPoint(transform.position)) ? belt : null;
+            return InReach(from, belt.ClosestPoint(from), slack) ? belt : null;
         }
 
-        public Station UseTarget() => Nearest(Station.All, s => s.HasWork, s => s.Slot.position);
+        public Station UseTarget() => UseTarget(transform.position, transform.forward, 0);
 
-        public bool InReach(Vector3 point)
+        Station UseTarget(Vector3 from, Vector3 facing, float slack) =>
+            Nearest(Station.All, s => s.HasWork, s => s.Slot.position, from, facing, slack);
+
+        public bool InReach(Vector3 point) => InReach(transform.position, point, Slack);
+
+        static bool InReach(Vector3 from, Vector3 point, float slack)
         {
-            var d = point - transform.position;
+            var d = point - from;
             d.y = 0;
-            return d.magnitude <= Balance.I.reach;
+            return d.magnitude <= Balance.I.reach + slack;
         }
 
-        T Nearest<T>(List<T> candidates, Func<T, bool> ok, Func<T, Vector3> pos) where T : Component
+        static T Nearest<T>(List<T> candidates, Func<T, bool> ok, Func<T, Vector3> pos, Vector3 from, Vector3 facing, float slack) where T : Component
         {
             T best = null;
             float bestScore = float.MaxValue;
             foreach (var c in candidates)
             {
-                if (!ok(c) || !InReach(pos(c))) continue;
-                var d = pos(c) - transform.position;
+                if (!ok(c) || !InReach(from, pos(c), slack)) continue;
+                var d = pos(c) - from;
                 d.y = 0;
-                float score = d.magnitude - 0.5f * Vector3.Dot(transform.forward, d.normalized);
+                float score = d.magnitude - 0.5f * Vector3.Dot(facing, d.normalized);
                 if (score < bestScore) (best, bestScore) = (c, score);
             }
             return best;
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
-        void GrabRpc()
+        void GrabRpc(Vector3 from, Vector3 facing)
         {
             if (Busy) return;
             var held = Net.Find<Pebble>(Carrying.Value);
-            var target = GrabTarget();
+            var target = GrabTarget(from, facing, Slack);
             if (held)
             {
                 if (target is Station station) held.PutOn(station);
-                else if (target is Belt belt) held.PutOnBelt(belt.DistanceAt(transform.position));
-                else held.Drop(transform.position + transform.forward * 0.8f);
+                else if (target is Belt belt) held.PutOnBelt(belt.DistanceAt(from));
+                else held.Drop(from + facing * 0.8f);
             }
             else if (target is Pebble pebble) pebble.Hold(this);
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
-        void UseRpc(bool down)
+        void UseRpc(bool down, Vector3 from, Vector3 facing)
         {
             if (down && Scribble.Value > 0)
             {
@@ -195,8 +218,8 @@ namespace Demons
                 return;
             }
             if (down && Lit.Value) return;
-            if (down && Net.Find<Pebble>(Carrying.Value) is { } held) held.Throw(this);
-            else Using = down ? UseTarget() : null;
+            if (down && Net.Find<Pebble>(Carrying.Value) is { } held) held.Throw(this, from, facing);
+            else Using = down ? UseTarget(from, facing, Slack) : null;
         }
     }
 }

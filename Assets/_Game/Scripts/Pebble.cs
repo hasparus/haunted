@@ -65,6 +65,7 @@ namespace Demons
 
         void Update()
         {
+            if (!IsSpawned) return;
             if (IsServer) ServerTick();
             Place();
             Animate();
@@ -160,10 +161,9 @@ namespace Demons
             demon.Carrying.Value = NetworkObjectId;
         }
 
-        public void Throw(Demon thrower)
+        public void Throw(Demon thrower, Vector3 feet, Vector3 dir)
         {
-            var from = thrower.Hand.position;
-            var dir = thrower.transform.forward;
+            var from = feet + Vector3.up * 1f + dir * 0.7f;
             dir.y = 0;
             dir.Normalize();
 

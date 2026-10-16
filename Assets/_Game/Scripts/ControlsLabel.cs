@@ -8,17 +8,22 @@ namespace Demons
         [TextArea] public string Template;
 
         TextMesh text;
+        int seenPlayers = -1;
+        float seenBest = -1;
 
         void Awake() => text = GetComponent<TextMesh>();
 
         void Update()
         {
-            var s = Template
+            float best = PlayerPrefs.GetFloat(Progression.BestKey, 0);
+            if (seenPlayers == LocalPlayers.All.Count && seenBest == best) return;
+            seenPlayers = LocalPlayers.All.Count;
+            seenBest = best;
+            text.text = Template
                 .Replace("{grab}", LocalPlayers.Keys(p => p.Grab))
                 .Replace("{haunt}", LocalPlayers.Keys(p => p.Use))
                 .Replace("{dash}", LocalPlayers.Keys(p => p.Dash))
-                .Replace("{best}", PlayerPrefs.GetFloat(Progression.BestKey, 0).ToString("0"));
-            if (text.text != s) text.text = s;
+                .Replace("{best}", best.ToString("0"));
         }
     }
 }

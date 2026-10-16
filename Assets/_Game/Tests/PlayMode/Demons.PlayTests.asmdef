@@ -1,0 +1,8 @@
+{
+  "name": "Demons.PlayTests",
+  "references": ["Demons", "Unity.Netcode.Runtime", "UnityEngine.TestRunner"],
+  "overrideReferences": true,
+  "precompiledReferences": ["nunit.framework.dll"],
+  "autoReferenced": false,
+  "defineConstraints": ["UNITY_INCLUDE_TESTS"]
+}

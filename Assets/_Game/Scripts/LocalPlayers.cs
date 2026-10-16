@@ -49,6 +49,8 @@ namespace Demons
             "<Keyboard>/leftAlt" => "LAlt",
             "<Keyboard>/rightMeta" => "RCmd",
             "<Keyboard>/slash" => "Slash",
+            "<Keyboard>/period" => "Period",
+            "<Keyboard>/space" => "Space",
             "<Gamepad>/buttonSouth" when p.Device == null => "A",
             "<Gamepad>/buttonWest" when p.Device == null => "X",
             "<Gamepad>/buttonEast" when p.Device == null => "B",
@@ -56,7 +58,7 @@ namespace Demons
         };
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetStatics()
+        public static void Clear()
         {
             foreach (var p in All) p.Move.actionMap.Dispose();
             All.Clear();
@@ -70,9 +72,9 @@ namespace Demons
             var kb = Keyboard.current;
             if (kb != null)
             {
-                if (AnyPressed(kb.upArrowKey, kb.downArrowKey, kb.leftArrowKey, kb.rightArrowKey, kb.rightShiftKey, kb.rightCtrlKey, kb.rightMetaKey, kb.slashKey))
+                if (AnyPressed(kb.upArrowKey, kb.downArrowKey, kb.leftArrowKey, kb.rightArrowKey, kb.rightShiftKey, kb.rightCtrlKey, kb.slashKey))
                     TryJoin("Arrows", kb);
-                if (AnyPressed(kb.wKey, kb.aKey, kb.sKey, kb.dKey, kb.leftShiftKey, kb.leftCtrlKey))
+                if (AnyPressed(kb.wKey, kb.aKey, kb.sKey, kb.dKey, kb.leftShiftKey, kb.eKey))
                     TryJoin("WASD", kb);
             }
             foreach (var pad in Gamepad.all)
@@ -98,6 +100,9 @@ namespace Demons
             GameState.Instance.RequestDemonRpc(index);
         }
 
+        // Browsers keep Ctrl+W, Alt+Left and Cmd shortcuts for themselves, so the web build skips those keys.
+        static bool InBrowser => Application.platform == RuntimePlatform.WebGLPlayer;
+
         static LocalPlayer Create(string scheme, InputDevice device)
         {
             var p = new LocalPlayer { Scheme = scheme, Device = device };
@@ -115,17 +120,26 @@ namespace Demons
                         .With("Left", "<Keyboard>/leftArrow").With("Right", "<Keyboard>/rightArrow");
                     p.Grab.AddBinding("<Keyboard>/rightShift");
                     p.Use.AddBinding("<Keyboard>/rightCtrl");
-                    p.Use.AddBinding("<Keyboard>/rightMeta");
                     p.Use.AddBinding("<Keyboard>/slash");
-                    p.Dash.AddBinding("<Keyboard>/rightAlt");
+                    p.Dash.AddBinding("<Keyboard>/period");
+                    if (!InBrowser)
+                    {
+                        p.Use.AddBinding("<Keyboard>/rightMeta");
+                        p.Dash.AddBinding("<Keyboard>/rightAlt");
+                    }
                     break;
                 case "WASD":
                     p.Move.AddCompositeBinding("2DVector")
                         .With("Up", "<Keyboard>/w").With("Down", "<Keyboard>/s")
                         .With("Left", "<Keyboard>/a").With("Right", "<Keyboard>/d");
                     p.Grab.AddBinding("<Keyboard>/leftShift");
-                    p.Use.AddBinding("<Keyboard>/leftCtrl");
-                    p.Dash.AddBinding("<Keyboard>/leftAlt");
+                    p.Use.AddBinding("<Keyboard>/e");
+                    p.Dash.AddBinding("<Keyboard>/space");
+                    if (!InBrowser)
+                    {
+                        p.Use.AddBinding("<Keyboard>/leftCtrl");
+                        p.Dash.AddBinding("<Keyboard>/leftAlt");
+                    }
                     break;
                 default:
                     p.Move.AddBinding("<Gamepad>/leftStick");

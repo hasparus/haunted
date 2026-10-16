@@ -34,13 +34,7 @@ namespace Demons
             if (!IsServer) return;
             Influence.Value = 0;
             Prestige.Clear();
-            foreach (var d in Demon.All)
-            {
-                d.Carrying.Value = Net.None;
-                d.Lit.Value = false;
-                d.Scribble.Value = 0;
-                d.Using = null;
-            }
+            foreach (var d in Demon.All) d.ResetForRound();
             for (int i = 0; i < Scoring.MaxDemons; i++) Prestige.Add(0);
         }
 

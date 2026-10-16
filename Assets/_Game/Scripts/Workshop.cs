@@ -37,7 +37,7 @@ namespace Demons
                     if (seed.Pinned && AtSeed(p, seed)) p.Touch();
                     continue;
                 }
-                if (Time.time - emptySince[i] < refillDelay) continue;
+                if (Time.time - emptySince[i] < refillDelay || (seed.Desk && !seed.Desk.CanTake)) continue;
 
                 p = Instantiate(pebblePrefab, seed.transform.position, Quaternion.identity);
                 p.SpawnKind = seed.Kind;

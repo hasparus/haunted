@@ -14,6 +14,9 @@ namespace Demons
     {
         public static bool TypingCode { get; private set; }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => TypingCode = false;
+
         NetworkManager net;
         ISession session;
         string status = "", joinCode = "";
@@ -27,7 +30,7 @@ namespace Demons
                 Destroy(gameObject);
                 return;
             }
-            net.OnClientStopped += _ => { if (session != null && !busy) BackToCouch("Disconnected"); };
+            net.OnClientStopped += wasHost => { if (session != null && !busy) _ = BackToCouch("Disconnected"); };
 
             var args = Environment.GetCommandLineArgs();
             int i = Array.IndexOf(args, "-join");
@@ -45,11 +48,19 @@ namespace Demons
             net.StartHost();
         }
 
-        void BackToCouch(string why)
+        async Task BackToCouch(string why)
         {
-            session = null;
             status = why;
+            var leaving = session;
+            session = null;
+            if (leaving != null)
+            {
+                try { await leaving.LeaveAsync(); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
+            if (net.IsListening && net.NetworkConfig.NetworkTransport is OfflineTransport) return;
             if (net.IsListening) net.Shutdown();
+            while (net.ShutdownInProgress) await Task.Yield();
             StartCouch();
         }
 
@@ -85,7 +96,7 @@ namespace Demons
             catch (Exception e)
             {
                 Debug.LogException(e);
-                BackToCouch($"Online failed: {e.Message}");
+                await BackToCouch($"Online failed: {e.Message}");
             }
             busy = false;
         }
@@ -114,7 +125,7 @@ namespace Demons
                 return;
             }
 
-            if (session == null && !busy)
+            if (session == null && !busy && !Progression.Instance)
             {
                 if (GUI.Button(left, "Host online", style)) _ = GoOnline(host: true);
                 if (GUI.Button(right, "Join online", style))

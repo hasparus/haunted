@@ -27,7 +27,13 @@ namespace Demons
         public bool CanTake => !Locked && !Ringing.Value && Item.Value == Net.None;
         public bool HasWork => !Locked && (Ringing.Value || (Item.Value != Net.None && Kind != StationKind.Pot));
 
-        public override void OnNetworkSpawn() => All.Add(this);
+        public override void OnNetworkSpawn()
+        {
+            All.Add(this);
+            if (!IsServer) return;
+            Clear();
+            Ringing.Value = false;
+        }
         public override void OnNetworkDespawn() => All.Remove(this);
 
         public void Clear()

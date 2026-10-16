@@ -1,4 +1,5 @@
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 
 namespace Demons
@@ -25,6 +26,13 @@ namespace Demons
         bool Active => Demo || (Progression.Instance && Progression.Has(Feature.Claw));
 
         void Awake() => home = transform.position;
+
+        public override void OnNetworkSpawn()
+        {
+            if (IsServer) phase.Value = Phase.Idle;
+        }
+
+        void Jump(Vector3 to) => GetComponent<NetworkTransform>().Teleport(to, transform.rotation, transform.localScale);
 
         void Update()
         {
@@ -64,8 +72,9 @@ namespace Demons
                         return;
                     }
                     var above = target.Slot.position;
-                    transform.position = new Vector3(above.x, High, above.z);
-                    Go(Phase.Warning, Balance.I.clawWarning, transform.position);
+                    var start = new Vector3(above.x, High, above.z);
+                    Jump(start);
+                    Go(Phase.Warning, Balance.I.clawWarning, start);
                     break;
                 case Phase.Warning:
                     Go(Phase.Descending, Duration(Phase.Descending), new Vector3(transform.position.x, Low, transform.position.z));
@@ -85,7 +94,7 @@ namespace Demons
                     break;
                 case Phase.Rising:
                     phase.Value = Phase.Idle;
-                    transform.position = home;
+                    Jump(home);
                     nextGrab = Time.time + (Demo ? 9 : Random.Range(Balance.I.clawInterval * 0.75f, Balance.I.clawInterval * 1.25f));
                     break;
             }
@@ -102,12 +111,13 @@ namespace Demons
         Station PickTarget()
         {
             Station best = null;
+            int seen = 0;
             foreach (var s in Station.All)
             {
                 if (s.Locked || s.Item.Value == Net.None) continue;
                 var off = s.transform.position - home;
                 if (Demo && new Vector2(off.x, off.z).sqrMagnitude > 16) continue;
-                if (!best || Random.value < 0.5f) best = s;
+                if (Random.Range(0, ++seen) == 0) best = s;
             }
             return best;
         }

@@ -12,7 +12,9 @@ namespace Demons
         public Vector2 Stick;
         public bool Idle => steps.Count == 0;
 
-        readonly HashSet<GamepadButton> held = new();
+        internal readonly HashSet<GamepadButton> held = new();
+        internal readonly BotBrain brain = new();
+        public bool Auto;
         readonly Queue<Func<bool>> steps = new();
 
         internal Bot(Gamepad pad) => Pad = pad;
@@ -93,7 +95,11 @@ namespace Demons
 
         internal void Tick()
         {
-            if (steps.Count > 0 && steps.Peek()()) steps.Dequeue();
+            if (steps.Count > 0)
+            {
+                if (steps.Peek()()) steps.Dequeue();
+            }
+            else if (Auto) brain.Think(this);
             var state = new GamepadState { leftStick = Stick };
             foreach (var b in held) state = state.WithButton(b);
             InputSystem.QueueStateEvent(Pad, state);

@@ -289,7 +289,7 @@ namespace Demons.Editor
 
             var look = new GameObject("Look");
             look.transform.SetParent(go.transform, false);
-            float d = ScriptableObject.CreateInstance<Balance>().spotRadius * 2;
+            float d = Balance.I.spotRadius * 2;
             var disc = Prim(PrimitiveType.Cylinder, "Disc", look.transform, Vector3.zero, new Vector3(d, 0.005f, d), Unlit("Spot", new Color(1f, 0.9f, 0.6f)));
             disc.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             var light = new GameObject("Light").AddComponent<Light>();
@@ -483,14 +483,14 @@ namespace Demons.Editor
             return tm;
         }
 
-        static Material Mat(string name, Color color)
+        static Material Mat(string name, Color color, string shader = "Universal Render Pipeline/Lit")
         {
             if (mats.TryGetValue(name, out var m)) return m;
             var path = $"{Root}/Materials/{name}.mat";
             m = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (!m)
             {
-                m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                m = new Material(Shader.Find(shader));
                 AssetDatabase.CreateAsset(m, path);
             }
             m.SetColor("_BaseColor", color);
@@ -498,19 +498,7 @@ namespace Demons.Editor
             return mats[name] = m;
         }
 
-        static Material Unlit(string name, Color color)
-        {
-            var path = $"{Root}/Materials/{name}.mat";
-            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (!m)
-            {
-                m = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-                AssetDatabase.CreateAsset(m, path);
-            }
-            m.SetColor("_BaseColor", color);
-            EditorUtility.SetDirty(m);
-            return m;
-        }
+        static Material Unlit(string name, Color color) => Mat(name, color, "Universal Render Pipeline/Unlit");
 
         static Color Gray(float v) => new(v, v, v);
 

@@ -13,6 +13,9 @@ namespace Demons
     {
         public static Progression Instance;
         public static GameMode NextMode;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => NextMode = GameMode.Week;
         public const string BestKey = "survival_best";
 
         static readonly string[] Days = { "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY" };
@@ -77,6 +80,9 @@ namespace Demons
         {
             if (!IsServer) return;
             Mode.Value = NextMode;
+            Day.Value = 0;
+            Peak.Value = 0;
+            InvertedUntil.Value = 0;
             Best.Value = PlayerPrefs.GetFloat(BestKey, 0);
             startTime = Now;
             nextCall = Now + 20;
@@ -108,7 +114,7 @@ namespace Demons
 
         void Update()
         {
-            if (!IsServer || !GameState.Instance) return;
+            if (!IsServer || !IsSpawned || !GameState.Instance) return;
             if (over)
             {
                 if (Now < endAt) return;

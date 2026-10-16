@@ -63,8 +63,9 @@ namespace Demons
         Demon Pick()
         {
             Demon best = null;
+            int seen = 0;
             foreach (var d in Demon.All)
-                if (Eligible(d) && (!best || Random.value < 0.5f)) best = d;
+                if (Eligible(d) && Random.Range(0, ++seen) == 0) best = d;
             return best;
         }
     }
