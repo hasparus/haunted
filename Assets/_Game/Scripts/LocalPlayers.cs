@@ -20,6 +20,13 @@ namespace Demons
 
         public static LocalPlayer Find(int index) => All.Find(p => p.Index == index);
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            foreach (var p in All) p.Move.actionMap.Dispose();
+            All.Clear();
+        }
+
         void Update()
         {
             var net = NetworkManager.Singleton;

@@ -8,11 +8,14 @@ namespace Demons
     {
         public static readonly List<Station> All = new();
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => All.Clear();
+
         public Transform Slot;
-        [SerializeField] Transform progressBar;
 
         public NetworkVariable<ulong> Item = new(Net.None);
         public NetworkVariable<float> Progress = new();
+        public NetworkVariable<byte> Workers = new();
 
         public bool CanTake => Item.Value == Net.None;
         public bool HasWork => Item.Value != Net.None;
@@ -24,12 +27,11 @@ namespace Demons
         {
             Item.Value = Net.None;
             Progress.Value = 0;
+            Workers.Value = 0;
         }
 
         void Update()
         {
-            progressBar.gameObject.SetActive(Progress.Value > 0);
-            progressBar.localScale = new Vector3(Progress.Value, 1, 1);
             if (IsServer) Work();
         }
 
@@ -44,6 +46,7 @@ namespace Demons
                     workers |= d.SlotBit;
 
             byte useful = (byte)(workers & ~pebble.Stamps.Value);
+            Workers.Value = useful;
             int n = Scoring.StampCount(useful);
             if (n == 0) return;
             pebble.Touch();

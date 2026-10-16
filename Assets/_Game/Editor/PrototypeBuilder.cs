@@ -18,6 +18,11 @@ namespace Demons.Editor
         [MenuItem("Demons/Build Prototype")]
         public static void Build()
         {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("Stop Play mode before building the prototype scene.");
+                return;
+            }
             foreach (var dir in new[] { "Resources", "Materials", "Prefabs", "Scenes" })
                 Directory.CreateDirectory($"{Root}/{dir}");
             mats.Clear();
@@ -39,7 +44,7 @@ namespace Demons.Editor
 
             var body = new GameObject("Body").transform;
             body.SetParent(root.transform, false);
-            Prim(PrimitiveType.Sphere, "Stone", body, Vector3.zero, Vector3.one * 0.5f, Mat("Pebble", Gray(0.85f)));
+            var stone = Prim(PrimitiveType.Sphere, "Stone", body, Vector3.zero, Vector3.one * 0.5f, Mat("Pebble", Gray(0.85f)));
 
             var dots = new Renderer[Scoring.MaxDemons];
             for (int i = 0; i < dots.Length; i++)
@@ -58,6 +63,7 @@ namespace Demons.Editor
             wings.SetActive(false);
 
             Set(p, "body", body);
+            Set(p, "stone", stone.GetComponent<Renderer>());
             Set(p, "wings", wings);
             SetArray(p, "stampDots", dots);
             return SavePrefab(root).GetComponent<Pebble>();
@@ -171,11 +177,6 @@ namespace Demons.Editor
             var st = go.AddComponent<Station>();
             Prim(PrimitiveType.Cube, "Top", go.transform, new Vector3(0, 0.5f, 0), new Vector3(1.3f, 1f, 1.3f), Mat("Desk", Gray(0.72f)), collider: true);
             st.Slot = Point("Slot", go.transform, new Vector3(0, 1.25f, 0));
-
-            var bar = Point("Progress", go.transform, new Vector3(-0.65f, 1.9f, 0));
-            Prim(PrimitiveType.Cube, "Fill", bar, new Vector3(0.65f, 0, 0), new Vector3(1.3f, 0.12f, 0.12f), Mat("ProgressFill", Color.white));
-            bar.gameObject.SetActive(false);
-            Set(st, "progressBar", bar);
             Label("DESK", go.transform, new Vector3(0, 0.5f, -0.7f), cam);
         }
 

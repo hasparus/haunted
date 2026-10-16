@@ -26,9 +26,7 @@ namespace Demons
         {
             if (!IsServer || Demon.All.Count == 0 || Time.time < nextSpawn) return;
             nextSpawn = Time.time + Balance.I.spawnInterval;
-            var pebble = Instantiate(pebblePrefab, start.position, Quaternion.identity);
-            pebble.BeltSince.Value = NetworkManager.ServerTime.Time;
-            pebble.NetworkObject.Spawn();
+            Instantiate(pebblePrefab, start.position, Quaternion.identity).NetworkObject.Spawn();
         }
     }
 }

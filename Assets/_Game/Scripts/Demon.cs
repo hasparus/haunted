@@ -9,6 +9,9 @@ namespace Demons
     {
         public static readonly List<Demon> All = new();
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => All.Clear();
+
         public static readonly Color[] SlotColors =
         {
             new(0.23f, 0.51f, 0.96f),

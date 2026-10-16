@@ -10,6 +10,9 @@ namespace Demons
     {
         public static readonly List<Pebble> All = new();
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => All.Clear();
+
         public NetworkVariable<PebbleState> State = new();
         public NetworkVariable<ulong> Anchor = new(Net.None);
         public NetworkVariable<Vector3> FloorPos = new();
@@ -20,6 +23,7 @@ namespace Demons
         public NetworkVariable<int> LastHolder = new(-1);
 
         [SerializeField] Transform body;
+        [SerializeField] Renderer stone;
         [SerializeField] Renderer[] stampDots;
         [SerializeField] GameObject wings;
 
@@ -34,6 +38,7 @@ namespace Demons
         public override void OnNetworkSpawn()
         {
             All.Add(this);
+            if (IsServer) BeltSince.Value = Now;
             Stamps.OnValueChanged += (_, _) => Paint();
             Paint();
         }
@@ -87,9 +92,23 @@ namespace Demons
             wings.SetActive(flying);
             if (flying) wings.transform.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(Time.time * 30) * 35);
 
+            var color = Mix(Stamps.Value);
+            if (State.Value == PebbleState.OnStation && Net.Find<Station>(Anchor.Value) is { } station && station.Workers.Value != 0)
+                color = Color.Lerp(color, Mix((byte)(Stamps.Value | station.Workers.Value)), station.Progress.Value);
+            stone.material.color = color;
+
             body.localPosition = Idle && ForgetIn < Balance.I.warnTime
                 ? new Vector3(Mathf.Sin(Time.time * 40) * 0.04f, 0, 0)
                 : Vector3.zero;
+        }
+
+        static Color Mix(byte stamps)
+        {
+            if (stamps == 0) return new Color(0.85f, 0.85f, 0.85f);
+            var sum = Color.clear;
+            for (int slot = 0; slot < Scoring.MaxDemons; slot++)
+                if ((stamps & (1 << slot)) != 0) sum += Demon.SlotColors[slot];
+            return sum / Scoring.StampCount(stamps);
         }
 
         void Paint()
