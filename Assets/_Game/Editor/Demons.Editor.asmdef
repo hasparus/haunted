@@ -1,0 +1,7 @@
+{
+  "name": "Demons.Editor",
+  "rootNamespace": "Demons.Editor",
+  "references": ["Demons", "Unity.Netcode.Runtime"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": false
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Demons",
+  "rootNamespace": "Demons",
+  "references": ["Unity.Netcode.Runtime", "Unity.InputSystem"],
+  "autoReferenced": true
+}
