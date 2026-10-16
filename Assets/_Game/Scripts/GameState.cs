@@ -8,6 +8,7 @@ namespace Demons
         public static GameState Instance;
 
         [SerializeField] Demon demonPrefab;
+        public Vector2 RoomHalfExtents = new(8.5f, 5.5f);
 
         public NetworkVariable<float> Influence = new();
         public NetworkList<float> Prestige;
@@ -60,7 +61,7 @@ namespace Demons
                 GUILayout.Label($"Demon {d.Slot.Value + 1}: {Prestige[d.Slot.Value]:0} prestige", style);
             }
             style.normal.textColor = Color.white;
-            style.fontSize = 16;
+            style.fontSize = 13;
             if (LocalPlayers.All.Count < Scoring.MaxDemons)
                 GUILayout.Label("Join: Arrows (RShift grab, RCtrl / RCmd / slash stamp+throw, RAlt dash) · WASD (LShift grab, LCtrl stamp+throw, LAlt dash) · Gamepad A (A grab, X stamp+throw, B dash)", style);
             GUILayout.EndArea();

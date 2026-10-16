@@ -117,7 +117,7 @@ namespace Demons.Editor
 
         static void BuildOffice(Pebble pebble, Demon demon, NetworkPrefabsList prefabs)
         {
-            var cam = NewRoom(pebble, demon, prefabs);
+            var cam = NewRoom(pebble, demon, prefabs, new Vector2(8.5f, 5.5f), walls: true);
             foreach (var pos in new[] { new Vector3(-6.5f, 0, -1.5f), new Vector3(-2.2f, 0, 0.6f), new Vector3(2.2f, 0, 0.6f), new Vector3(6.5f, 0, -1.5f) })
                 BuildStation(pos, cam);
             SaveScene(OfficePath);
@@ -125,32 +125,37 @@ namespace Demons.Editor
 
         static void BuildWorkshop(Pebble pebble, Demon demon, NetworkPrefabsList prefabs)
         {
-            var cam = NewRoom(pebble, demon, prefabs);
+            var cam = NewRoom(pebble, demon, prefabs, new Vector2(13f, 8.5f), walls: false);
             var go = new GameObject("Workshop");
             go.AddComponent<NetworkObject>();
             Set(go.AddComponent<Workshop>(), "pebblePrefab", pebble);
             var bays = go.transform;
 
-            FloorLabel("GRAB & DROP", bays, new Vector3(-6.6f, 0, -1.1f));
-            Seed(bays, new Vector3(-7.1f, 0, 0.6f));
-            Seed(bays, new Vector3(-6.1f, 0, 0.6f));
-            Seed(bays, new Vector3(-6.6f, 0, -0.3f));
+            FloorLabel("GRAB & DROP", bays, new Vector3(-10f, 0, -0.6f));
+            Seed(bays, new Vector3(-10.6f, 0, 1.6f));
+            Seed(bays, new Vector3(-9.4f, 0, 1.6f));
+            Seed(bays, new Vector3(-10f, 0, 0.5f));
 
-            var solo = BuildStation(new Vector3(-2.8f, 0, 0.8f), cam);
-            FloorLabel("HOLD STAMP", bays, new Vector3(-2.8f, 0, -0.6f));
+            var solo = BuildStation(new Vector3(-4.5f, 0, 1.8f), cam);
+            FloorLabel("HOLD STAMP", bays, new Vector3(-4.5f, 0, 0.3f));
             Seed(bays, solo.Slot.position, desk: solo);
 
-            var together = BuildStation(new Vector3(1.6f, 0, 0.8f), cam);
-            FloorLabel("STAMP TOGETHER\nfaster + combo", bays, new Vector3(1.6f, 0, -0.7f));
+            var together = BuildStation(new Vector3(1.5f, 0, 1.8f), cam);
+            FloorLabel("STAMP TOGETHER\nfaster + combo", bays, new Vector3(1.5f, 0, 0.2f));
             Seed(bays, together.Slot.position, stamps: 0b0001, desk: together);
 
-            FloorLabel("LEFT ALONE\nwings, -influence", bays, new Vector3(6f, 0, -0.7f));
-            Seed(bays, new Vector3(6f, 0, 0.6f), pinned: false);
+            FloorLabel("LEFT ALONE\nwings, -influence", bays, new Vector3(8f, 0, 0.2f));
+            Seed(bays, new Vector3(8f, 0, 1.6f), pinned: false);
 
-            FloorLabel("STAMP MIXES", bays, new Vector3(0, 0, -3.7f));
-            FloorLabel("THROW: stamp key while holding\ncatch with empty hands", bays, new Vector3(-5.6f, 0, -2.5f));
+            FloorLabel("THROW FROM HERE →\nstamp key while holding", bays, new Vector3(4.5f, 0, -3.6f));
+            Seed(bays, new Vector3(3.5f, 0, -3f));
+            var target = BuildStation(new Vector3(9.5f, 0, -3f), cam);
+            FloorLabel("THROW TARGET", bays, new Vector3(9.5f, 0, -4.4f));
+            FloorLabel("CATCH: stand in the arc\nwith empty hands", bays, new Vector3(7f, 0, -1.6f));
+
+            FloorLabel("STAMP MIXES", bays, new Vector3(-4f, 0, -5.4f));
             for (byte mask = 1; mask < 16; mask++)
-                Seed(bays, new Vector3(-8 + mask, 0, -4.4f), stamps: mask);
+                Seed(bays, new Vector3(-12.4f + mask * 1.05f, 0, -6.6f), stamps: mask);
 
             SaveScene(WorkshopPath);
         }
@@ -172,12 +177,13 @@ namespace Demons.Editor
             EditorSceneManager.SaveScene(scene);
         }
 
-        static Camera NewRoom(Pebble pebble, Demon demon, NetworkPrefabsList prefabs)
+        static Camera NewRoom(Pebble pebble, Demon demon, NetworkPrefabsList prefabs, Vector2 half, bool walls)
         {
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            float zoom = half.x / 8.5f;
 
             var cam = new GameObject("Main Camera") { tag = "MainCamera" }.AddComponent<Camera>();
-            cam.transform.position = new Vector3(0, 15, -12.5f);
+            cam.transform.position = new Vector3(0, 15, -12.5f) * zoom;
             cam.transform.LookAt(new Vector3(0, 0, 0.3f));
             cam.fieldOfView = 34;
             cam.clearFlags = CameraClearFlags.SolidColor;
@@ -189,24 +195,44 @@ namespace Demons.Editor
             sun.shadows = LightShadows.Soft;
             sun.transform.rotation = Quaternion.Euler(55, -25, 0);
 
-            Prim(PrimitiveType.Cube, "Floor", null, new Vector3(0, -0.1f, 0), new Vector3(17, 0.2f, 11), Mat("Floor", Gray(0.32f)), collider: true);
-            Prim(PrimitiveType.Cube, "WallBack", null, new Vector3(0, 0.75f, 5.75f), new Vector3(17, 1.5f, 0.5f), Mat("Wall", Gray(0.5f)), collider: true);
-            Prim(PrimitiveType.Cube, "WallFront", null, new Vector3(0, 0.2f, -5.75f), new Vector3(17, 0.4f, 0.5f), Mat("Wall", Gray(0.5f)), collider: true);
-            foreach (var x in new[] { -8.75f, 8.75f })
+            Prim(PrimitiveType.Cube, "Floor", null, new Vector3(0, -0.1f, 0), new Vector3(half.x * 2, 0.2f, half.y * 2), Mat("Floor", Gray(0.32f)), collider: true);
+            float beltZ = half.y - 1.3f, wx = half.x + 0.25f, wz = half.y + 0.25f;
+            if (walls)
             {
-                Prim(PrimitiveType.Cube, "WallSide", null, new Vector3(x, 0.75f, -1.3f), new Vector3(0.5f, 1.5f, 9.4f), Mat("Wall", Gray(0.5f)), collider: true);
-                Prim(PrimitiveType.Cube, "WallSide", null, new Vector3(x, 0.75f, 5.5f), new Vector3(0.5f, 1.5f, 1f), Mat("Wall", Gray(0.5f)), collider: true);
+                Prim(PrimitiveType.Cube, "WallBack", null, new Vector3(0, 0.75f, wz), new Vector3(half.x * 2, 1.5f, 0.5f), Mat("Wall", Gray(0.5f)), collider: true);
+                Prim(PrimitiveType.Cube, "WallFront", null, new Vector3(0, 0.2f, -wz), new Vector3(half.x * 2, 0.4f, 0.5f), Mat("Wall", Gray(0.5f)), collider: true);
+                float gapLow = beltZ - 0.8f, gapHigh = beltZ + 0.8f, top = half.y + 0.5f, bottom = -half.y - 0.5f;
+                foreach (var x in new[] { -wx, wx })
+                {
+                    Prim(PrimitiveType.Cube, "WallSide", null, new Vector3(x, 0.75f, (bottom + gapLow) / 2), new Vector3(0.5f, 1.5f, gapLow - bottom), Mat("Wall", Gray(0.5f)), collider: true);
+                    Prim(PrimitiveType.Cube, "WallSide", null, new Vector3(x, 0.75f, (gapHigh + top) / 2), new Vector3(0.5f, 1.5f, top - gapHigh), Mat("Wall", Gray(0.5f)), collider: true);
+                }
+            }
+            else
+            {
+                foreach (var (pos, size) in new[]
+                {
+                    (new Vector3(0, 1, wz), new Vector3(half.x * 2 + 1, 2, 0.5f)),
+                    (new Vector3(0, 1, -wz), new Vector3(half.x * 2 + 1, 2, 0.5f)),
+                    (new Vector3(-wx, 1, 0), new Vector3(0.5f, 2, half.y * 2 + 1)),
+                    (new Vector3(wx, 1, 0), new Vector3(0.5f, 2, half.y * 2 + 1)),
+                })
+                {
+                    var edge = new GameObject("Edge").AddComponent<BoxCollider>();
+                    edge.transform.position = pos;
+                    edge.size = size;
+                }
             }
 
             var beltGo = new GameObject("Belt");
-            beltGo.transform.position = new Vector3(0, 0, 4.2f);
+            beltGo.transform.position = new Vector3(0, 0, beltZ);
             beltGo.AddComponent<NetworkObject>();
             var belt = beltGo.AddComponent<Belt>();
-            Prim(PrimitiveType.Cube, "Conveyor", beltGo.transform, new Vector3(0, 0.25f, 0), new Vector3(20, 0.5f, 1), Mat("Belt", Gray(0.15f)), collider: true);
-            Set(belt, "start", Point("Start", beltGo.transform, new Vector3(-9.8f, 0.75f, 0)));
-            Set(belt, "end", Point("End", beltGo.transform, new Vector3(9.8f, 0.75f, 0)));
+            Prim(PrimitiveType.Cube, "Conveyor", beltGo.transform, new Vector3(0, 0.25f, 0), new Vector3(half.x * 2 + 3, 0.5f, 1), Mat("Belt", Gray(0.15f)), collider: true);
+            Set(belt, "start", Point("Start", beltGo.transform, new Vector3(-half.x - 1.3f, 0.75f, 0)));
+            Set(belt, "end", Point("End", beltGo.transform, new Vector3(half.x + 1.3f, 0.75f, 0)));
             Set(belt, "pebblePrefab", pebble);
-            Label("THOUGHTS →", beltGo.transform, new Vector3(-6.5f, 1.2f, 0), cam);
+            Label("THOUGHTS →", beltGo.transform, new Vector3(-half.x + 2, 1.2f, 0), cam);
 
             var netGo = new GameObject("Network");
             var nm = netGo.AddComponent<NetworkManager>();
@@ -217,7 +243,9 @@ namespace Demons.Editor
 
             var stateGo = new GameObject("GameState");
             stateGo.AddComponent<NetworkObject>();
-            Set(stateGo.AddComponent<GameState>(), "demonPrefab", demon);
+            var state = stateGo.AddComponent<GameState>();
+            state.RoomHalfExtents = half;
+            Set(state, "demonPrefab", demon);
             return cam;
         }
 
@@ -258,7 +286,7 @@ namespace Demons.Editor
             var t = Point("FloorLabel", parent, new Vector3(pos.x, 0.02f, pos.z));
             t.rotation = Quaternion.Euler(90, 0, 0);
             var tm = TextLabel(t, text);
-            tm.characterSize = 0.07f;
+            tm.characterSize = 0.11f;
             tm.color = Gray(0.8f);
         }
 

@@ -152,8 +152,8 @@ namespace Demons
             Release();
             ThrowFrom.Value = from;
             var to = new Vector3(from.x, 0.25f, from.z) + dir * distance;
-            // ponytail: hardcoded room bounds; read them from the scene once rooms vary
-            FloorPos.Value = new Vector3(Mathf.Clamp(to.x, -8.2f, 8.2f), to.y, Mathf.Clamp(to.z, -5.2f, 5.2f));
+            var room = GameState.Instance.RoomHalfExtents - new Vector2(0.3f, 0.3f);
+            FloorPos.Value = new Vector3(Mathf.Clamp(to.x, -room.x, room.x), to.y, Mathf.Clamp(to.z, -room.y, room.y));
             ThrowSince.Value = Now;
             Anchor.Value = thrower.NetworkObjectId;
             State.Value = PebbleState.Thrown;
