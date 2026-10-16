@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
@@ -18,7 +19,42 @@ namespace Demons
     {
         public static readonly List<LocalPlayer> All = new();
 
+        static LocalPlayer[] preview;
+
         public static LocalPlayer Find(int index) => All.Find(p => p.Index == index);
+
+        // Keys bound to an action for everyone playing on this machine, or for every scheme before anyone joins.
+        public static string Keys(Func<LocalPlayer, InputAction> action)
+        {
+            preview ??= new[] { Create("Arrows", null), Create("WASD", null), Create("Gamepad", null) };
+            var names = new List<string>();
+            foreach (var p in All.Count > 0 ? All.ToArray() : preview)
+            {
+                var a = action(p);
+                for (int i = 0; i < a.bindings.Count; i++)
+                {
+                    var name = KeyName(p, a, i);
+                    if (!names.Contains(name)) names.Add(name);
+                }
+            }
+            return string.Join(" / ", names);
+        }
+
+        static string KeyName(LocalPlayer p, InputAction a, int i) => a.bindings[i].effectivePath switch
+        {
+            "<Keyboard>/rightShift" => "RShift",
+            "<Keyboard>/leftShift" => "LShift",
+            "<Keyboard>/rightCtrl" => "RCtrl",
+            "<Keyboard>/leftCtrl" => "LCtrl",
+            "<Keyboard>/rightAlt" => "RAlt",
+            "<Keyboard>/leftAlt" => "LAlt",
+            "<Keyboard>/rightMeta" => "RCmd",
+            "<Keyboard>/slash" => "Slash",
+            "<Gamepad>/buttonSouth" when p.Device == null => "A",
+            "<Gamepad>/buttonWest" when p.Device == null => "X",
+            "<Gamepad>/buttonEast" when p.Device == null => "B",
+            _ => a.GetBindingDisplayString(i),
+        };
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics()
@@ -57,14 +93,15 @@ namespace Demons
             int index = 0;
             while (Find(index) != null) index++;
 
-            var player = new LocalPlayer { Index = index, Scheme = scheme, Device = device };
-            Bind(player);
+            var player = Create(scheme, device);
+            player.Index = index;
             All.Add(player);
             GameState.Instance.RequestDemonRpc(index);
         }
 
-        static void Bind(LocalPlayer p)
+        static LocalPlayer Create(string scheme, InputDevice device)
         {
+            var p = new LocalPlayer { Scheme = scheme, Device = device };
             var map = new InputActionMap(p.Scheme);
             p.Move = map.AddAction("Move", InputActionType.Value);
             p.Grab = map.AddAction("Grab", InputActionType.Button);
@@ -100,8 +137,10 @@ namespace Demons
                     break;
             }
 
-            map.devices = new[] { p.Device };
+            if (device == null) return p;
+            map.devices = new[] { device };
             map.Enable();
+            return p;
         }
     }
 }

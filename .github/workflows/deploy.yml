@@ -1,4 +1,4 @@
-name: WebGL to itch.io
+name: Deploy to itch.io
 
 on:
   push:
@@ -6,21 +6,38 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: itch-${{ github.ref }}
+  group: deploy-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  webgl:
+  build:
     if: vars.ITCH_GAME != ''
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - target: WebGL
+            channel: html5
+            path: build/WebGL/haunted
+          - target: StandaloneWindows64
+            channel: windows
+            path: build/StandaloneWindows64
+          - target: StandaloneOSX
+            channel: mac
+            path: build/StandaloneOSX
+          - target: StandaloneLinux64
+            channel: linux
+            path: build/StandaloneLinux64
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/cache@v4
         with:
           path: Library
-          key: Library-WebGL-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
-          restore-keys: Library-WebGL-
+          key: Library-${{ matrix.target }}-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: Library-${{ matrix.target }}-
 
       - uses: game-ci/unity-builder@v4
         env:
@@ -28,7 +45,7 @@ jobs:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
-          targetPlatform: WebGL
+          targetPlatform: ${{ matrix.target }}
           buildName: haunted
           versioning: None
 
@@ -40,4 +57,4 @@ jobs:
           curl -sSfL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
           unzip -q butler.zip -d butler
           chmod +x butler/butler
-          butler/butler push build/WebGL/haunted "$ITCH_GAME:html5" --userversion "${GITHUB_SHA::7}"
+          butler/butler push "${{ matrix.path }}" "$ITCH_GAME:${{ matrix.channel }}" --userversion "${GITHUB_REF_NAME}-${GITHUB_SHA::7}"

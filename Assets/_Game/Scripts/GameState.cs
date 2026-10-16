@@ -73,26 +73,29 @@ namespace Demons
 
         public void Forgotten() => Influence.Value -= Scoring.ForgottenPenalty;
 
+        public static int FontSize(float share) => Mathf.Clamp(Mathf.RoundToInt(Screen.height * share), 14, 36);
+
         void OnGUI()
         {
             if (!IsSpawned) return;
-            var style = new GUIStyle(GUI.skin.label) { fontSize = 15, fontStyle = FontStyle.Bold };
-            GUILayout.BeginArea(new Rect(12, 8, Screen.width - 24, 30));
+            var style = new GUIStyle(GUI.skin.label) { fontSize = FontSize(0.045f), fontStyle = FontStyle.Bold };
+            GUILayout.BeginArea(new Rect(12, 8, Screen.width * 0.6f, style.fontSize * 2));
             GUILayout.BeginHorizontal();
             GUILayout.Label($"Influence {Influence.Value:0.0}", style);
             foreach (var d in Demon.All)
             {
                 style.normal.textColor = d.Tint;
-                GUILayout.Label($"   Demon {d.Slot.Value + 1}: {Prestige[d.Slot.Value]:0}", style);
+                GUILayout.Label($"  D{d.Slot.Value + 1}: {Prestige[d.Slot.Value]:0}", style);
             }
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
             GUILayout.EndArea();
 
             if (LocalPlayers.All.Count >= Scoring.MaxDemons) return;
-            var hint = new GUIStyle(GUI.skin.label) { fontSize = 11 };
-            GUI.Label(new Rect(12, Screen.height - 20, Screen.width - 24, 20),
-                "Join: Arrows (RShift grab, RCtrl / RCmd / slash stamp+throw, RAlt dash) · WASD (LShift grab, LCtrl stamp+throw, LAlt dash) · Gamepad A (A grab, X stamp+throw, B dash)", hint);
+            var hint = new GUIStyle(GUI.skin.label) { fontSize = FontSize(0.035f), fontStyle = FontStyle.Bold };
+            float h = hint.fontSize * 1.6f;
+            GUI.Label(new Rect(12, Screen.height - h, Screen.width - 24, h),
+                "Join: arrows / RShift  ·  WASD / LShift  ·  gamepad A", hint);
         }
     }
 }

@@ -6,7 +6,6 @@ using Unity.Services.Authentication;
 using Unity.Services.Core;
 using Unity.Services.Multiplayer;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace Demons
 {
@@ -54,18 +53,6 @@ namespace Demons
             StartCouch();
         }
 
-        void Update()
-        {
-            var kb = Keyboard.current;
-            if (busy || session != null || TypingCode || kb == null) return;
-            if (kb.hKey.wasPressedThisFrame) _ = GoOnline(host: true);
-            if (kb.jKey.wasPressedThisFrame)
-            {
-                joinCode = "";
-                TypingCode = true;
-            }
-        }
-
         public async Task GoOnline(bool host)
         {
             busy = true;
@@ -105,31 +92,39 @@ namespace Demons
 
         void OnGUI()
         {
-            var rect = new Rect(Screen.width - 412, 8, 400, 24);
+            var style = new GUIStyle(GUI.skin.button) { fontSize = GameState.FontSize(0.035f) };
+            var label = new GUIStyle(GUI.skin.label) { fontSize = style.fontSize, alignment = TextAnchor.MiddleRight };
+            float h = style.fontSize * 1.8f, w = style.fontSize * 9;
+            var right = new Rect(Screen.width - w - 12, 8, w, h);
+            var left = new Rect(right.x - w - 8, 8, w, h);
+
             if (TypingCode)
             {
                 var e = Event.current;
-                if (e.type == EventType.KeyDown && e.keyCode is KeyCode.Return or KeyCode.KeypadEnter)
+                bool enter = e.type == EventType.KeyDown && e.keyCode is KeyCode.Return or KeyCode.KeypadEnter;
+                GUI.SetNextControlName("join-code");
+                joinCode = GUI.TextField(left, joinCode, 12, new GUIStyle(GUI.skin.textField) { fontSize = style.fontSize });
+                GUI.FocusControl("join-code");
+                if (enter || GUI.Button(right, "Join", style))
                 {
                     TypingCode = false;
                     _ = GoOnline(host: false);
-                    e.Use();
-                    return;
                 }
-                if (e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape)
-                {
-                    TypingCode = false;
-                    e.Use();
-                    return;
-                }
-                GUI.SetNextControlName("join-code");
-                joinCode = GUI.TextField(rect, joinCode, 12);
-                GUI.FocusControl("join-code");
+                if (GUI.Button(new Rect(right.x, right.yMax + 4, w, h), "Cancel", style)) TypingCode = false;
                 return;
             }
-            var style = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.UpperRight, fontSize = 13 };
-            var hint = session == null && !busy ? "H: host online · J: join by code" : "";
-            GUI.Label(rect, string.IsNullOrEmpty(status) ? hint : $"{status}   {hint}", style);
+
+            if (session == null && !busy)
+            {
+                if (GUI.Button(left, "Host online", style)) _ = GoOnline(host: true);
+                if (GUI.Button(right, "Join online", style))
+                {
+                    joinCode = "";
+                    TypingCode = true;
+                }
+            }
+            if (!string.IsNullOrEmpty(status))
+                GUI.Label(new Rect(Screen.width - 3 * w, right.yMax + 4, 3 * w - 12, h), status, label);
         }
     }
 }

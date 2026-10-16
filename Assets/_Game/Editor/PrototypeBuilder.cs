@@ -42,6 +42,8 @@ namespace Demons.Editor
 
             BuildOffice(pebble, demon, prefabs);
             BuildWorkshop(pebble, demon, prefabs);
+            PlayerSettings.defaultWebScreenWidth = 960;
+            PlayerSettings.defaultWebScreenHeight = 540;
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(WorkshopPath, true), new EditorBuildSettingsScene(OfficePath, true) };
             AssetDatabase.SaveAssets();
         }
@@ -130,35 +132,36 @@ namespace Demons.Editor
             so.FindProperty("startSceneWhenAllFall").stringValue = "Office";
             so.ApplyModifiedPropertiesWithoutUndo();
             Object.DestroyImmediate(GameObject.Find("EdgeFront"));
-            FloorLabel("EVERYONE JUMP OFF\nTHE LEDGE TO START ↓", null, new Vector3(8f, 0, -7.4f));
+            FloorLabel("EVERYONE JUMP OFF\nTHE LEDGE TO START ↓", null, new Vector3(8.5f, 0, -7.6f));
             var go = new GameObject("Workshop");
             go.AddComponent<NetworkObject>();
             Set(go.AddComponent<Workshop>(), "pebblePrefab", pebble);
             var bays = go.transform;
 
-            FloorLabel("GRAB & DROP", bays, new Vector3(-10f, 0, -0.6f));
+            FloorLabel("{grab}\nTO GRAB & DROP", bays, new Vector3(-10f, 0, -0.8f));
             Seed(bays, new Vector3(-10.6f, 0, 1.6f));
             Seed(bays, new Vector3(-9.4f, 0, 1.6f));
             Seed(bays, new Vector3(-10f, 0, 0.5f));
 
             var solo = BuildStation(new Vector3(-4.5f, 0, 1.8f), cam);
-            FloorLabel("HOLD STAMP", bays, new Vector3(-4.5f, 0, 0.3f));
+            FloorLabel("HOLD\n{haunt}\nTO HAUNT", bays, new Vector3(-4.5f, 0, 0f));
             Seed(bays, solo.Slot.position, desk: solo);
 
             var together = BuildStation(new Vector3(1.5f, 0, 1.8f), cam);
-            FloorLabel("STAMP TOGETHER\nfaster + combo", bays, new Vector3(1.5f, 0, 0.2f));
+            FloorLabel("HAUNT TOGETHER\nfaster + combo", bays, new Vector3(1.5f, 0, 0.2f));
             Seed(bays, together.Slot.position, stamps: 0b0001, desk: together);
 
             FloorLabel("LEFT ALONE\nwings, -influence", bays, new Vector3(8f, 0, 0.2f));
             Seed(bays, new Vector3(8f, 0, 1.6f), pinned: false);
 
-            FloorLabel("THROW FROM HERE →\nstamp key while holding", bays, new Vector3(4.5f, 0, -3.6f));
+            FloorLabel("THROW FROM HERE →\n{haunt}\nwhile holding", bays, new Vector3(4.5f, 0, -3.9f));
+            FloorLabel("{dash}\nTO DASH", bays, new Vector3(-1.5f, 0, -4.2f));
             Seed(bays, new Vector3(3.5f, 0, -3f));
             var target = BuildStation(new Vector3(9.5f, 0, -3f), cam);
             FloorLabel("THROW TARGET", bays, new Vector3(9.5f, 0, -4.4f));
             FloorLabel("CATCH: stand in the arc\nwith empty hands", bays, new Vector3(7f, 0, -1.6f));
 
-            FloorLabel("STAMP MIXES", bays, new Vector3(-4f, 0, -5.4f));
+            FloorLabel("HAUNTED BY MANY", bays, new Vector3(-4f, 0, -5.6f));
             for (byte mask = 1; mask < 16; mask++)
                 Seed(bays, new Vector3(-12.4f + mask * 1.05f, 0, -6.6f), stamps: mask);
 
@@ -292,8 +295,10 @@ namespace Demons.Editor
             var t = Point("FloorLabel", parent, new Vector3(pos.x, 0.02f, pos.z));
             t.rotation = Quaternion.Euler(90, 0, 0);
             var tm = TextLabel(t, text);
-            tm.characterSize = 0.08f;
-            tm.color = Gray(0.8f);
+            tm.characterSize = 0.12f;
+            tm.alignment = TextAlignment.Center;
+            tm.color = Gray(0.85f);
+            if (text.Contains("{")) t.gameObject.AddComponent<ControlsLabel>().Template = text;
         }
 
         static void Label(string text, Transform parent, Vector3 pos, Camera cam)
