@@ -15,7 +15,7 @@ namespace Demons
         public override void OnNetworkSpawn()
         {
             if (!IsServer) return;
-            seeds = FindObjectsByType<PebbleSeed>(FindObjectsSortMode.None);
+            seeds = FindObjectsByType<PebbleSeed>();
             live = new Pebble[seeds.Length];
             emptySince = new float[seeds.Length];
         }
@@ -36,7 +36,7 @@ namespace Demons
                 if (Time.time - emptySince[i] < refillDelay) continue;
 
                 p = Instantiate(pebblePrefab, seed.transform.position, Quaternion.identity);
-                p.NetworkObject.Spawn();
+                p.NetworkObject.Spawn(destroyWithScene: true);
                 if (seed.Desk) p.PutOn(seed.Desk);
                 else p.Drop(seed.transform.position);
                 p.Stamps.Value = seed.Stamps;

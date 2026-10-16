@@ -6,6 +6,11 @@ namespace Demons
     [RequireComponent(typeof(NetworkManager))]
     public class NetBootstrap : MonoBehaviour
     {
-        void Start() => GetComponent<NetworkManager>().StartHost();
+        void Start()
+        {
+            var net = GetComponent<NetworkManager>();
+            if (NetworkManager.Singleton != net) Destroy(gameObject);
+            else net.StartHost();
+        }
     }
 }

@@ -33,6 +33,7 @@ namespace Demons
         LocalPlayer input;
         Rigidbody rb;
         float dashUntil, nextDash;
+        bool falling;
 
         public byte SlotBit => (byte)(1 << Slot.Value);
         public Color Tint => SlotColors[Slot.Value];
@@ -48,6 +49,7 @@ namespace Demons
             if (!IsOwner) return;
             input = LocalPlayers.Find(LocalIndex.Value);
             marker.SetParent(null);
+            DontDestroyOnLoad(marker.gameObject);
             marker.GetComponent<Renderer>().material.color = Tint;
         }
 
@@ -77,9 +79,31 @@ namespace Demons
             marker.position = new Vector3(p.x, 0.03f, p.z);
         }
 
+        public void Respawn()
+        {
+            falling = false;
+            rb.isKinematic = false;
+            rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
+            rb.linearVelocity = Vector3.zero;
+            rb.position = transform.position = GameState.SpawnPoint(Slot.Value);
+        }
+
         void FixedUpdate()
         {
-            if (!IsOwner || input == null) return;
+            if (!IsOwner) return;
+            if (falling)
+            {
+                if (transform.position.y < -8) rb.isKinematic = true;
+                return;
+            }
+            var room = GameState.Instance ? GameState.Instance.RoomHalfExtents : Vector2.positiveInfinity;
+            if (Mathf.Abs(transform.position.x) > room.x || Mathf.Abs(transform.position.z) > room.y)
+            {
+                falling = true;
+                rb.constraints = RigidbodyConstraints.FreezeRotation;
+                return;
+            }
+            if (input == null) return;
             var m = input.Move.ReadValue<Vector2>();
             var want = new Vector3(m.x, 0, m.y) * Balance.I.moveSpeed;
             if (want.sqrMagnitude > 0.01f) rb.MoveRotation(Quaternion.LookRotation(want));

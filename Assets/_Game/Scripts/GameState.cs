@@ -9,6 +9,11 @@ namespace Demons
 
         [SerializeField] Demon demonPrefab;
         public Vector2 RoomHalfExtents = new(8.5f, 5.5f);
+        [SerializeField] string startSceneWhenAllFall;
+
+        bool loading;
+
+        public static Vector3 SpawnPoint(int slot) => new(-2.25f + slot * 1.5f, 0, -2.5f);
 
         public NetworkVariable<float> Influence = new();
         public NetworkList<float> Prestige;
@@ -21,7 +26,14 @@ namespace Demons
 
         public override void OnNetworkSpawn()
         {
+            foreach (var d in Demon.All)
+                if (d.IsOwner) d.Respawn();
             if (!IsServer) return;
+            foreach (var d in Demon.All)
+            {
+                d.Carrying.Value = Net.None;
+                d.Using = null;
+            }
             for (int i = 0; i < Scoring.MaxDemons; i++) Prestige.Add(0);
         }
 
@@ -32,7 +44,7 @@ namespace Demons
             while (slot < Scoring.MaxDemons && Demon.All.Exists(d => d.Slot.Value == slot)) slot++;
             if (slot == Scoring.MaxDemons) return;
 
-            var demon = Instantiate(demonPrefab, new Vector3(-2.25f + slot * 1.5f, 0, -2.5f), Quaternion.identity);
+            var demon = Instantiate(demonPrefab, SpawnPoint(slot), Quaternion.identity);
             demon.Slot.Value = slot;
             demon.LocalIndex.Value = localIndex;
             demon.NetworkObject.SpawnWithOwnership(rpc.Receive.SenderClientId);
@@ -45,6 +57,14 @@ namespace Demons
             for (int slot = 0; slot < Scoring.MaxDemons; slot++)
                 if (prestige[slot] != 0) Prestige[slot] += prestige[slot];
             pebble.Consume();
+        }
+
+        void Update()
+        {
+            if (!IsServer || loading || string.IsNullOrEmpty(startSceneWhenAllFall) || Demon.All.Count == 0) return;
+            if (!Demon.All.TrueForAll(d => d.transform.position.y < -3)) return;
+            loading = true;
+            NetworkManager.SceneManager.LoadScene(startSceneWhenAllFall, UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
 
         public void Forgotten() => Influence.Value -= Scoring.ForgottenPenalty;

@@ -26,7 +26,7 @@ namespace Demons
         {
             if (!IsServer || Demon.All.Count == 0 || Time.time < nextSpawn) return;
             nextSpawn = Time.time + Balance.I.spawnInterval;
-            Instantiate(pebblePrefab, start.position, Quaternion.identity).NetworkObject.Spawn();
+            Instantiate(pebblePrefab, start.position, Quaternion.identity).NetworkObject.Spawn(destroyWithScene: true);
         }
     }
 }

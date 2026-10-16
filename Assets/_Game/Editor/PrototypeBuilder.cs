@@ -42,7 +42,7 @@ namespace Demons.Editor
 
             BuildOffice(pebble, demon, prefabs);
             BuildWorkshop(pebble, demon, prefabs);
-            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(OfficePath, true), new EditorBuildSettingsScene(WorkshopPath, true) };
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(WorkshopPath, true), new EditorBuildSettingsScene(OfficePath, true) };
             AssetDatabase.SaveAssets();
         }
 
@@ -93,7 +93,6 @@ namespace Demons.Editor
 
             var nt = root.AddComponent<NetworkTransform>();
             nt.AuthorityMode = NetworkTransform.AuthorityModes.Owner;
-            nt.SyncPositionY = false;
             nt.SyncRotAngleX = false;
             nt.SyncRotAngleZ = false;
             nt.SyncScaleX = nt.SyncScaleY = nt.SyncScaleZ = false;
@@ -126,6 +125,12 @@ namespace Demons.Editor
         static void BuildWorkshop(Pebble pebble, Demon demon, NetworkPrefabsList prefabs)
         {
             var cam = NewRoom(pebble, demon, prefabs, new Vector2(13f, 8.5f), walls: false);
+            var state = Object.FindFirstObjectByType<GameState>();
+            var so = new SerializedObject(state);
+            so.FindProperty("startSceneWhenAllFall").stringValue = "Office";
+            so.ApplyModifiedPropertiesWithoutUndo();
+            Object.DestroyImmediate(GameObject.Find("EdgeFront"));
+            FloorLabel("EVERYONE JUMP OFF\nTHE LEDGE TO START ↓", null, new Vector3(8f, 0, -7.4f));
             var go = new GameObject("Workshop");
             go.AddComponent<NetworkObject>();
             Set(go.AddComponent<Workshop>(), "pebblePrefab", pebble);
@@ -210,15 +215,15 @@ namespace Demons.Editor
             }
             else
             {
-                foreach (var (pos, size) in new[]
+                foreach (var (name, pos, size) in new[]
                 {
-                    (new Vector3(0, 1, wz), new Vector3(half.x * 2 + 1, 2, 0.5f)),
-                    (new Vector3(0, 1, -wz), new Vector3(half.x * 2 + 1, 2, 0.5f)),
-                    (new Vector3(-wx, 1, 0), new Vector3(0.5f, 2, half.y * 2 + 1)),
-                    (new Vector3(wx, 1, 0), new Vector3(0.5f, 2, half.y * 2 + 1)),
+                    ("EdgeBack", new Vector3(0, 1, wz), new Vector3(half.x * 2 + 1, 2, 0.5f)),
+                    ("EdgeFront", new Vector3(0, 1, -wz), new Vector3(half.x * 2 + 1, 2, 0.5f)),
+                    ("EdgeLeft", new Vector3(-wx, 1, 0), new Vector3(0.5f, 2, half.y * 2 + 1)),
+                    ("EdgeRight", new Vector3(wx, 1, 0), new Vector3(0.5f, 2, half.y * 2 + 1)),
                 })
                 {
-                    var edge = new GameObject("Edge").AddComponent<BoxCollider>();
+                    var edge = new GameObject(name).AddComponent<BoxCollider>();
                     edge.transform.position = pos;
                     edge.size = size;
                 }
