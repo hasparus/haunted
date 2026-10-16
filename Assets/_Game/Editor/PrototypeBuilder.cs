@@ -122,7 +122,7 @@ namespace Demons.Editor
             for (int i = 0; i < 5; i++)
             {
                 var line = Prim(PrimitiveType.Cube, $"Line{i}", scribble.transform, new Vector3(0, 0.5f + i * 0.25f, 0), new Vector3(1.15f, 0.05f, 0.05f), Mat("Ink", Gray(0.05f)));
-                line.transform.localRotation = Quaternion.Euler(Random.Range(-25f, 25f), i * 37f, Random.Range(-25f, 25f));
+                line.transform.localRotation = Quaternion.Euler(i % 2 == 0 ? 18f : -22f, i * 37f, i % 3 == 0 ? -15f : 20f);
             }
             scribble.SetActive(false);
 
