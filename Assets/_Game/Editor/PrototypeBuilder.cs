@@ -291,7 +291,7 @@ namespace Demons.Editor
             var t = Point("FloorLabel", parent, new Vector3(pos.x, 0.02f, pos.z));
             t.rotation = Quaternion.Euler(90, 0, 0);
             var tm = TextLabel(t, text);
-            tm.characterSize = 0.11f;
+            tm.characterSize = 0.08f;
             tm.color = Gray(0.8f);
         }
 
