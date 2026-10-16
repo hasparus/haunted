@@ -12,6 +12,7 @@ namespace Demons
         [SerializeField] string startSceneWhenAllFall;
 
         bool loading;
+        float firstFallX = float.NaN;
 
         public static Vector3 SpawnPoint(int slot) => new(-2.25f + slot * 1.5f, 0, -2.5f);
 
@@ -36,6 +37,8 @@ namespace Demons
             foreach (var d in Demon.All)
             {
                 d.Carrying.Value = Net.None;
+                d.Lit.Value = false;
+                d.Scribble.Value = 0;
                 d.Using = null;
             }
             for (int i = 0; i < Scoring.MaxDemons; i++) Prestige.Add(0);
@@ -49,15 +52,15 @@ namespace Demons
             if (slot == Scoring.MaxDemons) return;
 
             var demon = Instantiate(demonPrefab, SpawnPoint(slot), Quaternion.identity);
-            demon.Slot.Value = slot;
-            demon.LocalIndex.Value = localIndex;
+            demon.SpawnSlot = slot;
+            demon.SpawnLocalIndex = localIndex;
             demon.NetworkObject.SpawnWithOwnership(rpc.Receive.SenderClientId);
         }
 
         public void Deliver(Pebble pebble)
         {
             var prestige = new float[Scoring.MaxDemons];
-            Influence.Value += Scoring.Deliver(pebble.Stamps.Value, pebble.LastHolder.Value, prestige);
+            Influence.Value += Scoring.Deliver(pebble.Stamps.Value, pebble.LastHolder.Value, prestige, pebble.Weight);
             for (int slot = 0; slot < Scoring.MaxDemons; slot++)
                 if (prestige[slot] != 0) Prestige[slot] += prestige[slot];
             pebble.Consume();
@@ -66,8 +69,11 @@ namespace Demons
         void Update()
         {
             if (!IsServer || loading || string.IsNullOrEmpty(startSceneWhenAllFall) || Demon.All.Count == 0) return;
+            foreach (var d in Demon.All)
+                if (float.IsNaN(firstFallX) && d.transform.position.y < -0.5f) firstFallX = d.transform.position.x;
             if (!Demon.All.TrueForAll(d => d.transform.position.y < -3)) return;
             loading = true;
+            Progression.NextMode = firstFallX < 0 ? GameMode.Week : GameMode.Survival;
             NetworkManager.SceneManager.LoadScene(startSceneWhenAllFall, UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
 
@@ -79,8 +85,13 @@ namespace Demons
         {
             if (!IsSpawned) return;
             var style = new GUIStyle(GUI.skin.label) { fontSize = FontSize(0.045f), fontStyle = FontStyle.Bold };
-            GUILayout.BeginArea(new Rect(12, 8, Screen.width * 0.6f, style.fontSize * 2));
+            GUILayout.BeginArea(new Rect(12, 8, Screen.width * 0.7f, style.fontSize * 2));
             GUILayout.BeginHorizontal();
+            var progress = Progression.Instance;
+            if (progress)
+                GUILayout.Label(progress.Mode.Value == GameMode.Week
+                    ? $"{progress.DayName}  ·  goal {progress.Goal:0}  ·  "
+                    : $"SURVIVAL  ·  best {progress.Best.Value:0}  ·  ", style);
             GUILayout.Label($"Influence {Influence.Value:0.0}", style);
             foreach (var d in Demon.All)
             {

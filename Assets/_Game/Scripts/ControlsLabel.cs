@@ -16,7 +16,8 @@ namespace Demons
             var s = Template
                 .Replace("{grab}", LocalPlayers.Keys(p => p.Grab))
                 .Replace("{haunt}", LocalPlayers.Keys(p => p.Use))
-                .Replace("{dash}", LocalPlayers.Keys(p => p.Dash));
+                .Replace("{dash}", LocalPlayers.Keys(p => p.Dash))
+                .Replace("{best}", PlayerPrefs.GetFloat(Progression.BestKey, 0).ToString("0"));
             if (text.text != s) text.text = s;
         }
     }

@@ -27,17 +27,16 @@ namespace Demons
         public static string Keys(Func<LocalPlayer, InputAction> action)
         {
             preview ??= new[] { Create("Arrows", null), Create("WASD", null), Create("Gamepad", null) };
-            var names = new List<string>();
+            var lines = new List<string>();
             foreach (var p in All.Count > 0 ? All.ToArray() : preview)
             {
                 var a = action(p);
-                for (int i = 0; i < a.bindings.Count; i++)
-                {
-                    var name = KeyName(p, a, i);
-                    if (!names.Contains(name)) names.Add(name);
-                }
+                var names = new List<string>();
+                for (int i = 0; i < a.bindings.Count; i++) names.Add(KeyName(p, a, i));
+                var line = string.Join(" / ", names);
+                if (!lines.Contains(line)) lines.Add(line);
             }
-            return string.Join(" / ", names);
+            return string.Join("\n", lines);
         }
 
         static string KeyName(LocalPlayer p, InputAction a, int i) => a.bindings[i].effectivePath switch

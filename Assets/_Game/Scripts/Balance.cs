@@ -28,6 +28,27 @@ namespace Demons
 
         [Header("Stations")]
         public float stampTime = 1f;
+        public float bigWeight = 3f;
+        public float potTime = 4f;
+        public float hammerTime = 1.2f;
+        public float answerTime = 1.5f;
+
+        [Header("Week events")]
+        public float pillTime = 10f;
+        public float spotRadius = 1.6f;
+        public float spotSpeed = 0.55f;
+        public float spotHunt = 10f;
+        public float spotRest = 6f;
+        public float penSpeed = 0.6f;
+        public float penRest = 6f;
+        public int scribbleTaps = 6;
+        public float scribbledSpeed = 0.4f;
+        public float clawInterval = 22f;
+        public float clawWarning = 2.5f;
+
+        [Header("Survival")]
+        public float survivalFloor = -5f;
+        public float survivalRampSeconds = 120f;
 
         static Balance instance;
 

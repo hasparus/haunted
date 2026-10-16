@@ -19,6 +19,14 @@ namespace Demons
 
         public Demon Demon => Demon.All.Find(d => d.IsOwner && LocalPlayers.Find(d.LocalIndex.Value)?.Device == Pad);
 
+        public Bot Clear()
+        {
+            steps.Clear();
+            held.Clear();
+            Stick = Vector2.zero;
+            return this;
+        }
+
         public Bot Then(Func<bool> step)
         {
             steps.Enqueue(step);

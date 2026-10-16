@@ -6,6 +6,8 @@ namespace Demons
 {
     public enum PebbleState : byte { OnBelt, Held, OnStation, Floor, Flying, Thrown }
 
+    public enum PebbleKind : byte { Normal, Big, Pill }
+
     public class Pebble : NetworkBehaviour
     {
         public static readonly List<Pebble> All = new();
@@ -23,11 +25,16 @@ namespace Demons
         public NetworkVariable<int> LastHolder = new(-1);
         public NetworkVariable<Vector3> ThrowFrom = new();
         public NetworkVariable<double> ThrowSince = new();
+        public NetworkVariable<PebbleKind> Kind = new();
+        public NetworkVariable<bool> Shelled = new();
+
+        [System.NonSerialized] public PebbleKind SpawnKind;
+        [System.NonSerialized] public bool SpawnShelled;
 
         [SerializeField] Transform body;
         [SerializeField] Renderer stone;
         [SerializeField] Renderer[] stampDots;
-        [SerializeField] GameObject wings;
+        [SerializeField] GameObject wings, shell, pill;
 
         double flyStart;
 
@@ -37,12 +44,20 @@ namespace Demons
         double ForgetIn => LastTouched.Value + Balance.I.forgetTime - Now;
         float ThrowT => (float)((Now - ThrowSince.Value) / Balance.I.throwTime);
         public bool IsGrabbable => State.Value is PebbleState.OnBelt or PebbleState.Floor or PebbleState.OnStation;
+        public float Weight => Kind.Value == PebbleKind.Big ? Balance.I.bigWeight : 1;
 
         public override void OnNetworkSpawn()
         {
             All.Add(this);
-            if (IsServer) BeltSince.Value = Now;
+            if (IsServer)
+            {
+                BeltSince.Value = Now;
+                Kind.Value = SpawnKind;
+                Shelled.Value = SpawnShelled;
+            }
             Stamps.OnValueChanged += (_, _) => Paint();
+            Kind.OnValueChanged += (_, _) => Paint();
+            Shelled.OnValueChanged += (_, _) => Paint();
             Paint();
         }
 
@@ -64,7 +79,7 @@ namespace Demons
                 return;
             }
             if (State.Value == PebbleState.Thrown) TickThrow();
-            else if (State.Value == PebbleState.OnBelt && BeltDistance >= Belt.Instance.Length) GameState.Instance.Deliver(this);
+            else if (State.Value == PebbleState.OnBelt && BeltDistance >= Belt.Instance.Length) ReachHost();
             else if (Idle && ForgetIn <= 0) FlyAway();
         }
 
@@ -77,6 +92,9 @@ namespace Demons
                     break;
                 case PebbleState.Held when Net.Find<Demon>(Anchor.Value) is { } demon:
                     transform.position = demon.Hand.position;
+                    break;
+                case PebbleState.Held when Net.Find<Claw>(Anchor.Value) is { } claw:
+                    transform.position = claw.Hand.position;
                     break;
                 case PebbleState.OnStation when Net.Find<Station>(Anchor.Value) is { } station:
                     transform.position = station.Slot.position;
@@ -101,7 +119,7 @@ namespace Demons
             if (flying) wings.transform.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(Time.time * 30) * 35);
 
             var color = Mix(Stamps.Value);
-            if (State.Value == PebbleState.OnStation && Net.Find<Station>(Anchor.Value) is { } station && station.Workers.Value != 0)
+            if (State.Value == PebbleState.OnStation && Net.Find<Station>(Anchor.Value) is { } station && station.Workers.Value != 0 && station.Kind != StationKind.Hammer)
                 color = Color.Lerp(color, Mix((byte)(Stamps.Value | station.Workers.Value)), station.Progress.Value);
             stone.material.color = color;
 
@@ -121,6 +139,10 @@ namespace Demons
 
         void Paint()
         {
+            body.localScale = Vector3.one * (Kind.Value == PebbleKind.Big ? 1.6f : 1);
+            shell.SetActive(Shelled.Value);
+            pill.SetActive(Kind.Value == PebbleKind.Pill);
+            stone.enabled = Kind.Value != PebbleKind.Pill;
             for (int slot = 0; slot < stampDots.Length; slot++)
             {
                 bool on = (Stamps.Value & (1 << slot)) != 0;
@@ -182,6 +204,19 @@ namespace Demons
 
         static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
 
+        public void Grip(Claw claw)
+        {
+            Release();
+            State.Value = PebbleState.Held;
+            Anchor.Value = claw.NetworkObjectId;
+        }
+
+        public void LetGo(float beltDistance)
+        {
+            Stamps.Value = 0;
+            PutOnBelt(beltDistance);
+        }
+
         public void PutOnBelt(float distance)
         {
             Release();
@@ -209,6 +244,16 @@ namespace Demons
 
         public void Touch() => LastTouched.Value = Now;
 
+        void ReachHost()
+        {
+            if (Kind.Value != PebbleKind.Pill) GameState.Instance.Deliver(this);
+            else
+            {
+                if (Progression.Instance) Progression.Instance.PillTaken();
+                Consume();
+            }
+        }
+
         public void Consume()
         {
             Release();
@@ -220,7 +265,7 @@ namespace Demons
             Release();
             State.Value = PebbleState.Flying;
             flyStart = Time.timeAsDouble;
-            GameState.Instance.Forgotten();
+            if (Kind.Value != PebbleKind.Pill) GameState.Instance.Forgotten();
         }
 
         void Release()

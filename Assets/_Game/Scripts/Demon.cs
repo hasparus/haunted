@@ -23,10 +23,15 @@ namespace Demons
         public NetworkVariable<int> Slot = new(-1);
         public NetworkVariable<int> LocalIndex = new(-1);
         public NetworkVariable<ulong> Carrying = new(Net.None);
+        public NetworkVariable<bool> Lit = new();
+        public NetworkVariable<int> Scribble = new();
+
+        [NonSerialized] public int SpawnSlot, SpawnLocalIndex;
 
         public Transform Hand;
         [SerializeField] Renderer body, head;
         [SerializeField] Transform marker;
+        [SerializeField] GameObject scribble;
 
         [NonSerialized] public Station Using;
 
@@ -36,21 +41,36 @@ namespace Demons
         bool falling;
 
         public byte SlotBit => (byte)(1 << Slot.Value);
+        public bool Busy => Lit.Value || Scribble.Value > 0;
         public Color Tint => SlotColors[Slot.Value];
 
         void Awake() => rb = GetComponent<Rigidbody>();
 
         public override void OnNetworkSpawn()
         {
+            if (IsServer)
+            {
+                Slot.Value = SpawnSlot;
+                LocalIndex.Value = SpawnLocalIndex;
+            }
             All.Add(this);
-            body.material.color = Tint;
-            head.material.color = Color.Lerp(Tint, Color.white, 0.35f);
+            Paint();
+            Lit.OnValueChanged += (_, _) => Paint();
+            Scribble.OnValueChanged += (_, _) => Paint();
             rb.isKinematic = !IsOwner;
             if (!IsOwner) return;
             input = LocalPlayers.Find(LocalIndex.Value);
             marker.SetParent(null);
             DontDestroyOnLoad(marker.gameObject);
             marker.GetComponent<Renderer>().material.color = Tint;
+        }
+
+        void Paint()
+        {
+            var tint = Lit.Value ? Color.Lerp(Tint, Color.white, 0.6f) : Tint;
+            body.material.color = tint;
+            head.material.color = Color.Lerp(tint, Color.white, 0.35f);
+            scribble.SetActive(Scribble.Value > 0);
         }
 
         public override void OnNetworkDespawn()
@@ -61,6 +81,7 @@ namespace Demons
 
         void Update()
         {
+            if (Scribble.Value > 0) scribble.transform.Rotate(0, 400 * Time.deltaTime, 0);
             if (!IsOwner || input == null) return;
             if (input.Grab.WasPressedThisFrame()) GrabRpc();
             if (input.Use.WasPressedThisFrame()) UseRpc(true);
@@ -105,7 +126,8 @@ namespace Demons
             }
             if (input == null) return;
             var m = input.Move.ReadValue<Vector2>();
-            var want = new Vector3(m.x, 0, m.y) * Balance.I.moveSpeed;
+            if (Progression.Instance && Progression.Instance.Inverted) m = -m;
+            var want = new Vector3(m.x, 0, m.y) * Balance.I.moveSpeed * (Scribble.Value > 0 ? Balance.I.scribbledSpeed : 1);
             if (want.sqrMagnitude > 0.01f) rb.MoveRotation(Quaternion.LookRotation(want));
             if (Time.time < dashUntil)
             {
@@ -152,6 +174,7 @@ namespace Demons
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
         void GrabRpc()
         {
+            if (Busy) return;
             var held = Net.Find<Pebble>(Carrying.Value);
             var target = GrabTarget();
             if (held)
@@ -166,6 +189,12 @@ namespace Demons
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
         void UseRpc(bool down)
         {
+            if (down && Scribble.Value > 0)
+            {
+                Scribble.Value--;
+                return;
+            }
+            if (down && Lit.Value) return;
             if (down && Net.Find<Pebble>(Carrying.Value) is { } held) held.Throw(this);
             else Using = down ? UseTarget() : null;
         }

@@ -13,15 +13,15 @@ namespace Demons
             return n;
         }
 
-        public static float Power(byte stamps)
+        public static float Power(byte stamps, float weight = 1)
         {
             int n = StampCount(stamps);
-            return n == 0 ? 0 : 1 + 0.5f * (n - 1);
+            return n == 0 ? 0 : (1 + 0.5f * (n - 1)) * weight;
         }
 
-        public static float Deliver(byte stamps, int deliverer, float[] prestige)
+        public static float Deliver(byte stamps, int deliverer, float[] prestige, float weight = 1)
         {
-            float power = Power(stamps);
+            float power = Power(stamps, weight);
             if (power == 0) return 0;
             float pot = power * PrestigePerPower;
             prestige[deliverer] += pot / 2;

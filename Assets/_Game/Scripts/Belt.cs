@@ -25,8 +25,17 @@ namespace Demons
         void Update()
         {
             if (!IsServer || Demon.All.Count == 0 || Time.time < nextSpawn) return;
-            nextSpawn = Time.time + Balance.I.spawnInterval;
-            Instantiate(pebblePrefab, start.position, Quaternion.identity).NetworkObject.Spawn(destroyWithScene: true);
+            var progress = Progression.Instance;
+            nextSpawn = Time.time + Balance.I.spawnInterval / (progress ? progress.SpawnRateScale : 1);
+            var pebble = Instantiate(pebblePrefab, start.position, Quaternion.identity);
+            if (progress)
+            {
+                float roll = Random.value;
+                if (Progression.Has(Feature.Pill) && roll < 0.08f) pebble.SpawnKind = PebbleKind.Pill;
+                else if (Progression.Has(Feature.Big) && roll < 0.28f) pebble.SpawnKind = PebbleKind.Big;
+                pebble.SpawnShelled = pebble.SpawnKind != PebbleKind.Pill && Progression.Has(Feature.Shell) && Random.value < 0.3f;
+            }
+            pebble.NetworkObject.Spawn(destroyWithScene: true);
         }
     }
 }

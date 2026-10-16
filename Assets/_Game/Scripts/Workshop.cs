@@ -7,6 +7,8 @@ namespace Demons
     {
         [SerializeField] Pebble pebblePrefab;
         [SerializeField] float refillDelay = 2f;
+        [SerializeField] Station phoneDesk;
+        float nextRing = 8;
 
         PebbleSeed[] seeds;
         Pebble[] live;
@@ -23,6 +25,8 @@ namespace Demons
         void Update()
         {
             if (!IsSpawned || !IsServer) return;
+            if (phoneDesk && phoneDesk.Ringing.Value) nextRing = Time.time + 12;
+            else if (phoneDesk && Time.time >= nextRing) phoneDesk.Ring();
             for (int i = 0; i < seeds.Length; i++)
             {
                 var seed = seeds[i];
@@ -36,6 +40,8 @@ namespace Demons
                 if (Time.time - emptySince[i] < refillDelay) continue;
 
                 p = Instantiate(pebblePrefab, seed.transform.position, Quaternion.identity);
+                p.SpawnKind = seed.Kind;
+                p.SpawnShelled = seed.Shelled;
                 p.NetworkObject.Spawn(destroyWithScene: true);
                 if (seed.Desk) p.PutOn(seed.Desk);
                 else p.Drop(seed.transform.position);

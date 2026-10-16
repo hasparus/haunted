@@ -74,9 +74,17 @@ namespace Demons.Editor
             Prim(PrimitiveType.Cube, "WingR", wings.transform, new Vector3(0.35f, 0.1f, 0), new Vector3(0.45f, 0.03f, 0.25f), Mat("Wing", Color.white));
             wings.SetActive(false);
 
+            var shell = Prim(PrimitiveType.Sphere, "Shell", body, Vector3.zero, Vector3.one * 0.62f, Mat("Shell", Gray(0.28f)));
+            shell.SetActive(false);
+            var pill = Prim(PrimitiveType.Capsule, "Pill", body, Vector3.zero, new Vector3(0.28f, 0.22f, 0.28f), Mat("Pill", new Color(0.55f, 0.75f, 1f)));
+            pill.transform.localRotation = Quaternion.Euler(0, 0, 90);
+            pill.SetActive(false);
+
             Set(p, "body", body);
             Set(p, "stone", stone.GetComponent<Renderer>());
             Set(p, "wings", wings);
+            Set(p, "shell", shell);
+            Set(p, "pill", pill);
             SetArray(p, "stampDots", dots);
             return SavePrefab(root).GetComponent<Pebble>();
         }
@@ -109,7 +117,17 @@ namespace Demons.Editor
             var marker = Prim(PrimitiveType.Cylinder, "Marker", root.transform, Vector3.zero, new Vector3(0.9f, 0.01f, 0.9f), Mat("Marker", Color.white));
             marker.SetActive(false);
 
+            var scribble = new GameObject("Scribble");
+            scribble.transform.SetParent(root.transform, false);
+            for (int i = 0; i < 5; i++)
+            {
+                var line = Prim(PrimitiveType.Cube, $"Line{i}", scribble.transform, new Vector3(0, 0.5f + i * 0.25f, 0), new Vector3(1.15f, 0.05f, 0.05f), Mat("Ink", Gray(0.05f)));
+                line.transform.localRotation = Quaternion.Euler(Random.Range(-25f, 25f), i * 37f, Random.Range(-25f, 25f));
+            }
+            scribble.SetActive(false);
+
             d.Hand = hand;
+            Set(d, "scribble", scribble);
             Set(d, "body", body.GetComponent<Renderer>());
             Set(d, "head", head.GetComponent<Renderer>());
             Set(d, "marker", marker.transform);
@@ -121,59 +139,180 @@ namespace Demons.Editor
             var cam = NewRoom(pebble, demon, prefabs, new Vector2(8.5f, 5.5f), walls: true);
             foreach (var pos in new[] { new Vector3(-6.5f, 0, -1.5f), new Vector3(-2.2f, 0, 0.6f), new Vector3(2.2f, 0, 0.6f), new Vector3(6.5f, 0, -1.5f) })
                 BuildStation(pos, cam);
+            BuildStation(new Vector3(-4.5f, 0, -4f), cam, StationKind.Hammer, Feature.Shell);
+            BuildStation(new Vector3(4.5f, 0, -4f), cam, StationKind.Pot, Feature.Pot);
+            BuildSpotlight(new Vector3(0, 0.02f, 0), demo: false);
+            BuildClaw(new Vector3(0, 7f, 0), demo: false);
+            BuildPen(new Vector3(0, 2.2f, -4.5f), demo: false);
+            new GameObject("Progression").AddComponent<NetworkObject>().gameObject.AddComponent<Progression>();
             SaveScene(OfficePath);
         }
 
         static void BuildWorkshop(Pebble pebble, Demon demon, NetworkPrefabsList prefabs)
         {
-            var cam = NewRoom(pebble, demon, prefabs, new Vector2(13f, 8.5f), walls: false);
+            var cam = NewRoom(pebble, demon, prefabs, new Vector2(16f, 10.5f), walls: false);
             var state = Object.FindFirstObjectByType<GameState>();
             var so = new SerializedObject(state);
             so.FindProperty("startSceneWhenAllFall").stringValue = "Office";
             so.ApplyModifiedPropertiesWithoutUndo();
             Object.DestroyImmediate(GameObject.Find("EdgeFront"));
-            FloorLabel("EVERYONE JUMP OFF\nTHE LEDGE TO START ↓", null, new Vector3(8.5f, 0, -7.6f));
+            FloorLabel("↓ FIRST WEEK AT WORK ↓", null, new Vector3(-8f, 0, -10.1f));
+            FloorLabel("↓ INFINITE SURVIVAL  ·  best {best} ↓", null, new Vector3(8f, 0, -10.1f));
+            Prim(PrimitiveType.Cube, "ModeDivider", null, new Vector3(0, 0.01f, -9.9f), new Vector3(0.12f, 0.02f, 1.2f), Mat("Divider", Gray(0.75f)));
+
             var go = new GameObject("Workshop");
             go.AddComponent<NetworkObject>();
-            Set(go.AddComponent<Workshop>(), "pebblePrefab", pebble);
+            var workshop = go.AddComponent<Workshop>();
+            Set(workshop, "pebblePrefab", pebble);
             var bays = go.transform;
 
-            FloorLabel("{grab}\nTO GRAB & DROP", bays, new Vector3(-10f, 0, -0.8f));
-            Seed(bays, new Vector3(-10.6f, 0, 1.6f));
-            Seed(bays, new Vector3(-9.4f, 0, 1.6f));
-            Seed(bays, new Vector3(-10f, 0, 0.5f));
+            FloorLabel("{grab}\nTO GRAB & DROP", bays, new Vector3(-13f, 0, 2.5f));
+            Seed(bays, new Vector3(-13.6f, 0, 4.4f));
+            Seed(bays, new Vector3(-12.4f, 0, 4.4f));
+            Seed(bays, new Vector3(-13f, 0, 3.4f));
 
-            var solo = BuildStation(new Vector3(-4.5f, 0, 1.8f), cam);
-            FloorLabel("HOLD\n{haunt}\nTO HAUNT", bays, new Vector3(-4.5f, 0, 0f));
+            var solo = BuildStation(new Vector3(-8f, 0, 4.4f), cam);
+            FloorLabel("HOLD\n{haunt}\nTO HAUNT", bays, new Vector3(-8f, 0, 2.4f));
             Seed(bays, solo.Slot.position, desk: solo);
 
-            var together = BuildStation(new Vector3(1.5f, 0, 1.8f), cam);
-            FloorLabel("HAUNT TOGETHER\nfaster + combo", bays, new Vector3(1.5f, 0, 0.2f));
+            var together = BuildStation(new Vector3(-3f, 0, 4.4f), cam);
+            FloorLabel("HAUNT TOGETHER\nfaster + combo", bays, new Vector3(-3f, 0, 2.8f));
             Seed(bays, together.Slot.position, stamps: 0b0001, desk: together);
 
-            FloorLabel("LEFT ALONE\nwings, -influence", bays, new Vector3(8f, 0, 0.2f));
-            Seed(bays, new Vector3(8f, 0, 1.6f), pinned: false);
+            var big = BuildStation(new Vector3(2f, 0, 4.4f), cam);
+            FloorLabel("BIG THOUGHT\nhaunt it together\n3x points", bays, new Vector3(2f, 0, 2.6f));
+            Seed(bays, big.Slot.position, desk: big, kind: PebbleKind.Big);
 
-            FloorLabel("THROW FROM HERE →\n{haunt}\nwhile holding", bays, new Vector3(4.5f, 0, -3.9f));
-            FloorLabel("{dash}\nTO DASH", bays, new Vector3(-1.5f, 0, -4.2f));
-            Seed(bays, new Vector3(3.5f, 0, -3f));
-            var target = BuildStation(new Vector3(9.5f, 0, -3f), cam);
-            FloorLabel("THROW TARGET", bays, new Vector3(9.5f, 0, -4.4f));
-            FloorLabel("CATCH: stand in the arc\nwith empty hands", bays, new Vector3(7f, 0, -1.6f));
+            FloorLabel("LEFT ALONE\nwings, -influence", bays, new Vector3(7f, 0, 2.8f));
+            Seed(bays, new Vector3(7f, 0, 4.2f), pinned: false);
 
-            FloorLabel("HAUNTED BY MANY", bays, new Vector3(-4f, 0, -5.6f));
-            for (byte mask = 1; mask < 16; mask++)
-                Seed(bays, new Vector3(-12.4f + mask * 1.05f, 0, -6.6f), stamps: mask);
+            FloorLabel("PILL\nif it reaches him,\ncontrols flip", bays, new Vector3(12f, 0, 2.6f));
+            Seed(bays, new Vector3(12f, 0, 4.2f), kind: PebbleKind.Pill);
+
+            BuildStation(new Vector3(-12f, 0, -0.8f), cam, StationKind.Pot, Feature.Pot);
+            FloorLabel("POT\nhaunts by itself", bays, new Vector3(-12f, 0, -2.6f));
+
+            BuildStation(new Vector3(-7f, 0, -0.8f), cam, StationKind.Hammer, Feature.Shell);
+            FloorLabel("HAMMER: HOLD\n{haunt}\nTO CRACK SHELLS", bays, new Vector3(-7f, 0, -2.8f));
+            Seed(bays, new Vector3(-5.4f, 0, -0.6f), shelled: true);
+
+            FloorLabel("THROW →\n{haunt}\nWHILE HOLDING", bays, new Vector3(1.6f, 0, -3.6f));
+            Seed(bays, new Vector3(1.2f, 0, -1.6f));
+            BuildStation(new Vector3(7.5f, 0, -1.6f), cam);
+            FloorLabel("THROW TARGET", bays, new Vector3(7.5f, 0, -3.1f));
+            FloorLabel("CATCH\nempty hands, in the arc", bays, new Vector3(4.4f, 0, 0.4f));
+
+            var phone = BuildStation(new Vector3(13f, 0, -1.2f), cam);
+            FloorLabel("PHONE: HOLD\n{haunt}\nTO ANSWER", bays, new Vector3(13f, 0, -3.2f));
+            Set(workshop, "phoneDesk", phone);
+
+            FloorLabel("HAUNTED BY MANY", bays, new Vector3(-12f, 0, -5.5f));
+            byte[] mixes = { 1, 2, 4, 8, 3, 12, 15 };
+            for (int i = 0; i < mixes.Length; i++)
+                Seed(bays, new Vector3(-15f + i * 1.0f, 0, -6.7f), stamps: mixes[i]);
+
+            var clawDesk = BuildStation(new Vector3(-5.5f, 0, -6.2f), cam);
+            Seed(bays, clawDesk.Slot.position, desk: clawDesk, stamps: 0b0010);
+            BuildClaw(new Vector3(-5.5f, 7f, -6.2f), demo: true);
+            FloorLabel("THE HAND\nsave thoughts before it lands", bays, new Vector3(-5.5f, 0, -8.1f));
+
+            BuildPen(new Vector3(2f, 2.2f, -6.8f), demo: true);
+            FloorLabel("THE PEN: MASH\n{haunt}\nTO SHAKE IT OFF", bays, new Vector3(2f, 0, -8.3f));
+            FloorLabel("{dash}\nTO DASH", bays, new Vector3(6.5f, 0, -6.4f));
+
+            BuildSpotlight(new Vector3(12.5f, 0.02f, -6.4f), demo: true);
+            FloorLabel("THERAPIST'S LIGHT\nlit demons drop things", bays, new Vector3(12.5f, 0, -8.6f));
 
             SaveScene(WorkshopPath);
         }
 
-        static void Seed(Transform parent, Vector3 pos, byte stamps = 0, Station desk = null, bool pinned = true)
+        static void BuildClaw(Vector3 pos, bool demo)
+        {
+            var go = new GameObject(demo ? "HandDemo" : "Hand");
+            go.transform.position = pos;
+            go.AddComponent<NetworkObject>();
+            var nt = go.AddComponent<NetworkTransform>();
+            nt.SyncRotAngleX = nt.SyncRotAngleY = nt.SyncRotAngleZ = false;
+            nt.SyncScaleX = nt.SyncScaleY = nt.SyncScaleZ = false;
+            var claw = go.AddComponent<Claw>();
+            claw.Demo = demo;
+
+            var look = new GameObject("Look");
+            look.transform.SetParent(go.transform, false);
+            var skin = Mat("Skin", Gray(0.82f));
+            Prim(PrimitiveType.Cube, "Palm", look.transform, new Vector3(0, 0.35f, 0), new Vector3(0.9f, 0.25f, 0.8f), skin);
+            Prim(PrimitiveType.Cube, "Arm", look.transform, new Vector3(0, 4f, 0), new Vector3(0.5f, 7f, 0.5f), skin);
+            for (int i = 0; i < 4; i++)
+                Prim(PrimitiveType.Cube, $"Finger{i}", look.transform, new Vector3(-0.32f + i * 0.21f, 0f, 0.3f), new Vector3(0.14f, 0.55f, 0.14f), skin);
+            Prim(PrimitiveType.Cube, "Thumb", look.transform, new Vector3(0.45f, 0.05f, -0.15f), new Vector3(0.14f, 0.45f, 0.14f), skin);
+            claw.Hand = Point("Grip", go.transform, new Vector3(0, -0.15f, 0));
+            look.SetActive(false);
+
+            var shadow = Prim(PrimitiveType.Cylinder, "Shadow", go.transform, Vector3.zero, new Vector3(1.6f, 0.005f, 1.6f), Unlit("HandShadow", Gray(0.12f)));
+            shadow.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            shadow.SetActive(false);
+            Set(claw, "look", look);
+            Set(claw, "shadow", shadow.transform);
+        }
+
+        static void BuildPen(Vector3 pos, bool demo)
+        {
+            var go = new GameObject(demo ? "PenDemo" : "Pen");
+            go.transform.position = pos;
+            go.AddComponent<NetworkObject>();
+            var nt = go.AddComponent<NetworkTransform>();
+            nt.SyncRotAngleX = nt.SyncRotAngleY = nt.SyncRotAngleZ = false;
+            nt.SyncScaleX = nt.SyncScaleY = nt.SyncScaleZ = false;
+            var pen = go.AddComponent<Pen>();
+            pen.Demo = demo;
+
+            var look = new GameObject("Look");
+            look.transform.SetParent(go.transform, false);
+            look.transform.localRotation = Quaternion.Euler(0, 0, 30);
+            Prim(PrimitiveType.Cylinder, "Body", look.transform, new Vector3(0, 0.3f, 0), new Vector3(0.12f, 0.45f, 0.12f), Mat("Ink", Gray(0.05f)));
+            Prim(PrimitiveType.Cylinder, "Cap", look.transform, new Vector3(0, 0.8f, 0), new Vector3(0.13f, 0.08f, 0.13f), Mat("Phone", new Color(0.98f, 0.8f, 0.08f)));
+            look.SetActive(false);
+            Set(pen, "look", look);
+        }
+
+        static void BuildSpotlight(Vector3 pos, bool demo)
+        {
+            var go = new GameObject(demo ? "TherapistDemo" : "Therapist");
+            go.transform.position = pos;
+            go.AddComponent<NetworkObject>();
+            var nt = go.AddComponent<NetworkTransform>();
+            nt.SyncPositionY = false;
+            nt.SyncRotAngleX = nt.SyncRotAngleY = nt.SyncRotAngleZ = false;
+            nt.SyncScaleX = nt.SyncScaleY = nt.SyncScaleZ = false;
+            var spot = go.AddComponent<Spotlight>();
+            spot.Demo = demo;
+
+            var look = new GameObject("Look");
+            look.transform.SetParent(go.transform, false);
+            float d = ScriptableObject.CreateInstance<Balance>().spotRadius * 2;
+            var disc = Prim(PrimitiveType.Cylinder, "Disc", look.transform, Vector3.zero, new Vector3(d, 0.005f, d), Unlit("Spot", new Color(1f, 0.9f, 0.6f)));
+            disc.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var light = new GameObject("Light").AddComponent<Light>();
+            light.transform.SetParent(look.transform, false);
+            light.transform.localPosition = new Vector3(0, 6, 0);
+            light.transform.localRotation = Quaternion.Euler(90, 0, 0);
+            light.type = LightType.Spot;
+            light.spotAngle = 32;
+            light.range = 10;
+            light.intensity = 30;
+            light.color = new Color(1f, 0.88f, 0.6f);
+            Set(spot, "look", look);
+        }
+
+        static void Seed(Transform parent, Vector3 pos, byte stamps = 0, Station desk = null, bool pinned = true,
+            PebbleKind kind = PebbleKind.Normal, bool shelled = false)
         {
             var seed = Point("Seed", parent, pos).gameObject.AddComponent<PebbleSeed>();
             seed.Stamps = stamps;
             seed.Desk = desk;
             seed.Pinned = pinned;
+            seed.Kind = kind;
+            seed.Shelled = shelled;
         }
 
         static void SaveScene(string path)
@@ -189,6 +328,7 @@ namespace Demons.Editor
         {
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             float zoom = half.x / 8.5f;
+
 
             var cam = new GameObject("Main Camera") { tag = "MainCamera" }.AddComponent<Camera>();
             cam.transform.position = new Vector3(0, 15, -12.5f) * zoom;
@@ -258,15 +398,37 @@ namespace Demons.Editor
             return cam;
         }
 
-        static Station BuildStation(Vector3 pos, Camera cam)
+        static Station BuildStation(Vector3 pos, Camera cam, StationKind kind = StationKind.Desk, Feature requires = Feature.None)
         {
-            var go = new GameObject("Desk");
+            var go = new GameObject(kind.ToString());
             go.transform.position = pos;
             go.AddComponent<NetworkObject>();
             var st = go.AddComponent<Station>();
-            Prim(PrimitiveType.Cube, "Top", go.transform, new Vector3(0, 0.5f, 0), new Vector3(1.3f, 1f, 1.3f), Mat("Desk", Gray(0.72f)), collider: true);
-            st.Slot = Point("Slot", go.transform, new Vector3(0, 1.25f, 0));
-            Label("DESK", go.transform, new Vector3(0, 0.5f, -0.7f), cam);
+            st.Kind = kind;
+            st.Requires = requires;
+            var visual = Point("Visual", go.transform, Vector3.zero);
+            switch (kind)
+            {
+                case StationKind.Pot:
+                    Prim(PrimitiveType.Cylinder, "Pot", visual, new Vector3(0, 0.45f, 0), new Vector3(1.1f, 0.45f, 1.1f), Mat("Pot", Gray(0.22f)), collider: true);
+                    st.Slot = Point("Slot", go.transform, new Vector3(0, 1.05f, 0));
+                    break;
+                case StationKind.Hammer:
+                    Prim(PrimitiveType.Cube, "Anvil", visual, new Vector3(0, 0.4f, 0), new Vector3(1.1f, 0.8f, 1.1f), Mat("Anvil", Gray(0.45f)), collider: true);
+                    Prim(PrimitiveType.Cube, "Head", visual, new Vector3(0.35f, 1.7f, 0), new Vector3(0.5f, 0.25f, 0.25f), Mat("Nose", Gray(0.1f)));
+                    Prim(PrimitiveType.Cube, "Handle", visual, new Vector3(0.35f, 1.3f, 0), new Vector3(0.08f, 0.6f, 0.08f), Mat("Nose", Gray(0.1f)));
+                    st.Slot = Point("Slot", go.transform, new Vector3(0, 1.05f, 0));
+                    break;
+                default:
+                    Prim(PrimitiveType.Cube, "Top", visual, new Vector3(0, 0.5f, 0), new Vector3(1.3f, 1f, 1.3f), Mat("Desk", Gray(0.72f)), collider: true);
+                    st.Slot = Point("Slot", go.transform, new Vector3(0, 1.25f, 0));
+                    var phone = Prim(PrimitiveType.Cube, "Phone", visual, new Vector3(0.4f, 1.1f, 0.35f), new Vector3(0.35f, 0.18f, 0.22f), Mat("Phone", new Color(0.98f, 0.8f, 0.08f)));
+                    phone.SetActive(false);
+                    Set(st, "phone", phone);
+                    break;
+            }
+            Label(kind.ToString().ToUpper(), visual, new Vector3(0, 0.5f, -0.7f), cam);
+            Set(st, "visual", visual.gameObject);
             return st;
         }
 
@@ -295,7 +457,7 @@ namespace Demons.Editor
             var t = Point("FloorLabel", parent, new Vector3(pos.x, 0.02f, pos.z));
             t.rotation = Quaternion.Euler(90, 0, 0);
             var tm = TextLabel(t, text);
-            tm.characterSize = 0.12f;
+            tm.characterSize = 0.115f;
             tm.alignment = TextAlignment.Center;
             tm.color = Gray(0.85f);
             if (text.Contains("{")) t.gameObject.AddComponent<ControlsLabel>().Template = text;
@@ -334,6 +496,20 @@ namespace Demons.Editor
             m.SetColor("_BaseColor", color);
             EditorUtility.SetDirty(m);
             return mats[name] = m;
+        }
+
+        static Material Unlit(string name, Color color)
+        {
+            var path = $"{Root}/Materials/{name}.mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (!m)
+            {
+                m = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+                AssetDatabase.CreateAsset(m, path);
+            }
+            m.SetColor("_BaseColor", color);
+            EditorUtility.SetDirty(m);
+            return m;
         }
 
         static Color Gray(float v) => new(v, v, v);
