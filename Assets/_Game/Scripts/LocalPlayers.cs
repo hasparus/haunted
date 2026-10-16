@@ -26,7 +26,7 @@ namespace Demons
         // Keys bound to an action for everyone playing on this machine, or for every scheme before anyone joins.
         public static string Keys(Func<LocalPlayer, InputAction> action)
         {
-            preview ??= new[] { Create("Arrows", null), Create("WASD", null), Create("Gamepad", null) };
+            preview ??= new[] { Create("Solo", null), Create("Arrows", null), Create("WASD", null), Create("Gamepad", null) };
             var lines = new List<string>();
             foreach (var p in All.Count > 0 ? All.ToArray() : preview)
             {
@@ -54,6 +54,8 @@ namespace Demons
             "<Gamepad>/buttonSouth" when p.Device == null => "A",
             "<Gamepad>/buttonWest" when p.Device == null => "X",
             "<Gamepad>/buttonEast" when p.Device == null => "B",
+            "<Gamepad>/leftTrigger" when p.Device == null => "LT",
+            "<Gamepad>/rightTrigger" when p.Device == null => "RT",
             _ => a.GetBindingDisplayString(i),
         };
 
@@ -72,10 +74,9 @@ namespace Demons
             var kb = Keyboard.current;
             if (kb != null)
             {
-                if (AnyPressed(kb.upArrowKey, kb.downArrowKey, kb.leftArrowKey, kb.rightArrowKey, kb.rightShiftKey, kb.rightCtrlKey, kb.slashKey))
-                    TryJoin("Arrows", kb);
-                if (AnyPressed(kb.wKey, kb.aKey, kb.sKey, kb.dKey, kb.leftShiftKey, kb.eKey))
-                    TryJoin("WASD", kb);
+                if (AnyPressed(kb.spaceKey, kb.eKey)) TryJoin("Solo", kb);
+                if (AnyPressed(kb.rightShiftKey, kb.rightCtrlKey, kb.slashKey)) TryJoin("Arrows", kb);
+                if (AnyPressed(kb.leftShiftKey, kb.leftCtrlKey, kb.qKey)) TryJoin("WASD", kb);
             }
             foreach (var pad in Gamepad.all)
                 if (pad.buttonSouth.wasPressedThisFrame) TryJoin("Gamepad", pad);
@@ -88,9 +89,12 @@ namespace Demons
             return false;
         }
 
+        // Solo spans the whole keyboard, so it can't share one with the split halves.
+        static bool Clashes(string a, string b) => a == b || a == "Solo" || b == "Solo";
+
         static void TryJoin(string scheme, InputDevice device)
         {
-            if (All.Count >= Scoring.MaxDemons || All.Exists(p => p.Scheme == scheme && p.Device == device)) return;
+            if (All.Count >= Scoring.MaxDemons || All.Exists(p => p.Device == device && Clashes(p.Scheme, scheme))) return;
             int index = 0;
             while (Find(index) != null) index++;
 
@@ -114,6 +118,18 @@ namespace Demons
 
             switch (p.Scheme)
             {
+                case "Solo":
+                    p.Move.AddCompositeBinding("2DVector")
+                        .With("Up", "<Keyboard>/w").With("Down", "<Keyboard>/s")
+                        .With("Left", "<Keyboard>/a").With("Right", "<Keyboard>/d");
+                    p.Move.AddCompositeBinding("2DVector")
+                        .With("Up", "<Keyboard>/upArrow").With("Down", "<Keyboard>/downArrow")
+                        .With("Left", "<Keyboard>/leftArrow").With("Right", "<Keyboard>/rightArrow");
+                    p.Grab.AddBinding("<Keyboard>/e");
+                    p.Use.AddBinding("<Keyboard>/space");
+                    p.Dash.AddBinding("<Keyboard>/leftShift");
+                    p.Dash.AddBinding("<Keyboard>/rightShift");
+                    break;
                 case "Arrows":
                     p.Move.AddCompositeBinding("2DVector")
                         .With("Up", "<Keyboard>/upArrow").With("Down", "<Keyboard>/downArrow")
@@ -133,8 +149,8 @@ namespace Demons
                         .With("Up", "<Keyboard>/w").With("Down", "<Keyboard>/s")
                         .With("Left", "<Keyboard>/a").With("Right", "<Keyboard>/d");
                     p.Grab.AddBinding("<Keyboard>/leftShift");
-                    p.Use.AddBinding("<Keyboard>/e");
-                    p.Dash.AddBinding("<Keyboard>/space");
+                    p.Use.AddBinding("<Keyboard>/q");
+                    p.Dash.AddBinding("<Keyboard>/z");
                     if (!InBrowser)
                     {
                         p.Use.AddBinding("<Keyboard>/leftCtrl");
@@ -147,6 +163,8 @@ namespace Demons
                     p.Grab.AddBinding("<Gamepad>/buttonSouth");
                     p.Use.AddBinding("<Gamepad>/buttonWest");
                     p.Dash.AddBinding("<Gamepad>/buttonEast");
+                    p.Dash.AddBinding("<Gamepad>/leftTrigger");
+                    p.Dash.AddBinding("<Gamepad>/rightTrigger");
                     break;
             }
 

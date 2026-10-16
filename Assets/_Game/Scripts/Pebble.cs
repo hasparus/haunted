@@ -37,6 +37,7 @@ namespace Demons
         [SerializeField] GameObject wings, shell, pill;
 
         double flyStart;
+        [System.NonSerialized] public int PlacedBy = -1;
 
         double Now => NetworkManager.ServerTime.Time;
         float BeltDistance => BeltFrom.Value + (float)(Now - BeltSince.Value) * Balance.I.beltSpeed;
@@ -228,6 +229,7 @@ namespace Demons
 
         public void PutOn(Station station)
         {
+            PlacedBy = State.Value is PebbleState.Held or PebbleState.Thrown ? LastHolder.Value : -1;
             Release();
             State.Value = PebbleState.OnStation;
             Anchor.Value = station.NetworkObjectId;

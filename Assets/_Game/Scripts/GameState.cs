@@ -57,6 +57,8 @@ namespace Demons
         {
             var prestige = new float[Scoring.MaxDemons];
             Influence.Value += Scoring.Deliver(pebble.Stamps.Value, pebble.LastHolder.Value, prestige, pebble.Weight);
+            if (pebble.Stamps.Value != 0 && Demon.All.Find(d => d.Slot.Value == pebble.LastHolder.Value) is { } deliverer)
+                deliverer.Deliveries.Value++;
             for (int slot = 0; slot < Scoring.MaxDemons; slot++)
                 if (prestige[slot] != 0) Prestige[slot] += prestige[slot];
             pebble.Consume();
@@ -80,8 +82,8 @@ namespace Demons
         void OnGUI()
         {
             if (!IsSpawned) return;
-            var style = new GUIStyle(GUI.skin.label) { fontSize = FontSize(0.045f), fontStyle = FontStyle.Bold };
-            GUILayout.BeginArea(new Rect(12, 8, Screen.width * 0.7f, style.fontSize * 2));
+            var style = new GUIStyle(GUI.skin.label) { fontSize = FontSize(0.04f), fontStyle = FontStyle.Bold, wordWrap = false };
+            GUILayout.BeginArea(new Rect(12, 8, Screen.width * 0.75f, style.fontSize * 2));
             GUILayout.BeginHorizontal();
             var progress = Progression.Instance;
             if (progress)
@@ -102,7 +104,7 @@ namespace Demons
             var hint = new GUIStyle(GUI.skin.label) { fontSize = FontSize(0.035f), fontStyle = FontStyle.Bold };
             float h = hint.fontSize * 1.6f;
             GUI.Label(new Rect(12, Screen.height - h, Screen.width - 24, h),
-                "Join: arrows / RShift  ·  WASD / LShift  ·  gamepad A", hint);
+                "Join: Space (solo keyboard)  ·  LShift (left half)  ·  RShift (right half)  ·  gamepad A", hint);
         }
     }
 }

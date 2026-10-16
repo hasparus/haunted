@@ -4,6 +4,11 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      targets:
+        description: 'Comma-separated targets to build (empty = all)'
+        required: false
+        default: ''
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -32,6 +37,7 @@ jobs:
             path: build/StandaloneLinux64
     steps:
       - name: Add swap (Unity import can OOM on hosted runners)
+        if: ${{ !inputs.targets || contains(inputs.targets, matrix.target) }}
         run: |
           sudo fallocate -l 8G /extra-swap
           sudo chmod 600 /extra-swap
@@ -40,14 +46,17 @@ jobs:
           free -h
 
       - uses: actions/checkout@v4
+        if: ${{ !inputs.targets || contains(inputs.targets, matrix.target) }}
 
       - uses: actions/cache@v4
+        if: ${{ !inputs.targets || contains(inputs.targets, matrix.target) }}
         with:
           path: Library
           key: Library-${{ matrix.target }}-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
           restore-keys: Library-${{ matrix.target }}-
 
       - uses: game-ci/unity-builder@v4
+        if: ${{ !inputs.targets || contains(inputs.targets, matrix.target) }}
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
@@ -56,8 +65,10 @@ jobs:
           targetPlatform: ${{ matrix.target }}
           buildName: haunted
           versioning: None
+          dockerShmSize: 4g
 
       - name: Push to itch.io
+        if: ${{ !inputs.targets || contains(inputs.targets, matrix.target) }}
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
           ITCH_GAME: ${{ vars.ITCH_GAME }}

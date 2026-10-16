@@ -26,6 +26,7 @@ namespace Demons
         public NetworkVariable<ulong> Carrying = new(Net.None);
         public NetworkVariable<bool> Lit = new();
         public NetworkVariable<int> Scribble = new();
+        public NetworkVariable<int> Haunts = new(), Deliveries = new(), Assists = new(), Throws = new(), Dashes = new();
 
         [NonSerialized] public int SpawnSlot, SpawnLocalIndex;
 
@@ -93,6 +94,7 @@ namespace Demons
             {
                 dashUntil = Time.time + Balance.I.dashTime;
                 nextDash = Time.time + Balance.I.dashCooldown;
+                DashedRpc();
             }
 
             Component target = GrabTarget();
@@ -119,6 +121,7 @@ namespace Demons
             Carrying.Value = Net.None;
             Lit.Value = false;
             Scribble.Value = 0;
+            Haunts.Value = Deliveries.Value = Assists.Value = Throws.Value = Dashes.Value = 0;
             Using = null;
         }
 
@@ -195,6 +198,9 @@ namespace Demons
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+        void DashedRpc() => Dashes.Value++;
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
         void GrabRpc(Vector3 from, Vector3 facing)
         {
             if (Busy) return;
@@ -218,7 +224,11 @@ namespace Demons
                 return;
             }
             if (down && Lit.Value) return;
-            if (down && Net.Find<Pebble>(Carrying.Value) is { } held) held.Throw(this, from, facing);
+            if (down && Net.Find<Pebble>(Carrying.Value) is { } held)
+            {
+                held.Throw(this, from, facing);
+                Throws.Value++;
+            }
             else Using = down ? UseTarget(from, facing, Slack) : null;
         }
     }

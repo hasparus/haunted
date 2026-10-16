@@ -48,6 +48,7 @@ namespace Demons
         public NetworkVariable<double> InvertedUntil = new();
         public NetworkVariable<float> Best = new();
         public NetworkVariable<float> Peak = new();
+        public NetworkVariable<bool> Review = new();
 
         double startTime, nextCall, endAt;
         bool over;
@@ -82,6 +83,7 @@ namespace Demons
             Mode.Value = NextMode;
             Day.Value = 0;
             Peak.Value = 0;
+            Review.Value = false;
             InvertedUntil.Value = 0;
             Best.Value = PlayerPrefs.GetFloat(BestKey, 0);
             startTime = Now;
@@ -108,8 +110,9 @@ namespace Demons
         void End(string text)
         {
             over = true;
-            endAt = Now + 6;
-            ShowCard(text, 6);
+            endAt = Now + 12;
+            Review.Value = true;
+            ShowCard(text, 12);
         }
 
         void Update()
@@ -163,6 +166,11 @@ namespace Demons
         void OnGUI()
         {
             if (!IsSpawned || Now >= CardUntil.Value) return;
+            if (Review.Value)
+            {
+                DrawReview();
+                return;
+            }
             var style = new GUIStyle(GUI.skin.box)
             {
                 fontSize = GameState.FontSize(0.05f),
@@ -173,6 +181,47 @@ namespace Demons
             style.normal.textColor = Color.white;
             float w = Mathf.Min(Screen.width * 0.8f, style.fontSize * 30), h = style.fontSize * 6;
             GUI.Box(new Rect((Screen.width - w) / 2, (Screen.height - h) / 2, w, h), Card.Value.ToString(), style);
+        }
+
+        static readonly string[] Columns = { "", "Prestige", "Haunts", "Deliveries", "Assists", "Throws", "Dashes" };
+
+        void DrawReview()
+        {
+            int font = GameState.FontSize(0.04f);
+            float w = Mathf.Min(Screen.width * 0.9f, font * 34), rowH = font * 1.7f;
+            var demons = Demon.All.FindAll(d => d.Slot.Value >= 0);
+            var prestige = GameState.Instance.Prestige;
+            demons.Sort((a, b) => prestige[b.Slot.Value].CompareTo(prestige[a.Slot.Value]));
+            float h = rowH * (demons.Count + 5.5f);
+            var area = new Rect((Screen.width - w) / 2, (Screen.height - h) / 2, w, h);
+            GUI.Box(area, "", GUI.skin.box);
+            GUI.Box(area, "", GUI.skin.box);
+
+            var title = new GUIStyle(GUI.skin.label) { fontSize = font * 2, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            var text = new GUIStyle(GUI.skin.label) { fontSize = font, alignment = TextAnchor.MiddleCenter, wordWrap = true };
+            float y = area.y + rowH * 0.3f;
+            GUI.Label(new Rect(area.x, y, w, rowH * 1.4f), "PERFORMANCE REVIEW", title);
+            y += rowH * 1.4f;
+            GUI.Label(new Rect(area.x, y, w, rowH * 1.6f), Card.Value.ToString(), text);
+            y += rowH * 1.8f;
+
+            float col = w / (Columns.Length + 1.5f);
+            var head = new GUIStyle(text) { fontStyle = FontStyle.Bold, wordWrap = false, fontSize = Mathf.RoundToInt(font * 0.8f) };
+            for (int c = 0; c < Columns.Length; c++)
+                GUI.Label(new Rect(area.x + (c == 0 ? 0 : (c + 1.5f) * col), y, c == 0 ? col * 2.5f : col, rowH), Columns[c], head);
+            y += rowH;
+
+            for (int i = 0; i < demons.Count; i++)
+            {
+                var d = demons[i];
+                var row = new GUIStyle(text) { fontStyle = i == 0 ? FontStyle.Bold : FontStyle.Normal, wordWrap = false };
+                row.normal.textColor = d.Tint;
+                string name = $"Demon {d.Slot.Value + 1}" + (i == 0 && prestige[d.Slot.Value] > 0 ? "  · Employee of the Week" : "");
+                string[] cells = { name, prestige[d.Slot.Value].ToString("0"), d.Haunts.Value.ToString(), d.Deliveries.Value.ToString(), d.Assists.Value.ToString(), d.Throws.Value.ToString(), d.Dashes.Value.ToString() };
+                for (int c = 0; c < cells.Length; c++)
+                    GUI.Label(new Rect(area.x + (c == 0 ? 0 : (c + 1.5f) * col), y, c == 0 ? col * 2.5f : col, rowH), cells[c], row);
+                y += rowH;
+            }
         }
     }
 }

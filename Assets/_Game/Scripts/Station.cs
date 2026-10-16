@@ -120,8 +120,22 @@ namespace Demons
             if (Progress.Value < 1) return;
 
             Progress.Value = 0;
-            if (Kind == StationKind.Hammer) pebble.Shelled.Value = false;
-            else pebble.Stamps.Value |= useful;
+            if (Kind == StationKind.Hammer)
+            {
+                pebble.Shelled.Value = false;
+                return;
+            }
+            pebble.Stamps.Value |= useful;
+            if (Kind != StationKind.Desk) return;
+            foreach (var d in Demon.All)
+            {
+                if ((useful & d.SlotBit) != 0) d.Haunts.Value++;
+                else if (d.Slot.Value == pebble.PlacedBy)
+                {
+                    d.Assists.Value++;
+                    pebble.PlacedBy = -1;
+                }
+            }
         }
     }
 }
