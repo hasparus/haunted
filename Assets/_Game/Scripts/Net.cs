@@ -9,6 +9,8 @@ namespace Demons
 
         public static T Find<T>(ulong id) where T : Component =>
             id != None
+            && NetworkManager.Singleton
+            && NetworkManager.Singleton.SpawnManager != null
             && NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(id, out var obj)
             && obj.TryGetComponent(out T c)
                 ? c
