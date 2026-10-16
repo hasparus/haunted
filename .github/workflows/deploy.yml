@@ -30,6 +30,7 @@ jobs:
         with:
           targetPlatform: WebGL
           buildName: haunted
+          versioning: None
 
       - name: Push to itch.io
         env:
