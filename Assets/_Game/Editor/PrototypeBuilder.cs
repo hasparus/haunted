@@ -11,7 +11,8 @@ namespace Demons.Editor
     public static class PrototypeBuilder
     {
         const string Root = "Assets/_Game";
-        const string ScenePath = Root + "/Scenes/Office.unity";
+        const string OfficePath = Root + "/Scenes/Office.unity";
+        const string WorkshopPath = Root + "/Scenes/Workshop.unity";
 
         static readonly Dictionary<string, Material> mats = new();
 
@@ -32,7 +33,16 @@ namespace Demons.Editor
 
             var pebble = BuildPebble();
             var demon = BuildDemon();
-            BuildScene(pebble, demon);
+
+            var prefabs = ScriptableObject.CreateInstance<NetworkPrefabsList>();
+            prefabs.Add(new NetworkPrefab { Prefab = pebble.gameObject });
+            prefabs.Add(new NetworkPrefab { Prefab = demon.gameObject });
+            AssetDatabase.DeleteAsset($"{Root}/NetworkPrefabs.asset");
+            AssetDatabase.CreateAsset(prefabs, $"{Root}/NetworkPrefabs.asset");
+
+            BuildOffice(pebble, demon, prefabs);
+            BuildWorkshop(pebble, demon, prefabs);
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(OfficePath, true), new EditorBuildSettingsScene(WorkshopPath, true) };
             AssetDatabase.SaveAssets();
         }
 
@@ -105,9 +115,65 @@ namespace Demons.Editor
             return SavePrefab(root).GetComponent<Demon>();
         }
 
-        static void BuildScene(Pebble pebble, Demon demon)
+        static void BuildOffice(Pebble pebble, Demon demon, NetworkPrefabsList prefabs)
         {
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var cam = NewRoom(pebble, demon, prefabs);
+            foreach (var pos in new[] { new Vector3(-6.5f, 0, -1.5f), new Vector3(-2.2f, 0, 0.6f), new Vector3(2.2f, 0, 0.6f), new Vector3(6.5f, 0, -1.5f) })
+                BuildStation(pos, cam);
+            SaveScene(OfficePath);
+        }
+
+        static void BuildWorkshop(Pebble pebble, Demon demon, NetworkPrefabsList prefabs)
+        {
+            var cam = NewRoom(pebble, demon, prefabs);
+            var go = new GameObject("Workshop");
+            go.AddComponent<NetworkObject>();
+            Set(go.AddComponent<Workshop>(), "pebblePrefab", pebble);
+            var bays = go.transform;
+
+            FloorLabel("GRAB & DROP", bays, new Vector3(-6.6f, 0, -1.1f));
+            Seed(bays, new Vector3(-7.1f, 0, 0.6f));
+            Seed(bays, new Vector3(-6.1f, 0, 0.6f));
+            Seed(bays, new Vector3(-6.6f, 0, -0.3f));
+
+            var solo = BuildStation(new Vector3(-2.8f, 0, 0.8f), cam);
+            FloorLabel("HOLD STAMP", bays, new Vector3(-2.8f, 0, -0.6f));
+            Seed(bays, solo.Slot.position, desk: solo);
+
+            var together = BuildStation(new Vector3(1.6f, 0, 0.8f), cam);
+            FloorLabel("STAMP TOGETHER\nfaster + combo", bays, new Vector3(1.6f, 0, -0.7f));
+            Seed(bays, together.Slot.position, stamps: 0b0001, desk: together);
+
+            FloorLabel("LEFT ALONE\nwings, -influence", bays, new Vector3(6f, 0, -0.7f));
+            Seed(bays, new Vector3(6f, 0, 0.6f), pinned: false);
+
+            FloorLabel("STAMP MIXES", bays, new Vector3(0, 0, -3.7f));
+            for (byte mask = 1; mask < 16; mask++)
+                Seed(bays, new Vector3(-8 + mask, 0, -4.4f), stamps: mask);
+
+            SaveScene(WorkshopPath);
+        }
+
+        static void Seed(Transform parent, Vector3 pos, byte stamps = 0, Station desk = null, bool pinned = true)
+        {
+            var seed = Point("Seed", parent, pos).gameObject.AddComponent<PebbleSeed>();
+            seed.Stamps = stamps;
+            seed.Desk = desk;
+            seed.Pinned = pinned;
+        }
+
+        static void SaveScene(string path)
+        {
+            var scene = EditorSceneManager.GetActiveScene();
+            EditorSceneManager.SaveScene(scene, path);
+            scene = EditorSceneManager.OpenScene(path);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+        }
+
+        static Camera NewRoom(Pebble pebble, Demon demon, NetworkPrefabsList prefabs)
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             var cam = new GameObject("Main Camera") { tag = "MainCamera" }.AddComponent<Camera>();
             cam.transform.position = new Vector3(0, 15, -12.5f);
@@ -141,15 +207,6 @@ namespace Demons.Editor
             Set(belt, "pebblePrefab", pebble);
             Label("THOUGHTS →", beltGo.transform, new Vector3(-6.5f, 1.2f, 0), cam);
 
-            foreach (var pos in new[] { new Vector3(-6.5f, 0, -1.5f), new Vector3(-2.2f, 0, 0.6f), new Vector3(2.2f, 0, 0.6f), new Vector3(6.5f, 0, -1.5f) })
-                BuildStation(pos, cam);
-
-            var prefabs = ScriptableObject.CreateInstance<NetworkPrefabsList>();
-            prefabs.Add(new NetworkPrefab { Prefab = pebble.gameObject });
-            prefabs.Add(new NetworkPrefab { Prefab = demon.gameObject });
-            AssetDatabase.DeleteAsset($"{Root}/NetworkPrefabs.asset");
-            AssetDatabase.CreateAsset(prefabs, $"{Root}/NetworkPrefabs.asset");
-
             var netGo = new GameObject("Network");
             var nm = netGo.AddComponent<NetworkManager>();
             nm.NetworkConfig = new NetworkConfig { NetworkTransport = netGo.AddComponent<OfflineTransport>() };
@@ -160,16 +217,10 @@ namespace Demons.Editor
             var stateGo = new GameObject("GameState");
             stateGo.AddComponent<NetworkObject>();
             Set(stateGo.AddComponent<GameState>(), "demonPrefab", demon);
-
-            EditorSceneManager.SaveScene(scene, ScenePath);
-            scene = EditorSceneManager.OpenScene(ScenePath);
-            foreach (var no in Object.FindObjectsByType<NetworkObject>(FindObjectsSortMode.None)) EditorUtility.SetDirty(no);
-            EditorSceneManager.MarkSceneDirty(scene);
-            EditorSceneManager.SaveScene(scene);
-            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+            return cam;
         }
 
-        static void BuildStation(Vector3 pos, Camera cam)
+        static Station BuildStation(Vector3 pos, Camera cam)
         {
             var go = new GameObject("Desk");
             go.transform.position = pos;
@@ -178,6 +229,7 @@ namespace Demons.Editor
             Prim(PrimitiveType.Cube, "Top", go.transform, new Vector3(0, 0.5f, 0), new Vector3(1.3f, 1f, 1.3f), Mat("Desk", Gray(0.72f)), collider: true);
             st.Slot = Point("Slot", go.transform, new Vector3(0, 1.25f, 0));
             Label("DESK", go.transform, new Vector3(0, 0.5f, -0.7f), cam);
+            return st;
         }
 
         static GameObject Prim(PrimitiveType type, string name, Transform parent, Vector3 pos, Vector3 scale, Material mat, bool collider = false)
@@ -200,10 +252,24 @@ namespace Demons.Editor
             return t;
         }
 
+        static void FloorLabel(string text, Transform parent, Vector3 pos)
+        {
+            var t = Point("FloorLabel", parent, new Vector3(pos.x, 0.02f, pos.z));
+            t.rotation = Quaternion.Euler(90, 0, 0);
+            var tm = TextLabel(t, text);
+            tm.characterSize = 0.07f;
+            tm.color = Gray(0.8f);
+        }
+
         static void Label(string text, Transform parent, Vector3 pos, Camera cam)
         {
             var t = Point("Label", parent, pos);
             t.rotation = cam.transform.rotation;
+            TextLabel(t, text);
+        }
+
+        static TextMesh TextLabel(Transform t, string text)
+        {
             var tm = t.gameObject.AddComponent<TextMesh>();
             tm.text = text;
             tm.anchor = TextAnchor.MiddleCenter;
@@ -212,6 +278,7 @@ namespace Demons.Editor
             tm.color = Gray(0.05f);
             tm.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             t.GetComponent<MeshRenderer>().sharedMaterial = tm.font.material;
+            return tm;
         }
 
         static Material Mat(string name, Color color)
