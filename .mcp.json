@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "unity": {
+      "type": "stdio",
+      "command": "/Users/hasparus/.unity/bin/unity",
+      "args": [
+        "mcp",
+        "--project-path",
+        "/Users/hasparus/workspace/haunted/haunted"
+      ],
+      "env": {}
+    }
+  }
+}
