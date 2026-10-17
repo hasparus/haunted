@@ -23,7 +23,6 @@ namespace Demons
         public const string BestKey = "survival_best";
 
         static readonly string[] Days = { "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY" };
-        static readonly float[] Goals = { 5, 12, 20, 30, 40, 50, 60 };
 
         static readonly string[] DayCards =
         {
@@ -36,15 +35,15 @@ namespace Demons
             "SUNDAY\nMom keeps calling. He tries to pull himself together.\nAnswer the phone. Save thoughts from his hand.",
         };
 
-        static readonly string[] SurvivalCards =
+        static readonly (Feature feature, string card)[] SurvivalCards =
         {
-            "",
-            "BIG THOUGHTS\nThey take long. Haunt them together.",
-            "THE POT\nDrop a thought in and it haunts itself.",
-            "SHELLS\nCrack them at the hammer first.",
-            "THERAPY\nStay out of the light. Mash or wiggle off the pen.",
-            "MEDS\nWhen he takes a pill, controls flip.",
-            "MOM\nAnswer the phone. Save thoughts from his hand.",
+            (Feature.Big, "BIG THOUGHTS\nThey take long. Haunt them together."),
+            (Feature.Pot, "THE POT\nDrop a thought in and it haunts itself."),
+            (Feature.Shell, "SHELLS\nCrack them at the hammer first."),
+            (Feature.Therapist, "THERAPY\nStay out of the light. Mash or wiggle off the pen."),
+            (Feature.Pill, "MEDS\nWhen he takes a pill, controls flip."),
+            (Feature.Phone, "MOM\nAnswer the phone."),
+            (Feature.Claw, "THE HAND\nSave thoughts before it lands."),
         };
 
         static readonly string[] Calls =
@@ -83,7 +82,7 @@ namespace Demons
 
         static double Now => Net.Now;
         public bool Inverted => IsSpawned && Now < InvertedUntil.Value;
-        public float Goal => Goals[Mathf.Min(Day.Value, Goals.Length - 1)];
+        public float Goal => Balance.I.dayGoals[Mathf.Min(Day.Value, Balance.I.dayGoals.Length - 1)];
         public string DayName => Days[Day.Value % Days.Length];
 
         public static bool Has(Feature f) => f == Feature.None || !Instance || Instance.Unlocked(f);
@@ -94,15 +93,20 @@ namespace Demons
 
         float Elapsed => (float)(Now - startTime);
 
-        static int UnlockDay(Feature f) => f switch
+        static int UnlockDay(Feature f)
         {
-            Feature.Big => 1,
-            Feature.Pot => 2,
-            Feature.Shell => 3,
-            Feature.Therapist or Feature.Pen => 4,
-            Feature.Pill => 5,
-            _ => 6,
-        };
+            var b = Balance.I;
+            return f switch
+            {
+                Feature.Big => b.bigDay,
+                Feature.Pot => b.potDay,
+                Feature.Shell => b.shellDay,
+                Feature.Therapist or Feature.Pen => b.therapyDay,
+                Feature.Pill => b.pillDay,
+                Feature.Phone => b.phoneDay,
+                _ => b.handDay,
+            };
+        }
 
         public float SpawnRateScale =>
             Mode.Value == GameMode.Survival ? 0.75f + Elapsed / Balance.I.survivalRampSeconds : 1;
@@ -211,7 +215,8 @@ namespace Demons
                 if (stage > Day.Value)
                 {
                     Day.Value = stage;
-                    ShowCard(SurvivalCards[stage], 3);
+                    var arriving = System.Array.Find(SurvivalCards, c => UnlockDay(c.feature) == stage);
+                    if (arriving.card != null) ShowCard(arriving.card, 3);
                     if (stage == UnlockDay(Feature.Pill)) nextPill = Now + 12;
                 }
                 if (influence > Peak.Value) Peak.Value = influence;
@@ -253,7 +258,7 @@ namespace Demons
 
             if (Has(Feature.Phone) && Now >= nextCall)
             {
-                nextCall = Now + Random.Range(20f, 35f);
+                nextCall = Now + Random.Range(Balance.I.phoneGapMin, Balance.I.phoneGapMax);
                 var idle = Station.All.FindAll(s => s.Kind == StationKind.Desk && !s.Ringing.Value);
                 if (idle.Count > 0) idle[Random.Range(0, idle.Count)].Ring();
             }

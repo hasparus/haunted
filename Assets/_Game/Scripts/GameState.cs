@@ -151,8 +151,8 @@ namespace Demons
 
         public void Forgotten(Vector3 at)
         {
-            Influence.Value -= Scoring.ForgottenPenalty;
-            PopupRpc(at, $"\u2212{Scoring.ForgottenPenalty:0.#}", -1);
+            Influence.Value -= Balance.I.forgottenPenalty;
+            PopupRpc(at, $"\u2212{Balance.I.forgottenPenalty:0.#}", -1);
         }
 
         [Rpc(SendTo.Everyone)]

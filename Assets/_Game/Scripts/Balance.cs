@@ -19,6 +19,10 @@ namespace Demons
         public float forgetTime = 10f;
         public float warnTime = 4f;
         public float flyAwayTime = 1.5f;
+        [Tooltip("Influence lost when a thought is forgotten and flies away.")]
+        public float forgottenPenalty = 0.5f;
+        [Range(0, 1)] public float bigChance = 0.2f;
+        [Range(0, 1)] public float shellChance = 0.3f;
 
         [Header("Throwing")]
         public float throwSpeed = 7f;
@@ -36,6 +40,12 @@ namespace Demons
         public float potTime = 4f;
         public float hammerTime = 1.2f;
         public float answerTime = 3f;
+
+        [Header("Week")]
+        [Tooltip("Influence needed to finish each day, Monday to Sunday.")]
+        public float[] dayGoals = { 5, 12, 20, 30, 40, 50, 60 };
+        [Tooltip("Day each mechanic arrives: 0 = Monday. In Survival, a day lasts survivalStageSeconds.")]
+        public int bigDay = 1, potDay = 2, shellDay = 3, therapyDay = 4, pillDay = 5, phoneDay = 6, handDay = 6;
 
         [Header("Week events")]
         public float pillTime = 10f;
@@ -56,11 +66,17 @@ namespace Demons
         public float scribbledSpeed = 0.4f;
         public float clawInterval = 22f;
         public float clawWarning = 2.5f;
+        public float phoneGapMin = 20f;
+        public float phoneGapMax = 35f;
 
         [Header("Survival")]
+        [Tooltip("Game over below this influence.")]
         public float survivalFloor = -5f;
+        [Tooltip("Spawn rate starts at 0.75x and gains +1x every this many seconds.")]
         public float survivalRampSeconds = 150f;
+        [Tooltip("Seconds between new mechanics (one 'day' each).")]
         public float survivalStageSeconds = 30f;
+        [Tooltip("Seconds until interruptions come at their shortest gap.")]
         public float survivalHardAt = 360f;
 
         [Header("Interruptions")]
