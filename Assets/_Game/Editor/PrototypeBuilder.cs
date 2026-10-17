@@ -587,14 +587,18 @@ namespace Demons.Editor
                     // The drawing's footprint: blocks demons and casts the desk's shadow.
                     var top = Prim(PrimitiveType.Cube, "Top", visual, new Vector3(0, 0.385f, -0.14f), new Vector3(1.7f, 0.77f, 0.72f), Mat("Desk", Gray(0.72f)), collider: true);
                     top.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
-                    // Billboard drawing standing on the footprint's front edge; the thought sits just in front of its middle.
+                    // Billboard drawing standing on the footprint's front edge.
                     var art = Point("Art", visual, new Vector3(0, 0, -0.5f)).gameObject.AddComponent<SpriteRenderer>();
                     art.sprite = Art(desksBuilt++ % 2 == 0 ? "Station_Blank" : "Station_Desk2");
                     art.transform.rotation = cam.transform.rotation;
                     art.transform.localScale = Vector3.one * 1.8f / art.sprite.bounds.size.x;
                     art.color = new Color(0.86f, 0.81f, 0.72f);
                     art.sharedMaterial = Resources.Load<Material>("Fx/Card");
-                    st.Slot = Point("Slot", go.transform, new Vector3(0, 0.65f, -0.42f));
+                    // The thought sits on the drawing (the plain desk's middle, the legged desk's top slab), a hair towards
+                    // the camera, so it looks centred from every desk's angle.
+                    var bounds = art.sprite.bounds;
+                    var on = art.transform.TransformPoint(new Vector3(0, bounds.min.y + bounds.size.y * (art.sprite.name == "Station_Desk2" ? 0.735f : 0.5f), 0));
+                    st.Slot = Point("Slot", go.transform, go.transform.InverseTransformPoint(on - cam.transform.forward * 0.3f));
                     var phone = Prim(PrimitiveType.Cube, "Phone", visual, new Vector3(0.45f, 0.95f, -0.15f), new Vector3(0.35f, 0.18f, 0.22f), Mat("Phone", new Color(0.98f, 0.8f, 0.08f)));
                     phone.SetActive(false);
                     Set(st, "phone", phone);

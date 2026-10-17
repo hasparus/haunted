@@ -37,8 +37,8 @@
     border-color: var(--hairline);
     /* Swings in on a gentle arc: a small turn about a pivot far below. */
     transform-origin: 50% 500%;
-    rotate: -2.5deg;
-    translate: 0 14px;
+    rotate: -0.8deg;
+    translate: 0 22px;
     transition-property: translate, rotate;
     transition-duration: 0.3s, 0.3s;
     transition-timing-function: ease-out-cubic, ease-out-cubic;
@@ -439,13 +439,13 @@
 
 .card {
     transform-origin: 50% 500%;
-    scale: 0.9 0.9;
-    rotate: -4deg;
-    translate: 0 26px;
+    scale: 0.96 0.96;
+    rotate: -1deg;
+    translate: 0 40px;
     opacity: 0;
     transition-property: scale, rotate, translate, opacity;
     transition-duration: 0.4s, 0.4s, 0.4s, 0.14s;
-    transition-timing-function: ease-out-back, ease-out-cubic, ease-out-cubic, ease-out-cubic;
+    transition-timing-function: ease-out-cubic, ease-out-cubic, ease-out-cubic, ease-out-cubic;
     max-width: 620px;
     padding: 18px 30px 22px 30px;
     background-color: var(--navy);
@@ -534,8 +534,8 @@
 
 .review {
     transform-origin: 50% 500%;
-    rotate: -3deg;
-    translate: 0 30px;
+    rotate: -1deg;
+    translate: 0 44px;
     opacity: 0;
     transition-property: rotate, translate, opacity;
     transition-duration: 0.45s, 0.45s, 0.16s;
