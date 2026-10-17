@@ -1,47 +1,91 @@
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace Demons
 {
-    // A headquarters workstation out of reach past the Office's left wall, coming out of the mist on the day the First
-    // Week at Work brings in its mechanic. Its props stay in demo mode, so they never act on the real room.
     public class Exhibit : MonoBehaviour
     {
-        const float Rise = 1.6f;
+        const int Size = 768;
+        const float Delay = 0.6f, Rise = 1.6f;
 
-        static readonly int RevealId = Shader.PropertyToID("_Reveal");
+        static readonly int PoolCenter = Shader.PropertyToID("_PoolCenter"), RevealId = Shader.PropertyToID("_Reveal"),
+            ViewId = Shader.PropertyToID("_MainTex"), SeedId = Shader.PropertyToID("_Seed");
 
         public Feature Mechanic;
-        [SerializeField] Renderer mist;
+        [SerializeField] Camera eye;
+        [SerializeField] Renderer window;
 
-        Renderer[] parts;
-        Light[] lights;
+        RenderTexture view;
         MaterialPropertyBlock block;
-        float shown;
-        bool drawn = true;
+        Vector4 roomPool;
+        float shown, todaySince = -1;
+
+        static bool Today(Feature mechanic)
+        {
+            var p = Progression.Instance;
+            return p && p.IsSpawned && p.Mode.Value == GameMode.Week && !p.Review.Value && Progression.Introduces(p.Day.Value, mechanic);
+        }
 
         void Awake()
         {
-            parts = GetComponentsInChildren<Renderer>(true);
-            lights = GetComponentsInChildren<Light>(true);
+            eye.enabled = false;
+            eye.GetUniversalAdditionalCameraData().renderPostProcessing = false;
+            window.forceRenderingOff = true;
             block = new MaterialPropertyBlock();
         }
 
-        void LateUpdate()
+        void OnEnable()
         {
-            var p = Progression.Instance;
-            bool today = p && p.IsSpawned && p.Mode.Value == GameMode.Week && !p.Review.Value && Progression.Introduces(p.Day.Value, Mechanic);
-            shown = Mathf.MoveTowards(shown, today ? 1 : 0, Time.unscaledDeltaTime / Rise);
+            RenderPipelineManager.beginCameraRendering += Lit;
+            RenderPipelineManager.endCameraRendering += Unlit;
+        }
+
+        void OnDisable()
+        {
+            RenderPipelineManager.beginCameraRendering -= Lit;
+            RenderPipelineManager.endCameraRendering -= Unlit;
+        }
+
+        void OnDestroy()
+        {
+            if (view) view.Release();
+        }
+
+        void Update()
+        {
+            bool today = Today(Mechanic);
+            if (!today) todaySince = -1;
+            else if (todaySince < 0) todaySince = Time.unscaledTime;
+            bool opening = today && Time.unscaledTime - todaySince > Delay;
+            shown = Mathf.MoveTowards(shown, opening ? 1 : 0, Time.unscaledDeltaTime / Rise);
             bool visible = shown > 0;
-            if (visible != drawn)
+            if (visible && !view)
             {
-                drawn = visible;
-                foreach (var r in parts) r.forceRenderingOff = !visible;
+                view = new RenderTexture(Size, Size, 24) { antiAliasing = 4 };
+                eye.targetTexture = view;
             }
-            if (!visible) foreach (var l in lights) l.enabled = false;
+            eye.enabled = visible;
+            window.forceRenderingOff = !visible;
             if (!visible) return;
             float t = 1 - shown;
+            block.SetTexture(ViewId, view);
             block.SetFloat(RevealId, 1 - t * t * t);
-            mist.SetPropertyBlock(block);
+            block.SetFloat(SeedId, (float)Mechanic);
+            window.SetPropertyBlock(block);
+        }
+
+        void Lit(ScriptableRenderContext _, Camera cam)
+        {
+            if (cam != eye) return;
+            roomPool = Shader.GetGlobalVector(PoolCenter);
+            var at = transform.position;
+            Shader.SetGlobalVector(PoolCenter, new Vector4(at.x, at.z));
+        }
+
+        void Unlit(ScriptableRenderContext _, Camera cam)
+        {
+            if (cam == eye) Shader.SetGlobalVector(PoolCenter, roomPool);
         }
     }
 }

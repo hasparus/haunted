@@ -142,8 +142,9 @@ namespace Demons
         Renderer[] parts;
 
         // Drawn at the depth of a point on the floor (Haunted/Paper's _Anchor), as the cards are drawn at their feet's:
-        // on a desk just in front of the desk's drawing, on the belt at its front edge, in hand just in front of the
-        // carrier when it faces down the screen and just behind when it faces up, anywhere else right under itself.
+        // on a desk just in front of the desk's drawing, on the belt at its front edge, in hand just behind the carrier
+        // when it faces up the screen and otherwise well in front of it, over any desk it stands at, anywhere else
+        // right under itself.
         void Sort()
         {
             var cam = Camera.main;
@@ -162,7 +163,7 @@ namespace Demons
                 case PebbleState.Held when Net.Find<Demon>(Anchor.Value) is { } demon:
                     var stand = demon.transform.position;
                     var up = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up).normalized;
-                    at = stand + (eye - stand).normalized * (Vector3.Dot(demon.transform.forward, up) > 0.3f ? -0.2f : 0.2f);
+                    at = stand + (eye - stand).normalized * (Vector3.Dot(demon.transform.forward, up) > 0.3f ? -0.2f : 1.2f);
                     break;
             }
             sortBlock ??= new MaterialPropertyBlock();

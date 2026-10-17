@@ -1,19 +1,20 @@
-// Black mist drifting around an exhibit past the Office's left wall: _Reveal opens a smoky hole in its middle (0 shut,
-// 1 open) and the cloud thins out towards the quad's edge so it melts into the dark around it.
-Shader "Haunted/Mist"
+// An exhibit's live view hanging in the dark past the Office's left wall: drifting smoky noise eats its edges, never
+// quite still, and _Reveal pushes the mist back from the middle (0 all mist, 1 open). It sits far behind the room, so
+// the room's floor and walls always cover it.
+Shader "Haunted/Shard"
 {
     Properties
     {
-        _BaseColor("Mist", Color) = (0.02, 0.02, 0.03, 1)
+        _MainTex("View", 2D) = "black" {}
         _Reveal("Reveal", Range(0, 1)) = 0
+        _Seed("Seed", Float) = 0
     }
 
     SubShader
     {
-        Tags { "Queue" = "Transparent+50" "RenderType" = "Transparent" "RenderPipeline" = "UniversalPipeline" "IgnoreProjector" = "True" }
+        Tags { "Queue" = "Transparent" "RenderType" = "Transparent" "RenderPipeline" = "UniversalPipeline" "IgnoreProjector" = "True" }
         Blend SrcAlpha OneMinusSrcAlpha
         ZWrite Off
-        ZTest Always
         Cull Off
 
         Pass
@@ -25,9 +26,11 @@ Shader "Haunted/Mist"
             #pragma fragment Frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
+            TEXTURE2D(_MainTex);
+            SAMPLER(sampler_MainTex);
+
             CBUFFER_START(UnityPerMaterial)
-                half4 _BaseColor;
-                float _Reveal;
+                float _Reveal, _Seed;
             CBUFFER_END
 
             struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; };
@@ -65,13 +68,13 @@ Shader "Haunted/Mist"
             half4 Frag(Varyings i) : SV_Target
             {
                 float2 p = i.uv * 2 - 1;
-                float2 drift = float2(_Time.y * 0.06, -_Time.y * 0.04);
+                float2 drift = float2(_Time.y * 0.06, -_Time.y * 0.04) + _Seed * 3.7;
                 float smoke = Smoke(i.uv * 3 + drift) + 0.5 * Smoke(i.uv * 5 - drift * 1.6);
-                float d = length(p) + (smoke - 0.55) * 0.5;
-                float hole = lerp(-0.4, 0.6, _Reveal);
-                float cloud = smoothstep(hole - 0.25, hole, d);
-                float rim = 1 - smoothstep(0.75, 1.0, length(p) + (smoke - 0.55) * 0.25);
-                return half4(_BaseColor.rgb, cloud * rim);
+                float d = length(p) + (smoke - 0.55) * 0.55;
+                float edge = lerp(-0.4, 0.95, _Reveal);
+                half4 c = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv);
+                c.a = 1 - smoothstep(edge - 0.22, edge, d);
+                return c;
             }
             ENDHLSL
         }

@@ -196,7 +196,7 @@ namespace Demons.Editor
             Seed(bays, new Vector3(-13f, 0, a - 1f));
 
             var solo = BuildStation(new Vector3(-8f, 0, a), cam);
-            FloorLabel(Lessons[Feature.None], bays, new Vector3(-8f, 0, a - 2f));
+            Lesson(Feature.None, bays, new Vector3(-8f, 0, a));
             Seed(bays, solo.Slot.position, desk: solo);
 
             var together = BuildStation(new Vector3(-3f, 0, a), cam);
@@ -204,20 +204,20 @@ namespace Demons.Editor
             Seed(bays, together.Slot.position, stamps: 0b0001, desk: together);
 
             var big = BuildStation(new Vector3(2f, 0, a), cam);
-            FloorLabel(Lessons[Feature.Big], bays, new Vector3(2f, 0, a - 1.8f));
+            Lesson(Feature.Big, bays, new Vector3(2f, 0, a));
             Seed(bays, big.Slot.position, desk: big, kind: PebbleKind.Big);
 
             FloorLabel("Left alone\nwings, -revenue", bays, new Vector3(7f, 0, a - 1.6f));
             Seed(bays, new Vector3(7f, 0, a - 0.2f), pinned: false);
 
-            FloorLabel(Lessons[Feature.Pill], bays, new Vector3(12f, 0, a - 1.8f));
+            Lesson(Feature.Pill, bays, new Vector3(12f, 0, a));
             BuildMeds(new Vector3(12f, 0.9f, a), demo: true);
 
             BuildStation(new Vector3(-12f, 0, b), cam, StationKind.Pot, Feature.Pot);
-            FloorLabel(Lessons[Feature.Pot], bays, new Vector3(-12f, 0, b - 1.8f));
+            Lesson(Feature.Pot, bays, new Vector3(-12f, 0, b));
 
             BuildStation(new Vector3(-7f, 0, b), cam, StationKind.Hammer, Feature.Shell);
-            FloorLabel(Lessons[Feature.Shell], bays, new Vector3(-7f, 0, b - 2f));
+            Lesson(Feature.Shell, bays, new Vector3(-7f, 0, b));
             Seed(bays, new Vector3(-5.4f, 0, b + 0.2f), shelled: true);
 
             FloorLabel("Throw →\n{haunt}\nwhile holding", bays, new Vector3(1.6f, 0, b - 2.4f));
@@ -227,7 +227,7 @@ namespace Demons.Editor
             FloorLabel("Catch\nempty hands, in the arc", bays, new Vector3(4.4f, 0, b + 1.6f));
 
             var phone = BuildStation(new Vector3(13f, 0, b), cam);
-            FloorLabel(Lessons[Feature.Phone], bays, new Vector3(13f, 0, b - 2f));
+            Lesson(Feature.Phone, bays, new Vector3(13f, 0, b));
             Set(headquarters, "phoneDesk", phone);
 
             FloorLabel("Haunted by many", bays, new Vector3(-12f, 0, c + 1.2f));
@@ -238,59 +238,59 @@ namespace Demons.Editor
             var clawDesk = BuildStation(new Vector3(-5.5f, 0, c), cam);
             Seed(bays, clawDesk.Slot.position, desk: clawDesk, stamps: 0b0010);
             BuildClaw(new Vector3(-5.5f, 7f, c), demo: true);
-            FloorLabel(Lessons[Feature.Claw], bays, new Vector3(-5.5f, 0, c - 1.9f));
+            Lesson(Feature.Claw, bays, new Vector3(-5.5f, 0, c));
 
             BuildPen(new Vector3(2f, 2.2f, c), demo: true);
-            FloorLabel(Lessons[Feature.Pen], bays, new Vector3(2f, 0, c - 1.6f));
+            Lesson(Feature.Pen, bays, new Vector3(2f, 0, c));
             FloorLabel("{dash}\nto dash", bays, new Vector3(6.5f, 0, c + 0.4f));
 
             BuildSpotlight(new Vector3(12.5f, 0.02f, c), demo: true);
-            FloorLabel(Lessons[Feature.Therapist], bays, new Vector3(12.5f, 0, c - 2.2f));
+            Lesson(Feature.Therapist, bays, new Vector3(12.5f, 0, c));
 
             SaveScene(HeadquartersPath);
         }
 
-        // What each mechanic's workstation says, in the headquarters and on its exhibit in the Office.
-        static readonly Dictionary<Feature, string> Lessons = new()
+        // What each mechanic's workstation says on the floor, and how far in front of the workstation, in the
+        // headquarters and on its exhibit in the Office.
+        static readonly Dictionary<Feature, (string text, float below)> Lessons = new()
         {
-            [Feature.None] = "Hold\n{haunt}\nto haunt",
-            [Feature.Big] = "Big thought\nhaunt it together\n5x points",
-            [Feature.Pill] = "Meds\nwhen he takes one,\ncontrols flip",
-            [Feature.Pot] = "Pot\nhaunts by itself",
-            [Feature.Shell] = "Hammer: hold\n{haunt}\nto crack shells",
-            [Feature.Phone] = "Phone: hold\n{haunt}\nto answer",
-            [Feature.Claw] = "The Hand\nsave thoughts before it lands",
-            [Feature.Pen] = "The Pen: mash\n{haunt}\nor wiggle ←→",
-            [Feature.Therapist] = "Therapist's light\nlit demons drop things",
+            [Feature.None] = ("Hold\n{haunt}\nto haunt", 2f),
+            [Feature.Big] = ("Big thought\nhaunt it together\n5x points", 1.8f),
+            [Feature.Pill] = ("Meds\nwhen he takes one,\ncontrols flip", 1.8f),
+            [Feature.Pot] = ("Pot\nhaunts by itself", 1.8f),
+            [Feature.Shell] = ("Hammer: hold\n{haunt}\nto crack shells", 2f),
+            [Feature.Phone] = ("Phone: hold\n{haunt}\nto answer", 2f),
+            [Feature.Claw] = ("The Hand\nsave thoughts before it lands", 1.9f),
+            [Feature.Pen] = ("The Pen: mash\n{haunt}\nor wiggle ←→", 1.6f),
+            [Feature.Therapist] = ("Therapist's light\nlit demons drop things", 2.2f),
         };
 
-        // The headquarters' workstations again, in the mist past the Office's left wall, each out of reach and shown on
-        // the day the First Week at Work brings in its mechanic. Two on a day stand one above the other on screen.
+        static void Lesson(Feature f, Transform parent, Vector3 station) =>
+            FloorLabel(Lessons[f].text, parent, station + Vector3.back * Lessons[f].below);
+
+        // The headquarters' workstations again, far out of the Office's sight and reach, each on its own patch of
+        // headquarters floor and filmed by its own camera onto a window in the dark past the Office's left wall. Two
+        // arriving on one day hang one above the other.
         static void BuildExhibits(Camera cam)
         {
-            Vector3 Floor(float y)
-            {
-                var ray = cam.ViewportPointToRay(new Vector3(0.1f, y, 0));
-                return ray.GetPoint(-ray.origin.y / ray.direction.y);
-            }
+            int i = 0;
             for (int day = 0; day < 7; day++)
             {
                 var mechanics = new List<Feature>();
                 for (var f = Feature.None; f <= Feature.Claw; f++)
                     if (Progression.Introduces(day, f)) mechanics.Add(f);
-                for (int i = 0; i < mechanics.Count; i++)
-                    BuildExhibit(mechanics[i], Floor(mechanics.Count == 1 ? 0.5f : i == 0 ? 0.66f : 0.3f), cam);
+                for (int m = 0; m < mechanics.Count; m++)
+                    BuildExhibit(mechanics[m], new Vector3(-300 + i++ * 40, 0, -300), cam, mechanics.Count == 1 ? 0.5f : m == 0 ? 0.7f : 0.28f);
             }
         }
 
-        static void BuildExhibit(Feature mechanic, Vector3 at, Camera cam)
+        static void BuildExhibit(Feature mechanic, Vector3 at, Camera cam, float screenY)
         {
             var root = new GameObject($"Exhibit{mechanic}").transform;
             root.position = at;
             var exhibit = root.gameObject.AddComponent<Exhibit>();
             exhibit.Mechanic = mechanic;
-            var prop = at + Vector3.forward * 0.9f;
-            var label = at + Vector3.back * 1.1f;
+            var prop = at + Vector3.forward * Lessons[mechanic].below / 2;
 
             Transform Inert(StationKind kind = StationKind.Desk)
             {
@@ -305,8 +305,8 @@ namespace Demons.Editor
             void Thought(Transform desk, float size = 0.5f, bool shelled = false)
             {
                 var slot = desk.Find("Slot").position;
-                Prim(PrimitiveType.Sphere, "Thought", root, slot, Vector3.one * size, Ink("Pebble", Gray(0.85f)));
-                if (shelled) Prim(PrimitiveType.Sphere, "Shell", root, slot, Vector3.one * 0.62f, Ink("Shell", Gray(0.5f)));
+                Prim(PrimitiveType.Sphere, "Thought", root, slot - at, Vector3.one * size, Ink("Pebble", Gray(0.85f)));
+                if (shelled) Prim(PrimitiveType.Sphere, "Shell", root, slot - at, Vector3.one * 0.62f, Ink("Shell", Gray(0.28f)));
             }
             void Demo(GameObject go) => go.transform.SetParent(root, true);
 
@@ -325,13 +325,27 @@ namespace Demons.Editor
                 case Feature.Pill: Demo(BuildMeds(prop + Vector3.up * 0.9f, demo: true)); break;
                 case Feature.Therapist: Demo(BuildSpotlight(prop + Vector3.up * 0.02f, demo: true)); break;
             }
-            FloorLabel(Lessons[mechanic], root, label);
+            Lesson(mechanic, root, prop - at);
+            Prim(PrimitiveType.Plane, "Floor", root, Vector3.zero, new Vector3(4, 1, 4), Paper("Floor", new Color(0.3f, 0.35f, 0.37f), tiles: true));
 
-            var center = at + Vector3.up * 0.6f;
-            var mist = Prim(PrimitiveType.Quad, "Mist", root, Vector3.zero, Vector3.one * 7.5f, Mat("Mist", new Color(0.02f, 0.02f, 0.03f), "Haunted/Mist"));
-            mist.transform.SetPositionAndRotation(center + (cam.transform.position - center).normalized * 4, cam.transform.rotation);
-            mist.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            Set(exhibit, "mist", mist.GetComponent<Renderer>());
+            var eye = new GameObject("Camera").AddComponent<Camera>();
+            eye.transform.SetParent(root, false);
+            eye.transform.SetPositionAndRotation(at + Vector3.up * 0.6f - cam.transform.forward * 30, cam.transform.rotation);
+            eye.orthographic = true;
+            eye.orthographicSize = 3.4f;
+            eye.clearFlags = CameraClearFlags.SolidColor;
+            eye.backgroundColor = Color.black;
+            eye.enabled = false;
+            Set(exhibit, "eye", eye);
+
+            // Far behind the room along the line of sight, so the room always covers it; sized to ~40% of the screen.
+            const float far = 45;
+            var ray = cam.ViewportPointToRay(new Vector3(0.11f, screenY, 0));
+            float height = 0.4f * 2 * far * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+            var window = Prim(PrimitiveType.Quad, "Window", root, Vector3.zero, Vector3.one * height, Mat("Shard", Color.white, "Haunted/Shard"));
+            window.transform.SetPositionAndRotation(ray.GetPoint(far), cam.transform.rotation);
+            window.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            Set(exhibit, "window", window.GetComponent<Renderer>());
         }
 
         static GameObject BuildClaw(Vector3 pos, bool demo)
