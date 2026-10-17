@@ -579,14 +579,15 @@ namespace Demons.Editor
                     break;
                 default:
                     var top = Prim(PrimitiveType.Cube, "Top", visual, new Vector3(0, 0.5f, 0), new Vector3(1.3f, 1f, 1.3f), Mat("Desk", Gray(0.72f)), collider: true);
-                    top.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
-                    // Billboard drawing; the thought sits in front of it, about two thirds up.
-                    var art = Point("Art", visual, Vector3.zero).gameObject.AddComponent<SpriteRenderer>();
+                    top.GetComponent<Renderer>().enabled = false;
+                    // Billboard drawing near the front edge so it stands on the floor; the thought sits in front of it, about two thirds up.
+                    var art = Point("Art", visual, new Vector3(0, 0, -0.5f)).gameObject.AddComponent<SpriteRenderer>();
                     art.sprite = Art("Station_Blank");
                     art.transform.rotation = cam.transform.rotation;
                     art.transform.localScale = Vector3.one * 1.8f / art.sprite.bounds.size.x;
                     art.color = Gray(0.82f);
-                    st.Slot = Point("Slot", go.transform, new Vector3(0, 0.9f, 0));
+                    art.gameObject.AddComponent<SpriteShadow>();
+                    st.Slot = Point("Slot", go.transform, new Vector3(0, 0.9f, -0.5f));
                     var phone = Prim(PrimitiveType.Cube, "Phone", visual, new Vector3(0.45f, 0.95f, -0.15f), new Vector3(0.35f, 0.18f, 0.22f), Mat("Phone", new Color(0.98f, 0.8f, 0.08f)));
                     phone.SetActive(false);
                     Set(st, "phone", phone);

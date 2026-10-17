@@ -304,7 +304,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 25492953}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 3
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -1087,7 +1087,7 @@ Transform:
   m_GameObject: {fileID: 175778496}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.9, z: 0}
+  m_LocalPosition: {x: 0, y: 0.9, z: -0.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1375,6 +1375,7 @@ GameObject:
   m_Component:
   - component: {fileID: 207344542}
   - component: {fileID: 207344543}
+  - component: {fileID: 207344544}
   m_Layer: 0
   m_Name: Art
   m_TagString: Untagged
@@ -1391,7 +1392,7 @@ Transform:
   m_GameObject: {fileID: 207344541}
   serializedVersion: 2
   m_LocalRotation: {x: 0.418856, y: -0, z: -0, w: 0.9080527}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -0.5}
   m_LocalScale: {x: 1.6071428, y: 1.6071428, z: 1.6071428}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1457,6 +1458,18 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
+--- !u!114 &207344544
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 207344541}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5899cb8c2b7fb4f8fbeccc5a1eb1860f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Demons::Demons.SpriteShadow
 --- !u!1 &274809959
 GameObject:
   m_ObjectHideFlags: 0
@@ -2974,7 +2987,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 761060468}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 3
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -3377,7 +3390,7 @@ Transform:
   m_GameObject: {fileID: 876849396}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.9, z: 0}
+  m_LocalPosition: {x: 0, y: 0.9, z: -0.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3498,7 +3511,7 @@ Transform:
   m_GameObject: {fileID: 962695571}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.9, z: 0}
+  m_LocalPosition: {x: 0, y: 0.9, z: -0.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4772,7 +4785,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1348055390}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 3
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -5446,7 +5459,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1504266353}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 3
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -5527,6 +5540,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1517547646}
   - component: {fileID: 1517547647}
+  - component: {fileID: 1517547648}
   m_Layer: 0
   m_Name: Art
   m_TagString: Untagged
@@ -5543,7 +5557,7 @@ Transform:
   m_GameObject: {fileID: 1517547645}
   serializedVersion: 2
   m_LocalRotation: {x: 0.418856, y: -0, z: -0, w: 0.9080527}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -0.5}
   m_LocalScale: {x: 1.6071428, y: 1.6071428, z: 1.6071428}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5609,6 +5623,18 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
+--- !u!114 &1517547648
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1517547645}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5899cb8c2b7fb4f8fbeccc5a1eb1860f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Demons::Demons.SpriteShadow
 --- !u!1 &1522141199
 GameObject:
   m_ObjectHideFlags: 0
@@ -6196,7 +6222,7 @@ Transform:
   m_GameObject: {fileID: 1751505267}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.9, z: 0}
+  m_LocalPosition: {x: 0, y: 0.9, z: -0.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6312,6 +6338,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1819386214}
   - component: {fileID: 1819386215}
+  - component: {fileID: 1819386216}
   m_Layer: 0
   m_Name: Art
   m_TagString: Untagged
@@ -6328,7 +6355,7 @@ Transform:
   m_GameObject: {fileID: 1819386213}
   serializedVersion: 2
   m_LocalRotation: {x: 0.418856, y: -0, z: -0, w: 0.9080527}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -0.5}
   m_LocalScale: {x: 1.6071428, y: 1.6071428, z: 1.6071428}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6394,6 +6421,18 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
+--- !u!114 &1819386216
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1819386213}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5899cb8c2b7fb4f8fbeccc5a1eb1860f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Demons::Demons.SpriteShadow
 --- !u!1 &1875635518
 GameObject:
   m_ObjectHideFlags: 0
@@ -7219,6 +7258,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2046079645}
   - component: {fileID: 2046079646}
+  - component: {fileID: 2046079647}
   m_Layer: 0
   m_Name: Art
   m_TagString: Untagged
@@ -7235,7 +7275,7 @@ Transform:
   m_GameObject: {fileID: 2046079644}
   serializedVersion: 2
   m_LocalRotation: {x: 0.418856, y: -0, z: -0, w: 0.9080527}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -0.5}
   m_LocalScale: {x: 1.6071428, y: 1.6071428, z: 1.6071428}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -7301,6 +7341,18 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
+--- !u!114 &2046079647
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2046079644}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5899cb8c2b7fb4f8fbeccc5a1eb1860f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Demons::Demons.SpriteShadow
 --- !u!1 &2115366761
 GameObject:
   m_ObjectHideFlags: 0

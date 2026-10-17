@@ -93,21 +93,14 @@ namespace Demons
             foreach (var r in visual.GetComponentsInChildren<MeshRenderer>())
                 if (r == body || r == head) r.enabled = false;
                 else if (r.name == "Nose") r.enabled = false;
-
-            // An invisible card turned toward the sun casts the drawing's own silhouette.
-            var card = new GameObject("Shadow");
-            card.transform.SetParent(visual, false);
-            card.AddComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
-            shadow = card.AddComponent<MeshRenderer>();
-            shadow.sharedMaterial = new Material(Resources.Load<Material>("SpriteShadow"));
-            shadow.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+            sprite.gameObject.AddComponent<SpriteShadow>();
         }
 
         SpriteRenderer sprite;
-        MeshRenderer shadow;
         static Sprite front, side, back;
 
-        // Billboard toward the camera; pick the drawing from where the demon faces on screen.
+        // Stands upright facing the camera, stretched to undo the camera's tilt, so it sorts by where the demon stands
+        // and covers what's behind it. Picks the drawing from where the demon faces on screen.
         void LateUpdate()
         {
             var cam = Camera.main;
@@ -116,20 +109,14 @@ namespace Demons
             side = side ? side : Resources.Load<Sprite>("Art/Devil_Side");
             back = back ? back : Resources.Load<Sprite>("Art/Devil_Back");
             var view = cam.transform;
-            sprite.transform.rotation = view.rotation;
+            var ahead = Flat(view.forward);
+            sprite.transform.rotation = Quaternion.LookRotation(ahead);
+            sprite.transform.localScale = new Vector3(1, 1 / ahead.magnitude, 1);
             float x = Vector3.Dot(transform.forward, view.right);
             float z = Vector3.Dot(transform.forward, Flat(view.forward).normalized);
             bool sideways = Mathf.Abs(x) > Mathf.Abs(z);
             sprite.sprite = sideways ? side : z > 0 ? back : front;
             sprite.flipX = sideways && x < 0;
-
-            if (!sprite.sprite) return;
-            var light = RenderSettings.sun ? RenderSettings.sun.transform.forward : new Vector3(0.4f, -1, 0.6f);
-            var size = sprite.sprite.bounds.size;
-            shadow.transform.rotation = Quaternion.LookRotation(Flat(light).normalized);
-            shadow.transform.localScale = new Vector3(sprite.flipX ? -size.x : size.x, size.y, 1);
-            shadow.transform.position = sprite.transform.position + Vector3.up * size.y * sprite.transform.lossyScale.y / 2;
-            if (shadow.sharedMaterial.mainTexture != sprite.sprite.texture) shadow.sharedMaterial.mainTexture = sprite.sprite.texture;
         }
 
         public override void OnNetworkSpawn()
