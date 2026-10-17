@@ -43,6 +43,8 @@ Shader "Haunted/Paper"
             float4 _PoolCenter; // xz of the floor point under the middle of the board, set by MindFx
             float _BeltTravel; // how far the belt has moved, set by Belt
             float _MindTime; // unscaled seconds, set by MindFx
+            TEXTURE2D(_Stains); SAMPLER(sampler_Stains); // coloured ink stains on the floor (rgb ink, a coverage), stamped by Fx
+            float4 _StainRect; // xz min, 1 / size
 
             struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 uv : TEXCOORD0; };
             struct Varyings
@@ -97,6 +99,8 @@ Shader "Haunted/Paper"
                     half grid = max(Lines(t.x, plane * 2.3, 0.06), Lines(t.y, plane.yx * 2.3 + 3, 0.06));
                     albedo *= 1 - grid * 0.16 * _Tiles;
                     albedo *= 0.96 + 0.08 * Hash(floor(t));
+                    half4 stain = SAMPLE_TEXTURE2D(_Stains, sampler_Stains, (i.positionWS.xz - _StainRect.xy) * _StainRect.zw);
+                    albedo = lerp(albedo, stain.rgb, smoothstep(0.4, 0.6, stain.a) * 0.9);
                 }
 
                 // The belt's slats, drawn as pale ridges on its top that roll along with the thoughts.

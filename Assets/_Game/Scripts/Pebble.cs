@@ -99,11 +99,13 @@ namespace Demons
                     byte fresh = (byte)(now & ~was);
                     Fx.Splat(transform.position, Mix(fresh != 0 ? fresh : now));
                     MindFx.Ripple(transform.position, 0.6f);
+                    Fx.Stain(transform.position + new Vector3(Random.Range(-0.4f, 0.4f), 0, -0.75f), Mix(fresh != 0 ? fresh : now));
                 }
             };
             State.OnValueChanged += (_, now) =>
             {
                 trail.emitting = now is PebbleState.Thrown or PebbleState.Flying && Mood.Effects;
+                if (now == PebbleState.Flying) Fx.Stain(transform.position, new Color(0.25f, 0.24f, 0.28f), 0.3f);
                 if (trail.emitting)
                 {
                     var color = Mix(Stamps.Value);
