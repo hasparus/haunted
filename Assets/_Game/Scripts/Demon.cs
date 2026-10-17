@@ -43,9 +43,22 @@ namespace Demons
 
         public static bool ColorTaken(int index, Demon except) => All.Exists(d => d != except && d.ColorIndex.Value == index);
 
+        public static bool HeadTaken(int head, Demon except)
+        {
+            foreach (var d in All)
+                if (d != except && d.Head.Value == head) return true;
+            return false;
+        }
+
+        public string Name => Names[Mathf.Clamp(Head.Value, 0, Names.Length - 1)];
+
+        public bool Dashing => Time.unscaledTime < windUntil;
+
         public NetworkVariable<int> Slot = new(-1);
         public NetworkVariable<int> LocalIndex = new(-1);
         public NetworkVariable<int> ColorIndex = new();
+        // Which of the artist's heads it wears, and so its name.
+        public NetworkVariable<int> Head = new();
         public NetworkVariable<ulong> Carrying = new(Net.None);
         public NetworkVariable<bool> Lit = new();
         public NetworkVariable<int> Scribble = new();
@@ -89,10 +102,8 @@ namespace Demons
 
         Springy spring;
         Transform visual;
-        MaterialPropertyBlock block;
         float flashAt = -10, frozenUntil, flashStrength = 1, flashShown;
         Vector3 frozenAt;
-        static readonly int FlashId = Shader.PropertyToID("_Flash");
 
         // Impact on this demon's drawing alone: a paper-white flash and, for a hit-stop, the card holding still for a
         // few frames while the networked body underneath carries on, then catching up. Never touches the simulation.
@@ -122,10 +133,7 @@ namespace Demons
             float flash = flashStrength * Mathf.Clamp01(1 - (Time.unscaledTime - flashAt) / 0.18f);
             if (flash == flashShown) return;
             flashShown = flash;
-            block ??= new MaterialPropertyBlock();
-            sprite.GetPropertyBlock(block);
-            block.SetFloat(FlashId, flash);
-            sprite.SetPropertyBlock(block);
+            rig.Flash(flash);
         }
 
         // Everything but the floor marker moves under a Visual pivot, so squash and stretch never scales the networked root.
@@ -141,17 +149,14 @@ namespace Demons
             spring = visual.gameObject.AddComponent<Springy>();
 
             // The drawing stands in for the capsule, which stays behind as an invisible shadow caster.
-            sprite = new GameObject("Sprite").AddComponent<SpriteRenderer>();
-            sprite.sharedMaterial = Resources.Load<Material>("Fx/Card");
-            sprite.transform.SetParent(visual, false);
             foreach (var r in visual.GetComponentsInChildren<MeshRenderer>())
                 if (r == body || r == head) r.enabled = false;
                 else if (r.name == "Nose") r.enabled = false;
-            sprite.gameObject.AddComponent<SpriteShadow>();
+            rig = new GameObject("Drawing").AddComponent<DemonRig>();
+            rig.transform.SetParent(visual, false);
         }
 
-        SpriteRenderer sprite;
-        static Sprite front, side, back;
+        DemonRig rig;
         static Camera tilted;
         static Quaternion tilt;
 
@@ -167,17 +172,10 @@ namespace Demons
                 tilted = cam;
                 tilt = cam.transform.rotation;
             }
-            front = front ? front : Resources.Load<Sprite>("Art/Devil_Front");
-            side = side ? side : Resources.Load<Sprite>("Art/Devil_Side");
-            back = back ? back : Resources.Load<Sprite>("Art/Devil_Back");
             var ahead = Flat(tilt * Vector3.forward);
-            sprite.transform.rotation = Quaternion.LookRotation(ahead);
-            sprite.transform.localScale = new Vector3(1, 1 / ahead.magnitude, 1);
-            float x = Vector3.Dot(transform.forward, tilt * Vector3.right);
-            float z = Vector3.Dot(transform.forward, ahead.normalized);
-            bool sideways = Mathf.Abs(x) > Mathf.Abs(z);
-            sprite.sprite = sideways ? side : z > 0 ? back : front;
-            sprite.flipX = sideways && x < 0;
+            rig.transform.rotation = Quaternion.LookRotation(ahead);
+            rig.transform.localScale = new Vector3(1, 1 / ahead.magnitude, 1);
+            rig.Pose(this, transform.forward, ahead.normalized);
             if (scribble.activeSelf) Scratch(ahead.normalized);
         }
 
@@ -199,8 +197,8 @@ namespace Demons
                 scratch.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 scratch.positionCount = 12;
             }
-            scribble.transform.SetPositionAndRotation(sprite.transform.position - ahead * 0.1f, sprite.transform.rotation);
-            scribble.transform.localScale = sprite.transform.localScale;
+            scribble.transform.SetPositionAndRotation(rig.transform.position - ahead * 0.1f, rig.transform.rotation);
+            scribble.transform.localScale = rig.transform.localScale;
             int frame = Mathf.FloorToInt(Time.time * 8);
             if (frame == scratched) return;
             scratched = frame;
@@ -216,6 +214,9 @@ namespace Demons
                 int color = SpawnSlot;
                 while (ColorTaken(color, this)) color = (color + 1) % Palette.Length;
                 ColorIndex.Value = color;
+                int head = 0;
+                while (HeadTaken(head, this) && head < DemonRig.Heads - 1) head++;
+                Head.Value = head;
                 LocalIndex.Value = SpawnLocalIndex;
             }
             All.Add(this);
@@ -241,6 +242,7 @@ namespace Demons
             {
                 spring.Punch(new Vector3(-0.1f, 0.05f, 0.3f));
                 if (now > was) Audio.Play(Sounds.I.throwThought, transform.position);
+                if (now > was) rig.Throw(transform.forward);
             };
             Haunts.OnValueChanged += (was, now) =>
             {
@@ -283,7 +285,7 @@ namespace Demons
         {
             var tint = Lit.Value ? Color.Lerp(Tint, Color.white, 0.6f) : Tint;
             body.material.color = tint;
-            sprite.color = tint;
+            rig.Tint(tint);
             head.material.color = Color.Lerp(tint, Color.white, 0.35f);
             scribble.SetActive(Scribble.Value > 0);
             if (IsOwner && marker) marker.GetComponent<Renderer>().material.color = Tint;
@@ -320,7 +322,11 @@ namespace Demons
                         PickColorRpc(pad.Index);
                         nextPick = Time.time + 0.5f;
                     }
-            if (input.Grab.WasPressedThisFrame()) GrabRpc(transform.position, transform.forward, Momentum);
+            if (input.Grab.WasPressedThisFrame())
+            {
+                if (Carrying.Value == Net.None && HeadPedestal.Near(transform.position, this) is { } pedestal) PickHeadRpc(pedestal.Head);
+                else GrabRpc(transform.position, transform.forward, Momentum);
+            }
             if (input.Use.WasPressedThisFrame())
             {
                 usingHeld = true;
@@ -507,6 +513,12 @@ namespace Demons
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
         public void LeaveRpc() => NetworkObject.Despawn();
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+        public void PickHeadRpc(int head)
+        {
+            if (head >= 0 && head < DemonRig.Heads && !HeadTaken(head, this)) Head.Value = head;
+        }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
         public void PickColorRpc(int color)

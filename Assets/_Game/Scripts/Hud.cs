@@ -494,7 +494,7 @@ namespace Demons
                     var row = UI.Box("tr", table);
                     var name = UI.Box("td-name", row);
                     UI.Box("hud-chip-dot", name).style.backgroundColor = d.Tint;
-                    name.Add(UI.Text(Demon.Names[d.Slot.Value], "td", i == 0 ? UI.PlexBold : null));
+                    name.Add(UI.Text(d.Name, "td", i == 0 ? UI.PlexBold : null));
                     if (i == 0 && Score(d) > 0) name.Add(UI.Text("Employee of the Week", "employee"));
                     row.Add(UI.Text($"{Score(d) / Scoring.PrestigePerPower:0.#} zł", "td-num"));
                     foreach (var value in new[] { d.Haunts.Value, d.Deliveries.Value, d.Assists.Value, d.Throws.Value, d.Dashes.Value })

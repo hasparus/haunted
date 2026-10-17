@@ -178,6 +178,7 @@ namespace Demons.Editor
                 var pad = Prim(PrimitiveType.Cylinder, $"ColorPad{i}", null, new Vector3(-15f + i * 1.3f, 0.01f, 7f), new Vector3(0.9f, 0.01f, 0.9f), Unlit($"Pad{i}", Demon.Palette[i]));
                 pad.AddComponent<ColorPad>().Index = i;
             }
+            BuildHeadPedestals(cam);
             FloorLabel("Learn the mechanics", null, new Vector3(0, 0, 4f), 0.14f);
             FloorArrow(new Vector3(-4.6f, 0, 4f), -1);
             FloorArrow(new Vector3(4.6f, 0, 4f), -1);
@@ -248,6 +249,38 @@ namespace Demons.Editor
             Lesson(Feature.Therapist, bays, new Vector3(12.5f, 0, c));
 
             SaveScene(HeadquartersPath);
+        }
+
+        // The wardrobe's heads: one per demon on a pedestal in front of the colours, its name on the floor below in Jolly
+        // Lodger. Grabbing beside one puts it on.
+        static void BuildHeadPedestals(Camera cam)
+        {
+            const float scale = 0.45f;
+            for (int i = 0; i < DemonRig.Heads; i++)
+            {
+                var at = new Vector3(-15.4f + i * 2.5f, 0, 4.6f);
+                var root = new GameObject($"Head{i}").transform;
+                root.position = at;
+                var stand = Prim(PrimitiveType.Cylinder, "Pedestal", root, new Vector3(0, 0.3f, 0), new Vector3(0.7f, 0.3f, 0.7f), Paper("Pedestal", new Color(0.66f, 0.61f, 0.53f)), collider: true);
+                stand.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                var shown = new GameObject("Shown").transform;
+                shown.SetParent(root, false);
+                // The drawings pivot at the demon's feet, 0.63 m under the head at full size.
+                foreach (var (name, sprite) in new[] { ("Head", DemonRig.HeadFront(i)), ("Face", DemonRig.Face(i)) })
+                {
+                    var art = Point(name, shown, new Vector3(0, 0.6f - 0.63f * scale + 0.02f, 0)).gameObject.AddComponent<SpriteRenderer>();
+                    art.sprite = sprite;
+                    art.transform.rotation = cam.transform.rotation;
+                    art.transform.localScale = Vector3.one * scale;
+                    art.sharedMaterial = Resources.Load<Material>("Fx/Card");
+                    if (name == "Face") art.sortingOrder = 1;
+                }
+                FloorLabel(Demon.Names[i], root, new Vector3(0, 0, -0.8f), 0.11f, Jolly);
+                var pedestal = root.gameObject.AddComponent<HeadPedestal>();
+                pedestal.Head = i;
+                Set(pedestal, "shown", shown.gameObject);
+                Set(pedestal, "label", root.GetComponentInChildren<TextMesh>());
+            }
         }
 
         // What each mechanic's workstation says on the floor, and how far in front of the workstation, in the
@@ -406,11 +439,45 @@ namespace Demons.Editor
         static void BuildEyeView(Camera cam)
         {
             cam.transform.SetPositionAndRotation(new Vector3(0, 19.37f, -16.89f), Quaternion.Euler(44.3f, 0, 0));
-            var material = Fade(Unlit("EyeView", Color.white));
-            material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>($"{Root}/Resources/Eyes/day0.png"));
+            var material = Mat("EyeView", Color.white, "Haunted/EyePhoto");
+            material.shader = Shader.Find("Haunted/EyePhoto");
+            material.SetTexture("_Mask", AssetDatabase.LoadAssetAtPath<Texture2D>($"{Root}/Resources/Eyes/Mask.png"));
+            EyePhotosAsset();
             var view = Prim(PrimitiveType.Quad, "EyeView", null, Vector3.zero, Vector3.one, material);
             view.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             view.AddComponent<EyeView>();
+        }
+
+        // Each day's photo under the eyes, starting from the photos in Resources/Eyes.
+        static void EyePhotosAsset()
+        {
+            var path = $"{Root}/Resources/EyePhotos.asset";
+            if (AssetDatabase.LoadAssetAtPath<EyePhotos>(path)) return;
+            var photos = ScriptableObject.CreateInstance<EyePhotos>();
+            for (int i = 0; i < 7; i++)
+                photos.days[i] = new EyePhotos.Day { photo = AssetDatabase.LoadAssetAtPath<Texture2D>($"{Root}/Resources/Eyes/day{i}.png") };
+            AssetDatabase.CreateAsset(photos, path);
+        }
+
+        // A bare copy of the Office's view for lining up the eye photos: the camera, the room's outline and the eyes,
+        // driven by EyePhotoTool. Not part of the build.
+        [MenuItem("Demons/Build Eye Photos Scene")]
+        public static void BuildEyePhotosScene()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            var cam = Camera.main;
+            cam.fieldOfView = 34;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = Color.black;
+            var half = new Vector2(8.5f, 5.5f);
+            Prim(PrimitiveType.Cube, "Floor", null, new Vector3(0, -0.1f, 0), new Vector3(half.x * 2, 0.2f, half.y * 2), Paper("Floor", new Color(0.3f, 0.35f, 0.37f), tiles: true, scenery: true));
+            var wall = Paper("Wall", new Color(0.66f, 0.61f, 0.53f), scenery: true);
+            Prim(PrimitiveType.Cube, "WallBack", null, new Vector3(0, 0.75f, half.y + 0.25f), new Vector3(half.x * 2, 1.5f, 0.5f), wall);
+            Prim(PrimitiveType.Cube, "WallLeft", null, new Vector3(-half.x - 0.25f, 0.75f, 0), new Vector3(0.5f, 1.5f, half.y * 2), wall);
+            Prim(PrimitiveType.Cube, "WallRight", null, new Vector3(half.x + 0.25f, 0.75f, 0), new Vector3(0.5f, 1.5f, half.y * 2), wall);
+            BuildEyeView(cam);
+            new GameObject("EyePhotoTool").AddComponent<EyePhotoTool>();
+            EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), $"{Root}/Scenes/EyePhotos.unity");
         }
 
         static GameObject BuildMeds(Vector3 pos, bool demo, float size = 1)

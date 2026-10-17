@@ -28,7 +28,9 @@ namespace Demons
             card.transform.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(light, Vector3.up).normalized);
             var stretch = transform.localScale.y / transform.localScale.x;
             card.transform.localScale = new Vector3(sprite.flipX ? -size.x : size.x, size.y / stretch, 1);
-            card.transform.position = transform.position + Vector3.up * size.y * transform.lossyScale.x / 2;
+            // At the drawing's middle, wherever its pivot is (a demon's parts all pivot at its feet).
+            var middle = sprite.sprite.bounds.center * transform.lossyScale.x;
+            card.transform.position = transform.position + Vector3.up * middle.y + transform.right * (sprite.flipX ? -middle.x : middle.x);
             if (card.sharedMaterial.mainTexture != sprite.sprite.texture) card.sharedMaterial.mainTexture = sprite.sprite.texture;
         }
     }
