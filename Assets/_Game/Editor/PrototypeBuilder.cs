@@ -593,6 +593,7 @@ namespace Demons.Editor
                     art.transform.rotation = cam.transform.rotation;
                     art.transform.localScale = Vector3.one * 1.8f / art.sprite.bounds.size.x;
                     art.color = new Color(0.86f, 0.81f, 0.72f);
+                    art.sharedMaterial = Resources.Load<Material>("Fx/Card");
                     st.Slot = Point("Slot", go.transform, new Vector3(0, 0.65f, -0.42f));
                     var phone = Prim(PrimitiveType.Cube, "Phone", visual, new Vector3(0.45f, 0.95f, -0.15f), new Vector3(0.35f, 0.18f, 0.22f), Mat("Phone", new Color(0.98f, 0.8f, 0.08f)));
                     phone.SetActive(false);
