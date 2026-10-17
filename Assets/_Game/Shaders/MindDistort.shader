@@ -106,8 +106,8 @@ Shader "Haunted/MindDistort"
                     // (navy rim, electric blue, a near-white core) like a cartoon fire, over a soft blue glow.
                     float above = saturate((p.y - hi.y) / 0.15 + 0.5);
                     float tongues = Fbm(float2(p.x * 16, p.y * 3 - t * 2.4));
-                    float reach = (0.01 + 0.13 * tongues * tongues * tongues * 2) * (0.35 + 2.2 * above);
-                    // Leaving (_CardBurn 0 to 1): the flames fade out with the card.
+                    // Leaving (_CardBurn 0 to 1): the flames shrink down and fade out as the card cracks apart.
+                    float reach = (0.01 + 0.13 * tongues * tongues * tongues * 2) * (0.35 + 2.2 * above) * (1 - 0.85 * _CardBurn);
                     float dying = 1 - _CardBurn;
                     float flame = saturate(1 - d / reach) * step(-0.004, d) * _CardFire * dying;
 
