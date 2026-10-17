@@ -2,7 +2,7 @@ interface Env {
   SCORES: KVNamespace;
 }
 
-type Entry = { score: number; players: number; at: string };
+type Entry = { score: number; players: number; name: string; at: string };
 
 const KEY = "survival";
 const cors = {
@@ -16,23 +16,33 @@ const json = (data: unknown, status = 200) =>
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
-    if (req.method === "OPTIONS") return new Response(null, { headers: cors });
-    if (new URL(req.url).pathname !== "/scores") return json({ error: "not found" }, 404);
-
-    const scores: Entry[] = (await env.SCORES.get(KEY, "json")) ?? [];
-    if (req.method === "GET") return json({ scores: scores.slice(0, 10) });
-    if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
-
-    const body = (await req.json().catch(() => null)) as Partial<Entry> | null;
-    const score = Number(body?.score);
-    const players = Number(body?.players);
-    if (!Number.isFinite(score) || score <= 0 || score > 100_000 || !Number.isInteger(players) || players < 1 || players > 4)
-      return json({ error: "bad score" }, 400);
-
-    // ponytail: read-modify-write on one KV key; concurrent posts can drop a score. Fine for a jam, use D1 if it matters.
-    const entry: Entry = { score: Math.round(score), players, at: new Date().toISOString() };
-    const next = [...scores, entry].sort((a, b) => b.score - a.score).slice(0, 50);
-    await env.SCORES.put(KEY, JSON.stringify(next));
-    return json({ rank: next.indexOf(entry) + 1, scores: next.slice(0, 10) });
+    try {
+      return await handle(req, env);
+    } catch {
+      return json({ error: "internal" }, 500);
+    }
   },
 } satisfies ExportedHandler<Env>;
+
+async function handle(req: Request, env: Env): Promise<Response> {
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+  if (new URL(req.url).pathname !== "/scores") return json({ error: "not found" }, 404);
+
+  const scores: Entry[] = (await env.SCORES.get(KEY, "json")) ?? [];
+  if (req.method === "GET") return json({ scores: scores.slice(0, 10) });
+  if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
+
+  const body = (await req.json().catch(() => null)) as Partial<Entry> | null;
+  const score = Number(body?.score);
+  const players = Number(body?.players);
+  const name = String(body?.name ?? "").replace(/[^\p{L}\p{N} ._-]/gu, "").trim().slice(0, 16);
+  if (!Number.isFinite(score) || score <= 0 || score > 10_000 || !Number.isInteger(players) || players < 1 || players > 4)
+    return json({ error: "bad score" }, 400);
+
+  // ponytail: read-modify-write on one KV key; concurrent posts can drop a score. Fine for a jam, use D1 if it matters.
+  const entry: Entry = { score: Math.round(score), players, name, at: new Date().toISOString() };
+  const next = [...scores, entry].sort((a, b) => b.score - a.score).slice(0, 50);
+  const rank = next.indexOf(entry) + 1;
+  if (rank > 0) await env.SCORES.put(KEY, JSON.stringify(next));
+  return json({ rank: rank || null, scores: next.slice(0, 10) });
+}

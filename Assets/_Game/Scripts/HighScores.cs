@@ -16,6 +16,7 @@ namespace Demons
         {
             public float score;
             public int players;
+            public string name;
         }
 
         [System.Serializable]
@@ -39,9 +40,9 @@ namespace Demons
 
         public static void Fetch() => Instance.StartCoroutine(Send(UnityWebRequest.Get(Url)));
 
-        public static void Submit(float score, int players)
+        public static void Submit(float score, int players, string name)
         {
-            var body = Encoding.UTF8.GetBytes(JsonUtility.ToJson(new Entry { score = score, players = players }));
+            var body = Encoding.UTF8.GetBytes(JsonUtility.ToJson(new Entry { score = score, players = players, name = name }));
             var req = new UnityWebRequest(Url, "POST") { uploadHandler = new UploadHandlerRaw(body), downloadHandler = new DownloadHandlerBuffer() };
             req.SetRequestHeader("content-type", "application/json");
             Instance.StartCoroutine(Send(req));
@@ -57,7 +58,10 @@ namespace Demons
                 if (board?.scores == null) yield break;
                 var sb = new StringBuilder();
                 for (int i = 0; i < Mathf.Min(5, board.scores.Length); i++)
-                    sb.AppendLine($"{i + 1}.  {board.scores[i].score:0}   ({board.scores[i].players} demon{(board.scores[i].players == 1 ? "" : "s")})");
+                {
+                    var e = board.scores[i];
+                    sb.AppendLine($"{i + 1}.  {e.score:0}   {(string.IsNullOrEmpty(e.name) ? "anonymous" : e.name)}  ({e.players} demon{(e.players == 1 ? "" : "s")})");
+                }
                 Top = sb.ToString().TrimEnd();
             }
         }

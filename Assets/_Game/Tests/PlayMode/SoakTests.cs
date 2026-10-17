@@ -1,4 +1,6 @@
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -44,13 +46,27 @@ namespace Demons.PlayTests
         public IEnumerator SurvivalWithBotsRunsClean()
         {
             yield return StartOffice(GameMode.Survival, 3);
-            float peak = 0, end = Time.time + 540;
+            float peak = 0, end = Time.time + 540, nextCheck = Time.time + 30;
+            var travelled = new Dictionary<Demon, float>();
+            var last = new Dictionary<Demon, Vector3>();
             while (Time.time < end)
             {
                 if (GameState.Instance) peak = Mathf.Max(peak, GameState.Instance.Influence.Value);
+                foreach (var d in Demon.All)
+                {
+                    if (last.TryGetValue(d, out var was)) travelled[d] = travelled.GetValueOrDefault(d) + Vector3.Distance(was, d.transform.position);
+                    last[d] = d.transform.position;
+                }
+                if (Time.time >= nextCheck)
+                {
+                    nextCheck = Time.time + 30;
+                    foreach (var d in Demon.All)
+                        Assert.Greater(travelled.GetValueOrDefault(d), 0.5f, $"demon {d.Slot.Value} stood still for 30s in {SceneManager.GetActiveScene().name} at {d.transform.position}, carrying {Net.Find<Pebble>(d.Carrying.Value)?.Kind.Value}, lit {d.Lit.Value}, scribble {d.Scribble.Value}");
+                    travelled.Clear();
+                }
                 yield return null;
             }
-            Debug.Log($"[soak] survival peak influence {peak}, demons {Demon.All.Count}");
+            Debug.Log($"[soak] survival peak influence {peak}, demons {Demon.All.Count}, haunts {Demon.All.ConvertAll(d => d.Haunts.Value).Sum()}, deliveries {Demon.All.ConvertAll(d => d.Deliveries.Value).Sum()}, throws {Demon.All.ConvertAll(d => d.Throws.Value).Sum()}");
             Assert.AreEqual(3, Demon.All.Count);
             Assert.Greater(peak, 1f, "bots never scored; the core loop is broken");
         }
@@ -61,14 +77,16 @@ namespace Demons.PlayTests
             yield return StartOffice(GameMode.Week, 2);
             for (int day = 0; day < 7; day++)
             {
+                Debug.Log($"[soak] week day {day}, scene {SceneManager.GetActiveScene().name}");
                 if (Progression.Instance) Progression.Instance.Day.Value = day;
                 float end = Time.time + 60;
                 while (Time.time < end) yield return null;
             }
             GameState.Instance.Influence.Value = 1000;
-            float back = Time.time + 30;
-            while (SceneManager.GetActiveScene().name != "Workshop" && Time.time < back) yield return null;
-            Assert.AreEqual("Workshop", SceneManager.GetActiveScene().name, "week never ended");
+            // The review runs on network time, which ignores timeScale.
+            float back = Time.unscaledTime + 30;
+            while (SceneManager.GetActiveScene().name != "Workshop" && Time.unscaledTime < back) yield return null;
+            Assert.AreEqual("Workshop", SceneManager.GetActiveScene().name, $"week never ended: day {(Progression.Instance ? Progression.Instance.Day.Value : -1)}, influence {(GameState.Instance ? GameState.Instance.Influence.Value : float.NaN)}");
             Assert.AreEqual(2, Demon.All.Count);
         }
     }

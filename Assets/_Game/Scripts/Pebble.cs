@@ -13,7 +13,11 @@ namespace Demons
         public static readonly List<Pebble> All = new();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetStatics() => All.Clear();
+        static void ResetStatics()
+        {
+            All.Clear();
+            bouncy = null;
+        }
 
         public NetworkVariable<PebbleState> State = new();
         public NetworkVariable<ulong> Anchor = new(Net.None);
@@ -23,7 +27,6 @@ namespace Demons
         public NetworkVariable<double> BeltSince = new();
         public NetworkVariable<double> LastTouched = new();
         public NetworkVariable<int> LastHolder = new(-1);
-        public NetworkVariable<Vector3> ThrowFrom = new();
         public NetworkVariable<double> ThrowSince = new();
         public NetworkVariable<PebbleKind> Kind = new();
         public NetworkVariable<bool> Shelled = new();
@@ -37,15 +40,33 @@ namespace Demons
         [SerializeField] GameObject wings, shell, pill;
 
         double flyStart;
+        Rigidbody rb;
+        SphereCollider col;
+        static PhysicsMaterial bouncy;
         [System.NonSerialized] public int PlacedBy = -1;
 
-        double Now => NetworkManager.ServerTime.Time;
+        static double Now => Net.Now;
         float BeltDistance => BeltFrom.Value + (float)(Now - BeltSince.Value) * Balance.I.beltSpeed;
         bool Idle => State.Value is PebbleState.Floor or PebbleState.OnStation;
         double ForgetIn => LastTouched.Value + Balance.I.forgetTime - Now;
-        float ThrowT => (float)((Now - ThrowSince.Value) / Balance.I.throwTime);
+        public double TimeLeft => Idle ? ForgetIn : double.MaxValue;
+        public float BeltLeft => Belt.Instance.Length - BeltDistance;
+        double SinceThrow => Now - ThrowSince.Value;
         public bool IsGrabbable => State.Value is PebbleState.OnBelt or PebbleState.Floor or PebbleState.OnStation;
+        public bool Hauntable => !Shelled.Value && Kind.Value != PebbleKind.Pill;
         public float Weight => Kind.Value == PebbleKind.Big ? Balance.I.bigWeight : 1;
+
+        void Awake()
+        {
+            rb = gameObject.AddComponent<Rigidbody>();
+            rb.isKinematic = true;
+            rb.constraints = RigidbodyConstraints.FreezeRotation;
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+            col = gameObject.AddComponent<SphereCollider>();
+            col.enabled = false;
+            if (!bouncy) bouncy = new PhysicsMaterial("Pebble") { bounciness = Balance.I.throwBounce, bounceCombine = PhysicsMaterialCombine.Maximum, dynamicFriction = 1, staticFriction = 1, frictionCombine = PhysicsMaterialCombine.Maximum };
+            col.sharedMaterial = bouncy;
+        }
 
         public override void OnNetworkSpawn()
         {
@@ -107,9 +128,8 @@ namespace Demons
                 case PebbleState.Flying:
                     transform.position += new Vector3(0.5f, 2.5f, 0.3f) * Time.deltaTime;
                     break;
-                case PebbleState.Thrown:
-                    float t = Mathf.Clamp01(ThrowT);
-                    transform.position = Vector3.Lerp(ThrowFrom.Value, FloorPos.Value, t) + Vector3.up * (4 * Balance.I.throwArc * t * (1 - t));
+                case PebbleState.Thrown when !IsServer:
+                    transform.position = Vector3.Lerp(transform.position, FloorPos.Value, 1 - Mathf.Exp(-20 * Time.deltaTime));
                     break;
             }
         }
@@ -124,6 +144,8 @@ namespace Demons
             if (State.Value == PebbleState.OnStation && Net.Find<Station>(Anchor.Value) is { } station && station.Workers.Value != 0 && station.Kind != StationKind.Hammer)
                 color = Color.Lerp(color, Mix((byte)(Stamps.Value | station.Workers.Value)), station.Progress.Value);
             stone.material.color = color;
+            for (int slot = 0; slot < stampDots.Length; slot++)
+                if (stampDots[slot].gameObject.activeSelf) stampDots[slot].material.color = Demon.ColorOf(slot);
 
             body.localPosition = Idle && ForgetIn < Balance.I.warnTime
                 ? new Vector3(Mathf.Sin(Time.time * 40) * 0.04f, 0, 0)
@@ -136,22 +158,19 @@ namespace Demons
             // Lighten blend: averaging blue + yellow gives olive, and green is off-limits in this jam.
             var mix = Color.black;
             for (int slot = 0; slot < Scoring.MaxDemons; slot++)
-                if ((stamps & (1 << slot)) != 0) mix = Vector4.Max(mix, Demon.SlotColors[slot]);
+                if ((stamps & (1 << slot)) != 0) mix = Vector4.Max(mix, Demon.ColorOf(slot));
             return mix;
         }
 
         void Paint()
         {
             body.localScale = Vector3.one * (Kind.Value == PebbleKind.Big ? 1.6f : 1);
+            col.radius = 0.25f * body.localScale.x;
             shell.SetActive(Shelled.Value);
             pill.SetActive(Kind.Value == PebbleKind.Pill);
             stone.enabled = Kind.Value != PebbleKind.Pill;
             for (int slot = 0; slot < stampDots.Length; slot++)
-            {
-                bool on = (Stamps.Value & (1 << slot)) != 0;
-                stampDots[slot].gameObject.SetActive(on);
-                if (on) stampDots[slot].material.color = Demon.SlotColors[slot];
-            }
+                stampDots[slot].gameObject.SetActive((Stamps.Value & (1 << slot)) != 0);
         }
 
         public void Hold(Demon demon)
@@ -163,46 +182,61 @@ namespace Demons
             demon.Carrying.Value = NetworkObjectId;
         }
 
-        public void Throw(Demon thrower, Vector3 feet, Vector3 dir)
+        public void Toss(Demon thrower, Vector3 feet, Vector3 dir, Vector3 velocity)
         {
-            var from = feet + Vector3.up * 1f + dir * 0.7f;
             dir.y = 0;
             dir.Normalize();
 
-            float distance = Balance.I.throwDistance;
-            foreach (var hit in Physics.RaycastAll(new Vector3(from.x, 1.2f, from.z), dir, distance, ~0, QueryTriggerInteraction.Ignore))
-                if (!hit.rigidbody) distance = Mathf.Min(distance, Mathf.Max(0, hit.distance - 0.4f));
-
             Release();
-            ThrowFrom.Value = from;
-            var to = new Vector3(from.x, 0.25f, from.z) + dir * distance;
-            var room = GameState.Instance.RoomHalfExtents - new Vector2(0.3f, 0.3f);
-            FloorPos.Value = new Vector3(Mathf.Clamp(to.x, -room.x, room.x), to.y, Mathf.Clamp(to.z, -room.y, room.y));
             ThrowSince.Value = Now;
             Anchor.Value = thrower.NetworkObjectId;
             State.Value = PebbleState.Thrown;
+
+            var from = feet + Vector3.up + dir * 0.7f;
+            transform.position = rb.position = FloorPos.Value = from;
+            col.enabled = true;
+            foreach (var d in Demon.All)
+                foreach (var c in d.GetComponentsInChildren<Collider>())
+                    Physics.IgnoreCollision(col, c);
+            rb.isKinematic = false;
+            rb.interpolation = RigidbodyInterpolation.Interpolate;
+            rb.linearVelocity = velocity;
         }
 
         void TickThrow()
         {
+            var at = transform.position;
+            var state = GameState.Instance;
+            var room = state.RoomHalfExtents - new Vector2(0.25f, 0.25f);
+            if (!state.IsLobby && (Mathf.Abs(at.x) > room.x || Mathf.Abs(at.z) > room.y))
+            {
+                var v = rb.linearVelocity;
+                if (Mathf.Abs(at.x) > room.x) v.x = -v.x * 0.4f;
+                if (Mathf.Abs(at.z) > room.y) v.z = -v.z * 0.4f;
+                at = new Vector3(Mathf.Clamp(at.x, -room.x, room.x), at.y, Mathf.Clamp(at.z, -room.y, room.y));
+                rb.position = transform.position = at;
+                rb.linearVelocity = v;
+            }
+            FloorPos.Value = at;
             foreach (var d in Demon.All)
             {
-                bool canCatch = d.Carrying.Value == Net.None && (d.NetworkObjectId != Anchor.Value || ThrowT > 0.5f);
-                if (canCatch && Vector3.Distance(d.Hand.position, transform.position) < Balance.I.catchRadius)
+                bool canCatch = d.Carrying.Value == Net.None && d.NetworkObjectId != Anchor.Value;
+                if (canCatch && Vector3.Distance(d.Hand.position, at) < Balance.I.catchRadius)
                 {
                     Hold(d);
                     return;
                 }
             }
-            if (ThrowT < 1) return;
 
-            var at = FloorPos.Value;
-            var station = Station.All.Find(s => s.CanTake && Flat(s.Slot.position - at) < 0.9f);
+            var station = Station.All.Find(s => s.CanTake && Flat(s.Slot.position - at) < 0.7f && at.y < s.Slot.position.y + 0.5f);
             var belt = Belt.Instance;
             if (station) PutOn(station);
-            else if (Flat(belt.ClosestPoint(at) - at) < 0.6f) PutOnBelt(belt.DistanceAt(at));
-            else Drop(at);
+            else if (Flat(belt.ClosestPoint(at) - at) < 0.5f && at.y < 1f) PutOnBelt(belt.DistanceAt(at));
+            else if (at.y < -3) FlyAway();
+            else if (SinceThrow > 4 || (SinceThrow > 0.3 && rb.linearVelocity.sqrMagnitude < 0.25f && Grounded(at))) Drop(at);
         }
+
+        bool Grounded(Vector3 at) => Physics.Raycast(at, Vector3.down, col.radius + 0.08f, ~0, QueryTriggerInteraction.Ignore);
 
         static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
 
@@ -240,7 +274,7 @@ namespace Demons
         public void Drop(Vector3 at)
         {
             Release();
-            FloorPos.Value = new Vector3(at.x, 0.25f, at.z);
+            FloorPos.Value = new Vector3(at.x, Mathf.Max(at.y, 0.25f), at.z);
             State.Value = PebbleState.Floor;
             Touch();
         }
@@ -273,6 +307,9 @@ namespace Demons
 
         void Release()
         {
+            col.enabled = false;
+            rb.isKinematic = true;
+            rb.interpolation = RigidbodyInterpolation.None;
             if (State.Value == PebbleState.Held && Net.Find<Demon>(Anchor.Value) is { } demon)
                 demon.Carrying.Value = Net.None;
             if (State.Value == PebbleState.OnStation && Net.Find<Station>(Anchor.Value) is { } station)

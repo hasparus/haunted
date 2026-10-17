@@ -50,9 +50,20 @@ namespace Demons
             Workers.Value = 0;
         }
 
+        public bool NeedsWorkFrom(Demon d, Pebble p) => Kind switch
+        {
+            StationKind.Hammer => p.Shelled.Value,
+            StationKind.Desk => p.Hauntable && (p.Stamps.Value & d.SlotBit) == 0,
+            _ => false,
+        };
+
         void Update()
         {
-            if (visual) visual.SetActive(!Locked);
+            if (visual && visual.activeSelf == Locked)
+            {
+                visual.SetActive(!Locked);
+                Navigator.Invalidate();
+            }
             if (phone)
             {
                 phone.SetActive(Ringing.Value);
@@ -88,7 +99,7 @@ namespace Demons
 
             var pebble = Net.Find<Pebble>(Item.Value);
             if (!pebble) return;
-            bool hauntable = !pebble.Shelled.Value && pebble.Kind.Value != PebbleKind.Pill;
+            bool hauntable = pebble.Hauntable;
 
             byte useful;
             int n;

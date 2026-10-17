@@ -23,6 +23,24 @@ namespace Demons
 
         public static LocalPlayer Find(int index) => All.Find(p => p.Index == index);
 
+        public static int Humans => All.FindAll(p => !Bots.IsBot(p.Device)).Count;
+
+        // The join keys that would work right now, with what each one joins as.
+        public static List<(string key, string role)> JoinOptions()
+        {
+            var options = new List<(string, string)>();
+            if (Humans >= Scoring.MaxDemons) return options;
+            if (Keyboard.current is { } kb)
+            {
+                var taken = All.FindAll(p => p.Device == kb).ConvertAll(p => p.Scheme);
+                if (taken.Count == 0) options.Add(("Space", "solo keyboard"));
+                if (!taken.Contains("Solo") && !taken.Contains("WASD")) options.Add(("LShift", "left half"));
+                if (!taken.Contains("Solo") && !taken.Contains("Arrows")) options.Add(("RShift", "right half"));
+            }
+            options.Add(("A", "gamepad"));
+            return options;
+        }
+
         // Keys bound to an action for everyone playing on this machine, or for every scheme before anyone joins.
         public static string Keys(Func<LocalPlayer, InputAction> action)
         {
@@ -69,17 +87,64 @@ namespace Demons
         void Update()
         {
             var net = NetworkManager.Singleton;
-            if (!net || !net.IsListening || NetBootstrap.TypingCode || !GameState.Instance || !GameState.Instance.IsSpawned) return;
+            if (!net || !net.IsListening || NetBootstrap.TypingCode || Progression.Typing || !GameState.Instance || !GameState.Instance.IsSpawned) return;
 
             var kb = Keyboard.current;
             if (kb != null)
             {
                 if (AnyPressed(kb.spaceKey, kb.eKey)) TryJoin("Solo", kb);
-                if (AnyPressed(kb.rightShiftKey, kb.rightCtrlKey, kb.slashKey)) TryJoin("Arrows", kb);
-                if (AnyPressed(kb.leftShiftKey, kb.leftCtrlKey, kb.qKey)) TryJoin("WASD", kb);
+                if (AnyPressed(kb.rightShiftKey, kb.slashKey) || (!InBrowser && kb.rightCtrlKey.wasPressedThisFrame)) TryJoin("Arrows", kb);
+                if (AnyPressed(kb.leftShiftKey, kb.qKey) || (!InBrowser && kb.leftCtrlKey.wasPressedThisFrame)) TryJoin("WASD", kb);
             }
             foreach (var pad in Gamepad.all)
                 if (pad.buttonSouth.wasPressedThisFrame) TryJoin("Gamepad", pad);
+        }
+
+        public static Demon DemonOf(LocalPlayer player) => Demon.All.Find(d => d.IsOwner && d.LocalIndex.Value == player.Index);
+
+        public static void Leave(LocalPlayer player)
+        {
+            if (DemonOf(player) is { } demon) demon.LeaveRpc();
+            player.Move.actionMap.Dispose();
+            All.Remove(player);
+        }
+
+        public static void Remove(InputDevice device)
+        {
+            if (All.Find(p => p.Device == device) is { } player) Leave(player);
+        }
+
+        static readonly string[] KeyboardSchemes = { "Solo", "WASD", "Arrows" };
+
+        public static string Describe(string scheme) => scheme switch
+        {
+            "Solo" => "Solo keyboard",
+            "WASD" => "Keyboard, left half",
+            "Arrows" => "Keyboard, right half",
+            _ => "Gamepad",
+        };
+
+        // Steps a keyboard player to the next scheme that doesn't clash with the others on that keyboard.
+        public static void CycleScheme(LocalPlayer player, int step)
+        {
+            if (player.Device is not Keyboard) return;
+            int at = Array.IndexOf(KeyboardSchemes, player.Scheme);
+            for (int i = 1; i < KeyboardSchemes.Length; i++)
+            {
+                var scheme = KeyboardSchemes[(at + step * i + KeyboardSchemes.Length * i) % KeyboardSchemes.Length];
+                if (All.Exists(p => p != player && p.Device == player.Device && Clashes(p.Scheme, scheme))) continue;
+                player.Move.actionMap.Dispose();
+                player.Scheme = scheme;
+                Bind(player);
+                return;
+            }
+        }
+
+        public static void SetEnabled(bool enabled)
+        {
+            foreach (var p in All)
+                if (enabled) p.Move.actionMap.Enable();
+                else p.Move.actionMap.Disable();
         }
 
         static bool AnyPressed(params KeyControl[] keys)
@@ -94,7 +159,7 @@ namespace Demons
 
         static void TryJoin(string scheme, InputDevice device)
         {
-            if (All.Count >= Scoring.MaxDemons || All.Exists(p => p.Device == device && Clashes(p.Scheme, scheme))) return;
+            if (Humans >= Scoring.MaxDemons || All.Exists(p => p.Device == device && Clashes(p.Scheme, scheme))) return;
             int index = 0;
             while (Find(index) != null) index++;
 
@@ -105,11 +170,18 @@ namespace Demons
         }
 
         // Browsers keep Ctrl+W, Alt+Left and Cmd shortcuts for themselves, so the web build skips those keys.
-        static bool InBrowser => Application.platform == RuntimePlatform.WebGLPlayer;
+        public static bool InBrowser => Application.platform == RuntimePlatform.WebGLPlayer;
 
         static LocalPlayer Create(string scheme, InputDevice device)
         {
             var p = new LocalPlayer { Scheme = scheme, Device = device };
+            Bind(p);
+            return p;
+        }
+
+        static void Bind(LocalPlayer p)
+        {
+            var device = p.Device;
             var map = new InputActionMap(p.Scheme);
             p.Move = map.AddAction("Move", InputActionType.Value);
             p.Grab = map.AddAction("Grab", InputActionType.Button);
@@ -135,11 +207,11 @@ namespace Demons
                         .With("Up", "<Keyboard>/upArrow").With("Down", "<Keyboard>/downArrow")
                         .With("Left", "<Keyboard>/leftArrow").With("Right", "<Keyboard>/rightArrow");
                     p.Grab.AddBinding("<Keyboard>/rightShift");
-                    p.Use.AddBinding("<Keyboard>/rightCtrl");
                     p.Use.AddBinding("<Keyboard>/slash");
                     p.Dash.AddBinding("<Keyboard>/period");
                     if (!InBrowser)
                     {
+                        p.Use.AddBinding("<Keyboard>/rightCtrl");
                         p.Use.AddBinding("<Keyboard>/rightMeta");
                         p.Dash.AddBinding("<Keyboard>/rightAlt");
                     }
@@ -168,10 +240,9 @@ namespace Demons
                     break;
             }
 
-            if (device == null) return p;
+            if (device == null) return;
             map.devices = new[] { device };
-            map.Enable();
-            return p;
+            if (!Menu.Open) map.Enable();
         }
     }
 }

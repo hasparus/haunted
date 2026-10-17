@@ -9,10 +9,13 @@ namespace Demons.Editor
     {
         public static void WebGL() => Build(BuildTarget.WebGL, "Builds/WebGL");
 
-        static void Build(BuildTarget target, string path)
+        // F8 ends a Survival run in development builds.
+        public static void WebGLDev() => Build(BuildTarget.WebGL, "Builds/WebGLDev", BuildOptions.Development);
+
+        static void Build(BuildTarget target, string path, BuildOptions options = BuildOptions.None)
         {
             var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
-            var report = BuildPipeline.BuildPlayer(scenes, path, target, BuildOptions.None);
+            var report = BuildPipeline.BuildPlayer(scenes, path, target, options);
             if (report.summary.result != BuildResult.Succeeded) EditorApplication.Exit(1);
         }
     }

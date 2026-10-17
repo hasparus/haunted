@@ -21,9 +21,12 @@ namespace Demons
         public float flyAwayTime = 1.5f;
 
         [Header("Throwing")]
-        public float throwDistance = 4.5f;
-        public float throwTime = 0.45f;
-        public float throwArc = 1.2f;
+        public float throwSpeed = 7f;
+        public float throwLift = 2f;
+        public float throwInherit = 0.25f;
+        public float dropLift = 1f;
+        public float dropInherit = 0.7f;
+        public float throwBounce = 0.35f;
         public float catchRadius = 0.9f;
 
         [Header("Stations")]

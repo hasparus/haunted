@@ -13,16 +13,25 @@ namespace Demons
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics() => All.Clear();
 
-        public static readonly Color[] SlotColors =
+        // No reds or greens: the jam rules ban them.
+        public static readonly Color[] Palette =
         {
             new(0.23f, 0.51f, 0.96f),
             new(0.48f, 0.36f, 1f),
             new(0.98f, 0.8f, 0.08f),
             new(0.61f, 0.31f, 0.65f),
+            new(0.2f, 0.85f, 0.95f),
+            new(1f, 0.55f, 0.1f),
+            new(1f, 0.45f, 0.8f),
         };
+
+        public static Color ColorOf(int slot) => All.Find(d => d.Slot.Value == slot) is { } d ? d.Tint : Palette[slot];
+
+        public static bool ColorTaken(int index, Demon except) => All.Exists(d => d != except && d.ColorIndex.Value == index);
 
         public NetworkVariable<int> Slot = new(-1);
         public NetworkVariable<int> LocalIndex = new(-1);
+        public NetworkVariable<int> ColorIndex = new();
         public NetworkVariable<ulong> Carrying = new(Net.None);
         public NetworkVariable<bool> Lit = new();
         public NetworkVariable<int> Scribble = new();
@@ -41,10 +50,23 @@ namespace Demons
         Rigidbody rb;
         float dashUntil, nextDash;
         bool falling;
+        float respawnAt, nextPick;
+        bool usingHeld;
+
+        static bool Frozen => GameState.Instance && GameState.Instance.Paused;
+        Vector3 fallFrom;
 
         public byte SlotBit => (byte)(1 << Slot.Value);
         public bool Busy => Lit.Value || Scribble.Value > 0;
-        public Color Tint => SlotColors[Slot.Value];
+        public Color Tint => Palette[ColorIndex.Value];
+
+        public void PickColor(int step)
+        {
+            int color = ColorIndex.Value;
+            do color = (color + step + Palette.Length) % Palette.Length;
+            while (ColorTaken(color, this));
+            PickColorRpc(color);
+        }
 
         void Awake() => rb = GetComponent<Rigidbody>();
 
@@ -53,19 +75,30 @@ namespace Demons
             if (IsServer)
             {
                 Slot.Value = SpawnSlot;
+                int color = SpawnSlot;
+                while (ColorTaken(color, this)) color = (color + 1) % Palette.Length;
+                ColorIndex.Value = color;
                 LocalIndex.Value = SpawnLocalIndex;
             }
             All.Add(this);
             Paint();
             Lit.OnValueChanged += (_, _) => Paint();
             Scribble.OnValueChanged += (_, _) => Paint();
+            ColorIndex.OnValueChanged += (_, _) => Paint();
             rb.isKinematic = !IsOwner;
             if (!IsOwner) rb.interpolation = RigidbodyInterpolation.None;
             if (!IsOwner) return;
             input = LocalPlayers.Find(LocalIndex.Value);
+            // The player left before this demon arrived, or the index was reused: nobody drives it.
+            if (input == null || All.Exists(d => d != this && d.IsOwner && d.LocalIndex.Value == LocalIndex.Value))
+            {
+                input = null;
+                LeaveRpc();
+                return;
+            }
             marker.SetParent(null);
             DontDestroyOnLoad(marker.gameObject);
-            marker.GetComponent<Renderer>().material.color = Tint;
+            Paint();
         }
 
         void Paint()
@@ -74,6 +107,7 @@ namespace Demons
             body.material.color = tint;
             head.material.color = Color.Lerp(tint, Color.white, 0.35f);
             scribble.SetActive(Scribble.Value > 0);
+            if (IsOwner && marker) marker.GetComponent<Renderer>().material.color = Tint;
         }
 
         public override void OnNetworkDespawn()
@@ -87,9 +121,30 @@ namespace Demons
         {
             if (Scribble.Value > 0) scribble.transform.Rotate(0, 400 * Time.deltaTime, 0);
             if (!IsOwner || input == null) return;
-            if (input.Grab.WasPressedThisFrame()) GrabRpc(transform.position, transform.forward);
-            if (input.Use.WasPressedThisFrame()) UseRpc(true, transform.position, transform.forward);
-            if (input.Use.WasReleasedThisFrame()) UseRpc(false, transform.position, transform.forward);
+            if (usingHeld && !input.Use.enabled)
+            {
+                usingHeld = false;
+                UseRpc(false, transform.position, transform.forward, Vector3.zero);
+            }
+            if (Frozen) return;
+            if (Time.time >= nextPick)
+                foreach (var pad in ColorPad.All)
+                    if (pad.Index != ColorIndex.Value && !ColorTaken(pad.Index, this) && Flat(pad.transform.position - transform.position).magnitude < 0.7f)
+                    {
+                        PickColorRpc(pad.Index);
+                        nextPick = Time.time + 0.5f;
+                    }
+            if (input.Grab.WasPressedThisFrame()) GrabRpc(transform.position, transform.forward, Momentum);
+            if (input.Use.WasPressedThisFrame())
+            {
+                usingHeld = true;
+                UseRpc(true, transform.position, transform.forward, Momentum);
+            }
+            if (input.Use.WasReleasedThisFrame())
+            {
+                usingHeld = false;
+                UseRpc(false, transform.position, transform.forward, Vector3.zero);
+            }
             if (input.Dash.WasPressedThisFrame() && Time.time >= nextDash)
             {
                 dashUntil = Time.time + Balance.I.dashTime;
@@ -105,15 +160,19 @@ namespace Demons
             marker.position = new Vector3(p.x, 0.03f, p.z);
         }
 
-        public void Respawn()
+        // Dash-throws keep the dash speed for a moment after the dash ends.
+        Vector3 Momentum => Time.time < dashUntil + 0.15f ? transform.forward * Balance.I.dashSpeed : rb.linearVelocity;
+
+        public void Respawn() => Respawn(GameState.Instance.SpawnPoint(Slot.Value));
+
+        void Respawn(Vector3 at)
         {
             falling = false;
             rb.isKinematic = false;
             rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
             rb.linearVelocity = Vector3.zero;
-            var spawn = GameState.Instance.SpawnPoint(Slot.Value);
-            rb.position = spawn;
-            GetComponent<NetworkTransform>().Teleport(spawn, transform.rotation, transform.localScale);
+            rb.position = at;
+            GetComponent<NetworkTransform>().Teleport(at, transform.rotation, transform.localScale);
         }
 
         public void ResetForRound()
@@ -130,13 +189,18 @@ namespace Demons
             if (!IsOwner) return;
             if (falling)
             {
-                if (transform.position.y < -8) rb.isKinematic = true;
+                if (Time.time >= respawnAt) Respawn(fallFrom);
+                else if (transform.position.y < -8) rb.isKinematic = true;
                 return;
             }
-            var room = GameState.Instance ? GameState.Instance.RoomHalfExtents : Vector2.positiveInfinity;
-            if (Mathf.Abs(transform.position.x) > room.x || Mathf.Abs(transform.position.z) > room.y)
+            var state = GameState.Instance;
+            var room = state ? state.RoomHalfExtents : Vector2.positiveInfinity;
+            var p = transform.position;
+            if (Mathf.Abs(p.x) > room.x || Mathf.Abs(p.z) > room.y)
             {
                 falling = true;
+                respawnAt = state.StartsLevel(p) ? float.PositiveInfinity : Time.time + 1;
+                fallFrom = new Vector3(Mathf.Clamp(p.x, 0.8f - room.x, room.x - 0.8f), 0, Mathf.Clamp(p.z, 0.8f - room.y, room.y - 0.8f));
                 rb.constraints = RigidbodyConstraints.FreezeRotation;
                 return;
             }
@@ -175,6 +239,8 @@ namespace Demons
 
         public bool InReach(Vector3 point) => InReach(transform.position, point, Slack);
 
+        static Vector3 Flat(Vector3 v) => new(v.x, 0, v.z);
+
         static bool InReach(Vector3 from, Vector3 point, float slack)
         {
             var d = point - from;
@@ -198,26 +264,39 @@ namespace Demons
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
-        void DashedRpc() => Dashes.Value++;
+        void DashedRpc()
+        {
+            if (!Frozen) Dashes.Value++;
+        }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
-        void GrabRpc(Vector3 from, Vector3 facing)
+        public void LeaveRpc() => NetworkObject.Despawn();
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+        public void PickColorRpc(int color)
         {
-            if (Busy) return;
+            if (color >= 0 && color < Palette.Length && !ColorTaken(color, this)) ColorIndex.Value = color;
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+        void GrabRpc(Vector3 from, Vector3 facing, Vector3 momentum)
+        {
+            if (Busy || Frozen) return;
             var held = Net.Find<Pebble>(Carrying.Value);
             var target = GrabTarget(from, facing, Slack);
             if (held)
             {
                 if (target is Station station) held.PutOn(station);
                 else if (target is Belt belt) held.PutOnBelt(belt.DistanceAt(from));
-                else held.Drop(from + facing * 0.8f);
+                else held.Toss(this, from, facing, Flat(momentum) * Balance.I.dropInherit + Vector3.up * Balance.I.dropLift);
             }
             else if (target is Pebble pebble) pebble.Hold(this);
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
-        void UseRpc(bool down, Vector3 from, Vector3 facing)
+        void UseRpc(bool down, Vector3 from, Vector3 facing, Vector3 momentum)
         {
+            if (down && Frozen) return;
             if (down && Scribble.Value > 0)
             {
                 Scribble.Value--;
@@ -226,7 +305,8 @@ namespace Demons
             if (down && Lit.Value) return;
             if (down && Net.Find<Pebble>(Carrying.Value) is { } held)
             {
-                held.Throw(this, from, facing);
+                var b = Balance.I;
+                held.Toss(this, from, facing, Flat(facing).normalized * b.throwSpeed + Vector3.up * b.throwLift + Flat(momentum) * b.throwInherit);
                 Throws.Value++;
             }
             else Using = down ? UseTarget(from, facing, Slack) : null;

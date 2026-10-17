@@ -44,6 +44,7 @@ namespace Demons.Editor
             BuildWorkshop(pebble, demon, prefabs);
             PlayerSettings.defaultWebScreenWidth = 960;
             PlayerSettings.defaultWebScreenHeight = 540;
+            PlayerSettings.WebGL.template = "PROJECT:Fill";
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(WorkshopPath, true), new EditorBuildSettingsScene(OfficePath, true) };
             AssetDatabase.SaveAssets();
         }
@@ -154,7 +155,8 @@ namespace Demons.Editor
             var spawn = new Vector3(0, 0, 7f);
             var cam = NewRoom(pebble, demon, prefabs, half, walls: false, beltZ: -1.5f, beltStart: -19.3f, beltEnd: 3f);
             var rig = cam.gameObject.AddComponent<CameraRig>();
-            rig.Focus = new Vector3(0, 0, 11f);
+            rig.Focus = new Vector3(0, 0, 11.4f);
+            rig.IdleExtents = new Vector3(14f, 0, 3.8f);
             cam.transform.position = spawn + new Vector3(0, 15, -12.5f);
 
             var state = Object.FindFirstObjectByType<GameState>();
@@ -162,15 +164,23 @@ namespace Demons.Editor
             var so = new SerializedObject(state);
             so.FindProperty("startSceneWhenAllFall").stringValue = "Office";
             so.ApplyModifiedPropertiesWithoutUndo();
-            Object.DestroyImmediate(GameObject.Find("EdgeBack"));
 
             FloorLabel("FIRST WEEK\nAT WORK", null, new Vector3(-9f, 0, 16.5f), 0.28f);
             FloorLabel("INFINITE\nSURVIVAL", null, new Vector3(9f, 0, 16.5f), 0.28f);
             FloorLabel("best here: {best}\n\nTOP SCORES\n{top}", null, new Vector3(9f, 0, 12.6f), 0.13f);
-            FloorLabel("Monday to Sunday,\none new trouble a day", null, new Vector3(-9f, 0, 13.4f), 0.13f);
             Prim(PrimitiveType.Cube, "ModeDivider", null, new Vector3(0, 0.01f, 16f), new Vector3(0.15f, 0.02f, 8f), Mat("Divider", Gray(0.75f)));
-            FloorLabel("↑  START A LEVEL: EVERYONE JUMPS OFF THE TOP EDGE  ↑", null, new Vector3(0, 0, 10.6f), 0.12f);
-            FloorLabel("↓  LEARN THE MECHANICS  ↓", null, new Vector3(9.5f, 0, 3.5f), 0.12f);
+            FloorLabel("JUMP OFF TO START", null, new Vector3(0, 0, 10.6f), 0.14f);
+            FloorArrow(new Vector3(-4.2f, 0, 10.6f), 1);
+            FloorArrow(new Vector3(4.2f, 0, 10.6f), 1);
+            FloorLabel("WARDROBE\nstand on a color", null, new Vector3(-11.1f, 0, 9f), 0.12f);
+            for (int i = 0; i < Demon.Palette.Length; i++)
+            {
+                var pad = Prim(PrimitiveType.Cylinder, $"ColorPad{i}", null, new Vector3(-15f + i * 1.3f, 0.01f, 7f), new Vector3(0.9f, 0.01f, 0.9f), Unlit($"Pad{i}", Demon.Palette[i]));
+                pad.AddComponent<ColorPad>().Index = i;
+            }
+            FloorLabel("LEARN THE MECHANICS", null, new Vector3(0, 0, 4f), 0.14f);
+            FloorArrow(new Vector3(-4.6f, 0, 4f), -1);
+            FloorArrow(new Vector3(4.6f, 0, 4f), -1);
 
             var go = new GameObject("Workshop");
             go.AddComponent<NetworkObject>();
@@ -371,21 +381,6 @@ namespace Demons.Editor
                     Prim(PrimitiveType.Cube, "WallSide", null, new Vector3(x, 0.75f, (gapHigh + top) / 2), new Vector3(0.5f, 1.5f, top - gapHigh), Mat("Wall", Gray(0.5f)), collider: true);
                 }
             }
-            else
-            {
-                foreach (var (name, pos, size) in new[]
-                {
-                    ("EdgeBack", new Vector3(0, 1, wz), new Vector3(half.x * 2 + 1, 2, 0.5f)),
-                    ("EdgeFront", new Vector3(0, 1, -wz), new Vector3(half.x * 2 + 1, 2, 0.5f)),
-                    ("EdgeLeft", new Vector3(-wx, 1, 0), new Vector3(0.5f, 2, half.y * 2 + 1)),
-                    ("EdgeRight", new Vector3(wx, 1, 0), new Vector3(0.5f, 2, half.y * 2 + 1)),
-                })
-                {
-                    var edge = new GameObject(name).AddComponent<BoxCollider>();
-                    edge.transform.position = pos;
-                    edge.size = size;
-                }
-            }
 
             var beltGo = new GameObject("Belt");
             beltGo.transform.position = new Vector3(0, 0, beltZ);
@@ -465,6 +460,18 @@ namespace Demons.Editor
             t.SetParent(parent, false);
             t.localPosition = pos;
             return t;
+        }
+
+        static void FloorArrow(Vector3 pos, float dir)
+        {
+            var mat = Unlit("Arrow", Color.white);
+            var arrow = new GameObject("Arrow").transform;
+            arrow.position = pos + Vector3.up * 0.01f;
+            arrow.rotation = Quaternion.Euler(0, dir > 0 ? 0 : 180, 0);
+            Prim(PrimitiveType.Cube, "Shaft", arrow, Vector3.zero, new Vector3(0.12f, 0.02f, 1.2f), mat);
+            foreach (var side in new[] { -1, 1 })
+                Prim(PrimitiveType.Cube, "Head", arrow, new Vector3(side * 0.2f, 0, 0.4f), new Vector3(0.12f, 0.02f, 0.6f), mat)
+                    .transform.localRotation = Quaternion.Euler(0, -side * 45, 0);
         }
 
         static void FloorLabel(string text, Transform parent, Vector3 pos, float size = 0.115f)

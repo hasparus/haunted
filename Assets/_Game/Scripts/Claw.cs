@@ -17,6 +17,11 @@ namespace Demons
 
         Vector3 home;
         Station target;
+
+        public static Station Threatened { get; private set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => Threatened = null;
         Pebble carried;
         float phaseEnd, nextGrab = 6;
         Vector3 from, to;
@@ -71,6 +76,7 @@ namespace Demons
                         nextGrab = Time.time + 2;
                         return;
                     }
+                    if (!Demo) Threatened = target;
                     var above = target.Slot.position;
                     var start = new Vector3(above.x, High, above.z);
                     Jump(start);
@@ -80,6 +86,7 @@ namespace Demons
                     Go(Phase.Descending, Duration(Phase.Descending), new Vector3(transform.position.x, Low, transform.position.z));
                     break;
                 case Phase.Descending:
+                    Threatened = null;
                     carried = target ? Net.Find<Pebble>(target.Item.Value) : null;
                     if (carried) carried.Grip(this);
                     var belt = Belt.Instance;

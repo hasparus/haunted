@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -14,11 +15,70 @@ namespace Demons
         bool loading;
         float firstFallX = float.NaN;
 
+        public bool IsLobby => !string.IsNullOrEmpty(startSceneWhenAllFall);
+        public float FirstFallX => firstFallX;
+
+        // Only the lobby's top edge starts a level; every other fall respawns.
+        public bool StartsLevel(Vector3 p) => IsLobby && p.z > RoomHalfExtents.y;
+
         public Vector3 SpawnOrigin = new(0, 0, -2.5f);
 
         public Vector3 SpawnPoint(int slot) => SpawnOrigin + new Vector3(-2.25f + slot * 1.5f, 0, 0);
 
         public NetworkVariable<float> Influence = new();
+        public NetworkVariable<double> PausedFor = new(), PausedAt = new(-1);
+
+        static bool wasPaused;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            wasPaused = false;
+            Time.timeScale = 1;
+        }
+
+        public bool Paused => PausedAt.Value >= 0;
+
+        public double Now
+        {
+            get
+            {
+                double t = NetworkManager.ServerTime.Time;
+                return t - PausedFor.Value - (Paused ? t - PausedAt.Value : 0);
+            }
+        }
+
+        // Paused while anyone, on any machine, has the menu open.
+        readonly HashSet<ulong> pausers = new();
+
+        [Rpc(SendTo.Server)]
+        public void PauseRpc(bool pause, RpcParams rpc = default)
+        {
+            if (pause) pausers.Add(rpc.Receive.SenderClientId);
+            else pausers.Remove(rpc.Receive.SenderClientId);
+            SetPaused(pausers.Count > 0);
+        }
+
+        void SetPaused(bool pause)
+        {
+            double t = NetworkManager.ServerTime.Time;
+            if (pause && !Paused) PausedAt.Value = t;
+            else if (!pause && Paused)
+            {
+                PausedFor.Value += t - PausedAt.Value;
+                PausedAt.Value = -1;
+            }
+        }
+
+        void Dropped(ulong client)
+        {
+            if (pausers.Remove(client)) SetPaused(pausers.Count > 0);
+        }
+
+        public override void OnNetworkDespawn()
+        {
+            if (NetworkManager) NetworkManager.OnClientDisconnectCallback -= Dropped;
+        }
         public NetworkList<float> Prestige;
 
         void Awake()
@@ -29,11 +89,15 @@ namespace Demons
 
         public override void OnNetworkSpawn()
         {
+            Navigator.Invalidate();
+            BotBrain.ClearClaims();
+            if (Menu.Open) PauseRpc(true);
             foreach (var d in Demon.All)
                 if (d.IsOwner) d.Respawn();
             foreach (var p in LocalPlayers.All)
                 if (!Demon.All.Exists(d => d.IsOwner && d.LocalIndex.Value == p.Index)) RequestDemonRpc(p.Index);
             if (!IsServer) return;
+            NetworkManager.OnClientDisconnectCallback += Dropped;
             Influence.Value = 0;
             Prestige.Clear();
             foreach (var d in Demon.All) d.ResetForRound();
@@ -44,6 +108,8 @@ namespace Demons
         public void RequestDemonRpc(int localIndex, RpcParams rpc = default)
         {
             int slot = 0;
+            bool fromBot = rpc.Receive.SenderClientId == NetworkManager.ServerClientId && Bots.IsBot(LocalPlayers.Find(localIndex)?.Device);
+            if (Demon.All.Count >= Scoring.MaxDemons && !fromBot && Bots.All.Find(b => b.Demon) is { } cpu) Bots.Remove(cpu);
             while (slot < Scoring.MaxDemons && Demon.All.Exists(d => d.Slot.Value == slot)) slot++;
             if (slot == Scoring.MaxDemons) return;
 
@@ -66,45 +132,20 @@ namespace Demons
 
         void Update()
         {
+            if (IsSpawned && Paused != wasPaused)
+            {
+                wasPaused = Paused;
+                Time.timeScale = Paused ? 0 : 1;
+            }
             if (!IsServer || loading || string.IsNullOrEmpty(startSceneWhenAllFall) || Demon.All.Count == 0) return;
             foreach (var d in Demon.All)
-                if (float.IsNaN(firstFallX) && d.transform.position.y < -0.5f) firstFallX = d.transform.position.x;
-            if (!Demon.All.TrueForAll(d => d.transform.position.y < -3)) return;
+                if (float.IsNaN(firstFallX) && d.transform.position.y < -0.5f && StartsLevel(d.transform.position)) firstFallX = d.transform.position.x;
+            if (!Demon.All.TrueForAll(d => d.transform.position.y < -3 && StartsLevel(d.transform.position))) return;
             loading = true;
             Progression.NextMode = firstFallX < 0 ? GameMode.Week : GameMode.Survival;
             NetworkManager.SceneManager.LoadScene(startSceneWhenAllFall, UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
 
         public void Forgotten() => Influence.Value -= Scoring.ForgottenPenalty;
-
-        public static int FontSize(float share) => Mathf.Clamp(Mathf.RoundToInt(Screen.height * share), 14, 36);
-
-        void OnGUI()
-        {
-            if (!IsSpawned) return;
-            var style = new GUIStyle(GUI.skin.label) { fontSize = FontSize(0.04f), fontStyle = FontStyle.Bold, wordWrap = false };
-            GUILayout.BeginArea(new Rect(12, 8, Screen.width * 0.75f, style.fontSize * 2));
-            GUILayout.BeginHorizontal();
-            var progress = Progression.Instance;
-            if (progress)
-                GUILayout.Label(progress.Mode.Value == GameMode.Week
-                    ? $"{progress.DayName}  ·  goal {progress.Goal:0}  ·  "
-                    : $"SURVIVAL  ·  best {progress.Best.Value:0}  ·  ", style);
-            GUILayout.Label($"Influence {Influence.Value:0.0}", style);
-            foreach (var d in Demon.All)
-            {
-                style.normal.textColor = d.Tint;
-                GUILayout.Label($"  D{d.Slot.Value + 1}: {Prestige[d.Slot.Value]:0}", style);
-            }
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            GUILayout.EndArea();
-
-            if (LocalPlayers.All.Count >= Scoring.MaxDemons) return;
-            var hint = new GUIStyle(GUI.skin.label) { fontSize = FontSize(0.035f), fontStyle = FontStyle.Bold };
-            float h = hint.fontSize * 1.6f;
-            GUI.Label(new Rect(12, Screen.height - h, Screen.width - 24, h),
-                "Join: Space (solo keyboard)  ·  LShift (left half)  ·  RShift (right half)  ·  gamepad A", hint);
-        }
     }
 }

@@ -16,7 +16,7 @@ namespace Demons
         void Awake()
         {
             cam = GetComponent<Camera>();
-            direction = (transform.position - Focus).normalized;
+            direction = -transform.forward;
             center = Focus;
             distance = MinDistance;
         }

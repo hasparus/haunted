@@ -125,6 +125,28 @@ namespace Demons
             return bot;
         }
 
+        public static void AddCpu()
+        {
+            if (Demon.All.Count + All.FindAll(b => !b.Demon).Count < Scoring.MaxDemons) Add().Auto = true;
+        }
+
+        public static void RemoveCpu()
+        {
+            if (All.Count > 0) Remove(All[^1]);
+        }
+
+        public static bool IsBot(InputDevice device) => All.Exists(b => b.Pad == device);
+
+        public static bool IsBot(Demon demon) => All.Exists(b => b.Demon == demon);
+
+        public static void Remove(Bot bot)
+        {
+            bot.brain.Release();
+            LocalPlayers.Remove(bot.Pad);
+            InputSystem.RemoveDevice(bot.Pad);
+            All.Remove(bot);
+        }
+
         void Update()
         {
             foreach (var bot in All) bot.Tick();
