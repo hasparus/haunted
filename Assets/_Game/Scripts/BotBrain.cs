@@ -23,7 +23,10 @@ namespace Demons
         public static void ClearClaims() => claims.Clear();
 
         Object claimed;
-        public string Doing = "";
+        string doing = "";
+        Task task;
+        bool carrying;
+        public string Doing => doing ?? $"{(task.Claim ? task.Claim.name : "-")} {task.Act} {task.Button} score {task.Score:0.0} at {task.Goal:F1} carrying {carrying}";
         List<Vector3> path;
         Vector3 pathGoal;
         float repathAt, stuckFor, sidestepUntil, nextDash, nextTap;
@@ -43,7 +46,7 @@ namespace Demons
             }
             if (d.Scribble.Value > 0)
             {
-                Doing = "scribbled";
+                doing = "scribbled";
                 Release();
                 TapNow(bot, GamepadButton.West);
                 return;
@@ -51,7 +54,7 @@ namespace Demons
             var light = Spotlight.Instance;
             if (light && (d.Lit.Value || light.Threatens(d.transform.position)))
             {
-                Doing = "lit";
+                doing = "lit";
                 Release();
                 Steer(bot, d, Escape(d.transform.position, light.transform.position), arrive: false);
                 return;
@@ -67,7 +70,7 @@ namespace Demons
             }
             if (best.Score == float.MinValue)
             {
-                Doing = "idle";
+                doing = "idle";
                 Release();
                 return;
             }
@@ -78,7 +81,9 @@ namespace Demons
                 if (best.Claim) claims[best.Claim] = this;
                 claimed = best.Claim;
             }
-            Doing = $"{(best.Claim ? best.Claim.name : "-")} {best.Act} {best.Button} score {best.Score:0.0} at {best.Goal:F1} carrying {d.Carrying.Value != Net.None}";
+            doing = null;
+            task = best;
+            carrying = d.Carrying.Value != Net.None;
             if (Steer(bot, d, best.Goal))
             {
                 if (best.Act == Act.Hold) bot.held.Add(best.Button);
@@ -219,7 +224,7 @@ namespace Demons
             }
             if (!leader) return false;
 
-            Doing = "duckling";
+            doing = "duckling";
             Release();
             var half = state.RoomHalfExtents - Vector2.one;
             var behind = leader.transform.position - leader.transform.forward * 1.2f;
