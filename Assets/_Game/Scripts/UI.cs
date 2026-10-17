@@ -78,8 +78,11 @@ namespace Demons
             return button;
         }
 
-        public static void Show(VisualElement element, bool visible) =>
-            element.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+        public static void Show(VisualElement element, bool visible)
+        {
+            var display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (element.resolvedStyle.display != display) element.style.display = display;
+        }
 
         public static void Set(Label label, string text)
         {

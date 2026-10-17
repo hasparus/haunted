@@ -25,7 +25,7 @@ namespace Demons
         Object claimed;
         List<Vector3> path;
         Vector3 pathGoal;
-        float repathAt, stuckFor, sidestepUntil, nextDash;
+        float repathAt, stuckFor, sidestepUntil, nextDash, nextTap;
         Vector3 lastPos;
         Vector2 sidestep;
 
@@ -237,9 +237,12 @@ namespace Demons
             return false;
         }
 
-        static void TapNow(Bot bot, GamepadButton button)
+        // One-frame presses on game time, so a slow frame rate doesn't slow the bot down.
+        void TapNow(Bot bot, GamepadButton button)
         {
-            if (Time.frameCount % 6 == 0) bot.held.Add(button);
+            if (Time.time < nextTap) return;
+            nextTap = Time.time + 0.1f;
+            bot.held.Add(button);
         }
     }
 }

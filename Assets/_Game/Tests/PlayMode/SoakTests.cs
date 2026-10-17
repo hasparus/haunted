@@ -47,6 +47,8 @@ namespace Demons.PlayTests
         {
             yield return StartOffice(GameMode.Survival, 3);
             float peak = 0, end = Time.time + 540, nextCheck = Time.time + 30;
+            int startFrame = Time.frameCount;
+            float startReal = Time.realtimeSinceStartup;
             var travelled = new Dictionary<Demon, float>();
             var last = new Dictionary<Demon, Vector3>();
             while (Time.time < end)
@@ -66,7 +68,7 @@ namespace Demons.PlayTests
                 }
                 yield return null;
             }
-            Debug.Log($"[soak] survival peak influence {peak}, demons {Demon.All.Count}, haunts {Demon.All.ConvertAll(d => d.Haunts.Value).Sum()}, deliveries {Demon.All.ConvertAll(d => d.Deliveries.Value).Sum()}, throws {Demon.All.ConvertAll(d => d.Throws.Value).Sum()}");
+            Debug.Log($"[soak] survival peak influence {peak}, demons {Demon.All.Count}, haunts {Demon.All.ConvertAll(d => d.Haunts.Value).Sum()}, deliveries {Demon.All.ConvertAll(d => d.Deliveries.Value).Sum()}, throws {Demon.All.ConvertAll(d => d.Throws.Value).Sum()}, fps {(Time.frameCount - startFrame) / (Time.realtimeSinceStartup - startReal):0}");
             Assert.AreEqual(3, Demon.All.Count);
             Assert.Greater(peak, 1f, "bots never scored; the core loop is broken");
         }
