@@ -49,15 +49,25 @@ namespace Demons
             }
         }
 
-        // Paused while anyone, on any machine, has the menu open.
+        // Paused while anyone, on any machine, has the menu open, or while a held card is up.
         readonly HashSet<ulong> pausers = new();
+        double heldUntil;
+
+        // Server: pause for this many real seconds, e.g. while the boss's card is read.
+        public void Hold(float seconds)
+        {
+            heldUntil = NetworkManager.ServerTime.Time + seconds;
+            SetPaused(true);
+        }
+
+        bool Holding => heldUntil > NetworkManager.ServerTime.Time;
 
         [Rpc(SendTo.Server)]
         public void PauseRpc(bool pause, RpcParams rpc = default)
         {
             if (pause) pausers.Add(rpc.Receive.SenderClientId);
             else pausers.Remove(rpc.Receive.SenderClientId);
-            SetPaused(pausers.Count > 0);
+            SetPaused(pausers.Count > 0 || Holding);
         }
 
         void SetPaused(bool pause)
@@ -73,7 +83,7 @@ namespace Demons
 
         void Dropped(ulong client)
         {
-            if (pausers.Remove(client)) SetPaused(pausers.Count > 0);
+            if (pausers.Remove(client)) SetPaused(pausers.Count > 0 || Holding);
         }
 
         public override void OnNetworkDespawn()
@@ -125,7 +135,7 @@ namespace Demons
             var prestige = new float[Scoring.MaxDemons];
             float gained = Scoring.Deliver(pebble.Stamps.Value, pebble.LastHolder.Value, prestige, pebble.Points);
             Influence.Value += gained;
-            if (gained > 0) PopupRpc(pebble.transform.position, $"+{gained:0.#}", pebble.LastHolder.Value);
+            if (gained > 0) PopupRpc(pebble.transform.position, $"+{gained:0.#} zł", pebble.LastHolder.Value);
             if (pebble.Stamps.Value != 0 && Demon.All.Find(d => d.Slot.Value == pebble.LastHolder.Value) is { } deliverer)
                 deliverer.Deliveries.Value++;
             for (int slot = 0; slot < Scoring.MaxDemons; slot++)
@@ -140,6 +150,11 @@ namespace Demons
                 wasPaused = Paused;
                 Time.timeScale = Paused ? 0 : 1;
             }
+            if (IsServer && IsSpawned && heldUntil > 0 && !Holding)
+            {
+                heldUntil = 0;
+                SetPaused(pausers.Count > 0);
+            }
             if (!IsServer || loading || string.IsNullOrEmpty(startSceneWhenAllFall) || Demon.All.Count == 0) return;
             foreach (var d in Demon.All)
                 if (float.IsNaN(firstFallX) && d.transform.position.y < -0.5f && StartsLevel(d.transform.position)) firstFallX = d.transform.position.x;
@@ -152,13 +167,13 @@ namespace Demons
         public void Missed(Vector3 at)
         {
             Influence.Value -= Balance.I.survivalMissPenalty;
-            PopupRpc(at, $"\u2212{Balance.I.survivalMissPenalty:0.#}", -1);
+            PopupRpc(at, $"\u2212{Balance.I.survivalMissPenalty:0.#} zł", -1);
         }
 
         public void Forgotten(Vector3 at)
         {
             Influence.Value -= Balance.I.forgottenPenalty;
-            PopupRpc(at, $"\u2212{Balance.I.forgottenPenalty:0.#}", -1);
+            PopupRpc(at, $"\u2212{Balance.I.forgottenPenalty:0.#} zł", -1);
         }
 
         [Rpc(SendTo.Everyone)]

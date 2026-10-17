@@ -32,7 +32,9 @@ namespace Demons
             All.Add(this);
             Ringing.OnValueChanged += (was, now) =>
             {
-                if (was && !now) Audio.Play(Sounds.I.answer, Slot.position);
+                if (!was || now) return;
+                Audio.Play(Sounds.I.answer, Slot.position);
+                talkUntil = Time.time + Hud.BubbleTime;
             };
             Workers.OnValueChanged += (was, now) =>
             {
@@ -82,13 +84,14 @@ namespace Demons
         }
 
         AudioSource hum;
+        float talkUntil;
 
         AudioClip Hum()
         {
             var s = Sounds.I;
             if (!IsSpawned || Locked) return null;
             if (Ringing.Value) return s.phoneRing;
-            if (Workers.Value == 0) return null;
+            if (Workers.Value == 0) return Time.time < talkUntil ? s.phoneTalk : null;
             return Kind switch { StationKind.Pot => s.potLoop, StationKind.Hammer => s.hammerLoop, _ => s.hauntLoop };
         }
 
@@ -120,6 +123,7 @@ namespace Demons
             var pebble = Net.Find<Pebble>(Item.Value);
             if (!pebble) return;
             bool hauntable = pebble.Hauntable;
+            bool big = pebble.Kind.Value == PebbleKind.Big;
 
             byte useful;
             int n;
@@ -128,7 +132,7 @@ namespace Demons
             {
                 case StationKind.Pot:
                     int owner = pebble.LastHolder.Value;
-                    useful = hauntable && owner >= 0 ? (byte)((1 << owner) & ~pebble.Stamps.Value) : (byte)0;
+                    useful = hauntable && owner >= 0 ? Scoring.Haunters(pebble.Stamps.Value, (byte)(1 << owner), big) : (byte)0;
                     n = useful != 0 ? 1 : 0;
                     duration = Balance.I.potTime * pebble.Weight;
                     break;
@@ -138,7 +142,7 @@ namespace Demons
                     duration = Balance.I.hammerTime;
                     break;
                 default:
-                    useful = hauntable ? (byte)(Hands() & ~pebble.Stamps.Value) : (byte)0;
+                    useful = hauntable ? Scoring.Haunters(pebble.Stamps.Value, Hands(), big) : (byte)0;
                     n = Scoring.StampCount(useful);
                     duration = Balance.I.stampTime * pebble.Weight;
                     break;
@@ -156,7 +160,7 @@ namespace Demons
                 pebble.Shelled.Value = false;
                 return;
             }
-            pebble.Stamps.Value |= useful;
+            pebble.Stamps.Value = Scoring.Haunted(pebble.Stamps.Value, useful, big);
             if (Kind != StationKind.Desk) return;
             foreach (var d in Demon.All)
             {

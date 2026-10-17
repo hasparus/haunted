@@ -7,16 +7,20 @@ namespace Demons
 {
     public class Hud : MonoBehaviour
     {
-        static readonly string[] Columns = { "Prestige", "Haunts", "Deliveries", "Assists", "Throws", "Dashes" };
+        static readonly string[] Columns = { "Revenue", "Haunts", "Deliveries", "Assists", "Throws", "Dashes" };
 
-        VisualElement top, chips, net, offline, joining, online, notice, cpu, cardWrap, card, reviewWrap, table, sign;
-        Label status, netStatus, noticeTitle, noticeBody, cardTitle, cardBody, paused, reviewTitle, reviewBody, signHint, signWait;
+        VisualElement top, scores, net, offline, joining, online, notice, cpu, cardWrap, card, reviewWrap, table, sign;
+        Label day, dayInfo, revenue, netStatus, noticeTitle, noticeBody, cardTitle, cardBody, paused, reviewTitle, reviewBody, signHint, signWait;
         TextField code, signature;
         Button removeCpu;
         VisualElement footer;
         string footerShape;
         string chipShape, tableShape;
-        bool signFocused, codeFocused;
+        readonly float[] scoreSeen = new float[Scoring.MaxDemons];
+        bool signFocused, codeFocused, reviewing;
+        readonly VisualElement[] stars = new VisualElement[3];
+        float reviewAt;
+        int starsLit;
 
         static Hud instance;
         VisualElement hud;
@@ -36,7 +40,7 @@ namespace Demons
             instance.popups.Add((label, at, Time.time));
         }
 
-        const float BubbleTime = 4.5f;
+        public const float BubbleTime = 4.5f;
         readonly List<(VisualElement box, Vector3 at, float born)> bubbles = new();
 
         // A speech bubble pinned beside a world point, e.g. the phone that was just answered.
@@ -100,9 +104,14 @@ namespace Demons
             hud = UI.Box("hud", root);
 
             top = UI.Box("hud-top", hud);
-            status = UI.Text("", "hud-status");
-            top.Add(status);
-            chips = UI.Box("hud-chips", top);
+            day = UI.Text("", "hud-day", UI.Jolly);
+            top.Add(day);
+            dayInfo = UI.Text("", "hud-day-info", UI.Jolly);
+            top.Add(dayInfo);
+            var right = UI.Box("hud-right", hud);
+            revenue = UI.Text("", "hud-revenue", UI.Jolly);
+            right.Add(revenue);
+            scores = UI.Box("hud-scores", right);
 
             net = UI.Box("hud-net", hud);
             offline = UI.Box("hud-net-row", net);
@@ -156,6 +165,8 @@ namespace Demons
             var review = UI.Box("review", reviewWrap);
             reviewTitle = UI.Text("Performance Review", "review-title", UI.Jolly);
             review.Add(reviewTitle);
+            var starRow = UI.Box("stars", review);
+            for (int i = 0; i < stars.Length; i++) stars[i] = Star(starRow);
             reviewBody = UI.Text("", "review-body");
             review.Add(reviewBody);
             table = UI.Box("table", review);
@@ -190,6 +201,7 @@ namespace Demons
             var progress = Progression.Instance && Progression.Instance.IsSpawned ? Progression.Instance : null;
 
             UI.Show(top, live && !state.IsLobby);
+            UI.Show(scores.parent, live && !state.IsLobby);
             if (live && !state.IsLobby) RefreshTop(state, progress);
 
             RefreshNet(state);
@@ -200,9 +212,15 @@ namespace Demons
             if (!showCard) lastCard = null;
             if (showCard && !showReview) RefreshCard(progress.Card.Value.ToString());
             UI.Show(reviewWrap, showReview);
+            if (showReview && !reviewing)
+            {
+                reviewAt = Time.unscaledTime;
+                LightStars(0);
+            }
+            reviewing = showReview;
             if (showReview) RefreshReview(state, progress);
 
-            UI.Show(paused.parent, live && state.Paused && !Menu.Open);
+            UI.Show(paused.parent, live && state.Paused && !Menu.Open && !showCard);
 
             var hint = live ? JoinHint(state) : null;
             UI.Show(footer.parent, hint != null && !Menu.Open);
@@ -211,10 +229,10 @@ namespace Demons
 
         void RefreshTop(GameState state, Progression progress)
         {
-            var text = progress == null ? ""
-                : progress.Mode.Value == GameMode.Week ? $"{progress.DayName}  ·  goal {progress.Goal:0}  ·  "
-                : $"Survival  ·  best {progress.Best.Value:0}  ·  fired below {progress.FireLine:0}  ·  ";
-            UI.Set(status, text + $"influence {state.Influence.Value:0.0}");
+            bool week = progress && progress.Mode.Value == GameMode.Week;
+            UI.Set(day, !progress ? "" : week ? progress.DayName[..1] + progress.DayName[1..].ToLowerInvariant() : "Survival");
+            UI.Set(dayInfo, !progress ? "" : week ? $"goal {progress.Goal:0} zł" : $"best {progress.Best.Value:0} zł  ·  fired below {progress.FireLine:0} zł");
+            UI.Set(revenue, $"Revenue: {state.Influence.Value:0.#} zł");
 
             var demons = Demon.All.FindAll(d => d.Slot.Value >= 0);
             demons.Sort((a, b) => a.Slot.Value.CompareTo(b.Slot.Value));
@@ -223,20 +241,31 @@ namespace Demons
             if (shape.ToString() != chipShape)
             {
                 chipShape = shape.ToString();
-                chips.Clear();
+                scores.Clear();
                 foreach (var d in demons)
                 {
-                    var chip = UI.Box("hud-chip", chips);
-                    UI.Box("hud-chip-dot", chip).style.backgroundColor = d.Tint;
-                    chip.Add(UI.Text("", "hud-chip-value", UI.PlexBold));
+                    var score = UI.Text("", "hud-score", UI.Jolly);
+                    score.style.color = d.Tint;
+                    scores.Add(score);
                 }
+                System.Array.Fill(scoreSeen, float.NaN);
             }
-            for (int i = 0; i < demons.Count && i < chips.childCount; i++)
+            for (int i = 0; i < demons.Count && i < scores.childCount; i++)
             {
                 int slot = demons[i].Slot.Value;
-                var value = state.Prestige.Count > slot ? state.Prestige[slot] : 0;
-                UI.Set(chips[i].Q<Label>(), value.ToString("0"));
+                var value = (state.Prestige.Count > slot ? state.Prestige[slot] : 0) / Scoring.PrestigePerPower;
+                var score = (Label)scores[i];
+                UI.Set(score, $"{value:0.#} zł");
+                if (value > scoreSeen[slot]) Hop(score);
+                scoreSeen[slot] = value;
             }
+        }
+
+        // A jolly hop when a demon's revenue goes up: up with a tilt, then back down with a bounce.
+        static void Hop(VisualElement score)
+        {
+            score.AddToClassList("hud-score--hop");
+            score.schedule.Execute(() => score.RemoveFromClassList("hud-score--hop")).ExecuteLater(160);
         }
 
         void RefreshNet(GameState state)
@@ -282,6 +311,14 @@ namespace Demons
         {
             UI.Set(reviewBody, progress.Card.Value.ToString());
 
+            // Earned stars light up one by one once the review has landed.
+            int lit = Mathf.Clamp(Mathf.FloorToInt((Time.unscaledTime - reviewAt - 0.8f) / 0.5f) + 1, 0, progress.Stars.Value);
+            if (lit > starsLit)
+            {
+                Audio.Ui(Sounds.I.star, lit - 1);
+                LightStars(lit);
+            }
+
             var demons = Demon.All.FindAll(d => d.Slot.Value >= 0);
             var prestige = state.Prestige;
             float Score(Demon d) => prestige.Count > d.Slot.Value ? prestige[d.Slot.Value] : 0;
@@ -305,7 +342,8 @@ namespace Demons
                     UI.Box("hud-chip-dot", name).style.backgroundColor = d.Tint;
                     name.Add(UI.Text($"Demon {d.Slot.Value + 1}", "td", i == 0 ? UI.PlexBold : null));
                     if (i == 0 && Score(d) > 0) name.Add(UI.Text("Employee of the Week", "employee"));
-                    foreach (var value in new[] { Score(d), d.Haunts.Value, d.Deliveries.Value, d.Assists.Value, d.Throws.Value, d.Dashes.Value })
+                    row.Add(UI.Text($"{Score(d) / Scoring.PrestigePerPower:0.#} zł", "td-num"));
+                    foreach (var value in new[] { d.Haunts.Value, d.Deliveries.Value, d.Assists.Value, d.Throws.Value, d.Dashes.Value })
                         row.Add(UI.Text(value.ToString("0"), "td-num"));
                 }
             }
@@ -321,6 +359,40 @@ namespace Demons
                 signature.schedule.Execute(() => signature.Focus());
             }
             signFocused = mine;
+        }
+
+        void LightStars(int count)
+        {
+            starsLit = count;
+            for (int i = 0; i < stars.Length; i++)
+            {
+                stars[i].EnableInClassList("star--lit", i < count);
+                stars[i].MarkDirtyRepaint();
+            }
+        }
+
+        // Drawn rather than typed: neither UI font has a star glyph.
+        static VisualElement Star(VisualElement parent)
+        {
+            var star = UI.Box("star", parent);
+            star.generateVisualContent += ctx =>
+            {
+                var r = star.contentRect;
+                float outer = Mathf.Min(r.width, r.height) / 2, inner = outer * 0.45f;
+                var p = ctx.painter2D;
+                p.fillColor = star.resolvedStyle.color;
+                p.BeginPath();
+                for (int i = 0; i < 10; i++)
+                {
+                    float angle = Mathf.PI * (i / 5f - 0.5f);
+                    var point = r.center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * (i % 2 == 0 ? outer : inner);
+                    if (i == 0) p.MoveTo(point);
+                    else p.LineTo(point);
+                }
+                p.ClosePath();
+                p.Fill();
+            };
+            return star;
         }
 
         // Alternating words and keycaps: [("Join", false), ("Space", true), ("solo keyboard", false), ...].

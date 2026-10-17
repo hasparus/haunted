@@ -3,7 +3,7 @@ namespace Demons
     public static class Scoring
     {
         public const int MaxDemons = 4;
-        const float PrestigePerPower = 10f;
+        public const float PrestigePerPower = 10f;
 
         public static int StampCount(byte stamps)
         {
@@ -11,6 +11,14 @@ namespace Demons
             for (; stamps != 0; stamps &= (byte)(stamps - 1)) n++;
             return n;
         }
+
+        public static byte Haunters(byte stamps, byte hands, bool big)
+        {
+            byte fresh = (byte)(hands & ~stamps);
+            return big || fresh == 0 ? fresh : hands;
+        }
+
+        public static byte Haunted(byte stamps, byte haunters, bool big) => big ? (byte)(stamps | haunters) : haunters;
 
         public static float Power(byte stamps, float weight = 1)
         {

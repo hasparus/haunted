@@ -55,6 +55,8 @@ namespace Demons
         float respawnAt, nextPick;
         int wiggle;
         bool usingHeld;
+        Vector3 lastFeet;
+        float stride;
 
         static bool Frozen => GameState.Instance && GameState.Instance.Paused;
         Vector3 fallFrom;
@@ -91,24 +93,16 @@ namespace Demons
             foreach (var r in visual.GetComponentsInChildren<MeshRenderer>())
                 if (r == body || r == head) r.enabled = false;
                 else if (r.name == "Nose") r.enabled = false;
-
-            // An invisible card turned toward the sun casts the drawing's own silhouette.
-            var card = new GameObject("Shadow");
-            card.transform.SetParent(visual, false);
-            card.AddComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
-            shadow = card.AddComponent<MeshRenderer>();
-            shadow.sharedMaterial = new Material(Resources.Load<Material>("SpriteShadow"));
-            shadow.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+            sprite.gameObject.AddComponent<SpriteShadow>();
         }
 
         SpriteRenderer sprite;
-        MeshRenderer shadow;
         static Sprite front, side, back;
         static Camera tilted;
         static Quaternion tilt;
 
-        // Hold the camera's starting tilt against the root's yaw (the live rotation would roll with a shake);
-        // pick the drawing from where the demon faces on screen.
+        // Stands upright facing the camera's starting view (the live one would roll with a shake), stretched to undo its
+        // tilt, so it sorts by where the demon stands and covers what's behind it. Picks the drawing from where the demon faces.
         void LateUpdate()
         {
             var cam = Camera.main;
@@ -121,20 +115,14 @@ namespace Demons
             front = front ? front : Resources.Load<Sprite>("Art/Devil_Front");
             side = side ? side : Resources.Load<Sprite>("Art/Devil_Side");
             back = back ? back : Resources.Load<Sprite>("Art/Devil_Back");
-            sprite.transform.rotation = tilt;
+            var ahead = Flat(tilt * Vector3.forward);
+            sprite.transform.rotation = Quaternion.LookRotation(ahead);
+            sprite.transform.localScale = new Vector3(1, 1 / ahead.magnitude, 1);
             float x = Vector3.Dot(transform.forward, tilt * Vector3.right);
-            float z = Vector3.Dot(transform.forward, Flat(tilt * Vector3.forward).normalized);
+            float z = Vector3.Dot(transform.forward, ahead.normalized);
             bool sideways = Mathf.Abs(x) > Mathf.Abs(z);
             sprite.sprite = sideways ? side : z > 0 ? back : front;
             sprite.flipX = sideways && x < 0;
-
-            if (!sprite.sprite) return;
-            var light = RenderSettings.sun ? RenderSettings.sun.transform.forward : new Vector3(0.4f, -1, 0.6f);
-            var size = sprite.sprite.bounds.size;
-            shadow.transform.rotation = Quaternion.LookRotation(Flat(light).normalized);
-            shadow.transform.localScale = new Vector3(sprite.flipX ? -size.x : size.x, size.y, 1);
-            shadow.transform.position = sprite.transform.position + Vector3.up * size.y * sprite.transform.lossyScale.y / 2;
-            if (shadow.sharedMaterial.mainTexture != sprite.sprite.texture) shadow.sharedMaterial.mainTexture = sprite.sprite.texture;
         }
 
         public override void OnNetworkSpawn()
@@ -222,6 +210,7 @@ namespace Demons
                 fallen = down;
                 Audio.Play(down ? Sounds.I.fall : Sounds.I.respawn, transform.position);
             }
+            Footsteps(down);
             if (Scribble.Value > 0) scribble.transform.Rotate(0, 400 * Time.deltaTime, 0);
             if (!IsOwner || input == null) return;
             if (usingHeld && !input.Use.enabled)
@@ -268,6 +257,19 @@ namespace Demons
             marker.position = Vector3.Lerp(marker.position, markerAt, k);
             marker.localScale = new Vector3(MarkerRadius, 1, MarkerRadius) * markerSize;
             marker.gameObject.SetActive(markerSize > 0.01f);
+        }
+
+        // From the transform rather than input, so every client hears every demon walk. Teleports don't count.
+        void Footsteps(bool down)
+        {
+            var feet = Flat(transform.position);
+            float moved = (feet - lastFeet).magnitude;
+            lastFeet = feet;
+            if (down || moved > 2) return;
+            stride += moved;
+            if (stride < Sounds.I.stepLength) return;
+            stride = 0;
+            Audio.Play(Sounds.I.step, transform.position);
         }
 
         const float MarkerRadius = 0.5f;
@@ -454,7 +456,7 @@ namespace Demons
             if (down && Net.Find<Pebble>(Carrying.Value) is { } held)
             {
                 var b = Balance.I;
-                held.Toss(this, from, facing, Flat(facing).normalized * b.throwSpeed + Vector3.up * b.throwLift + Flat(momentum) * b.throwInherit);
+                held.Toss(this, from, facing, Flat(facing).normalized * b.throwSpeed + Vector3.up * b.throwLift + Vector3.ClampMagnitude(Flat(momentum), b.throwInheritMax) * b.throwInherit);
                 Throws.Value++;
             }
             else Using = down ? UseTarget(from, facing, Slack) : null;

@@ -209,7 +209,7 @@ namespace Demons.Editor
             FloorLabel("Big thought\nhaunt it together\n5x points", bays, new Vector3(2f, 0, a - 1.8f));
             Seed(bays, big.Slot.position, desk: big, kind: PebbleKind.Big);
 
-            FloorLabel("Left alone\nwings, -influence", bays, new Vector3(7f, 0, a - 1.6f));
+            FloorLabel("Left alone\nwings, -revenue", bays, new Vector3(7f, 0, a - 1.6f));
             Seed(bays, new Vector3(7f, 0, a - 0.2f), pinned: false);
 
             FloorLabel("Meds\nwhen he takes one,\ncontrols flip", bays, new Vector3(12f, 0, a - 1.8f));
@@ -301,19 +301,13 @@ namespace Demons.Editor
             Set(pen, "look", look);
         }
 
-        // Pull the camera back so the strip in front of the office shows what the host sees.
+        // Tilt the camera up and back so the board sits low, under what the host sees across the top of the screen.
         static void BuildEyeView(Camera cam)
         {
-            cam.transform.position = new Vector3(0, 18.5f, -16.3f);
-            cam.transform.LookAt(new Vector3(0, 0, -1.2f));
-            var ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.13f, 0));
-            var at = ray.GetPoint((-7.4f - ray.origin.z) / ray.direction.z);
-            float depth = Vector3.Dot(at - cam.transform.position, cam.transform.forward);
-            float height = 2 * depth * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * 0.28f;
+            cam.transform.SetPositionAndRotation(new Vector3(0, 19.37f, -16.89f), Quaternion.Euler(44.3f, 0, 0));
             var material = Fade(Unlit("EyeView", Color.white));
             material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>($"{Root}/Resources/Eyes/day0.png"));
-            var view = Prim(PrimitiveType.Quad, "EyeView", null, at, new Vector3(height * 2.5f, height, 1), material);
-            view.transform.rotation = cam.transform.rotation;
+            var view = Prim(PrimitiveType.Quad, "EyeView", null, Vector3.zero, Vector3.one, material);
             view.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             view.AddComponent<EyeView>();
         }
@@ -585,15 +579,16 @@ namespace Demons.Editor
                     st.Slot = Point("Slot", go.transform, new Vector3(0, 1.05f, 0));
                     break;
                 default:
-                    var top = Prim(PrimitiveType.Cube, "Top", visual, new Vector3(0, 0.5f, 0), new Vector3(1.3f, 1f, 1.3f), Mat("Desk", Gray(0.72f)), collider: true);
+                    // The drawing's footprint: blocks demons and casts the desk's shadow.
+                    var top = Prim(PrimitiveType.Cube, "Top", visual, new Vector3(0, 0.385f, -0.14f), new Vector3(1.7f, 0.77f, 0.72f), Mat("Desk", Gray(0.72f)), collider: true);
                     top.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
-                    // Billboard drawing; the thought sits in front of it, about two thirds up.
-                    var art = Point("Art", visual, Vector3.zero).gameObject.AddComponent<SpriteRenderer>();
+                    // Billboard drawing standing on the footprint's front edge; the thought sits just in front of its middle.
+                    var art = Point("Art", visual, new Vector3(0, 0, -0.5f)).gameObject.AddComponent<SpriteRenderer>();
                     art.sprite = Art("Station_Blank");
                     art.transform.rotation = cam.transform.rotation;
                     art.transform.localScale = Vector3.one * 1.8f / art.sprite.bounds.size.x;
                     art.color = Gray(0.82f);
-                    st.Slot = Point("Slot", go.transform, new Vector3(0, 0.9f, 0));
+                    st.Slot = Point("Slot", go.transform, new Vector3(0, 0.65f, -0.42f));
                     var phone = Prim(PrimitiveType.Cube, "Phone", visual, new Vector3(0.45f, 0.95f, -0.15f), new Vector3(0.35f, 0.18f, 0.22f), Mat("Phone", new Color(0.98f, 0.8f, 0.08f)));
                     phone.SetActive(false);
                     Set(st, "phone", phone);

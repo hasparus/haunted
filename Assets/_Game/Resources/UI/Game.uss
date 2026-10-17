@@ -262,30 +262,52 @@
 .hud-top {
     position: absolute;
     left: 16px;
-    top: 12px;
-    flex-direction: row;
-    align-items: center;
-    padding: 6px 14px;
-    background-color: rgba(11, 30, 79, 0.86);
-    border-radius: 10px;
+    top: 4px;
 }
 
-.hud-status {
-    font-size: 18px;
+.hud-day {
+    font-size: 44px;
     color: var(--ink);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
     margin: 0;
     padding: 0;
 }
 
-.hud-chips {
-    flex-direction: row;
-    align-items: center;
+.hud-day-info {
+    font-size: 22px;
+    color: var(--muted);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+    margin: -6px 0 0 0;
+    padding: 0;
 }
 
-.hud-chip {
-    flex-direction: row;
-    align-items: center;
-    margin-left: 16px;
+.hud-right {
+    position: absolute;
+    right: 16px;
+    top: 4px;
+    align-items: flex-end;
+}
+
+.hud-revenue {
+    font-size: 36px;
+    color: var(--ink);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    margin: 0;
+    padding: 0;
+}
+
+.hud-scores {
+    align-items: flex-end;
+}
+
+.hud-score {
+    font-size: 32px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    margin: -4px 0 0 0;
+    padding: 0;
+    transition-property: translate, rotate, scale;
+    transition-duration: 0.16s, 0.16s, 0.16s;
+    transition-timing-function: ease-out-back, ease-out-back, ease-out-back;
 }
 
 .hud-chip-dot {
@@ -295,11 +317,10 @@
     margin-right: 6px;
 }
 
-.hud-chip-value {
-    font-size: 18px;
-    color: var(--ink);
-    margin: 0;
-    padding: 0;
+.hud-score--hop {
+    translate: 0 -14px;
+    rotate: -8deg;
+    scale: 1.2 1.2;
 }
 
 .hud-net {
@@ -461,6 +482,27 @@
     -unity-text-align: middle-center;
     margin: 0;
     padding: 0;
+}
+
+.stars {
+    flex-direction: row;
+    justify-content: center;
+    margin: 2px 0 6px 0;
+}
+
+.star {
+    width: 44px;
+    height: 44px;
+    margin: 0 6px;
+    color: var(--navy-raised);
+    transition-property: scale;
+    transition-duration: 0.25s;
+    transition-timing-function: ease-out-back;
+}
+
+.star--lit {
+    color: var(--yellow);
+    scale: 1.15 1.15;
 }
 
 .review-body {

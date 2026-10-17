@@ -49,6 +49,7 @@ namespace Demons
         public float BeltDistance => BeltFrom.Value + (float)(Belt.Travel(Now) - Belt.Travel(BeltSince.Value));
         bool Idle => State.Value is PebbleState.Floor or PebbleState.OnStation;
         double ForgetIn => LastTouched.Value + Balance.I.forgetTime - Now;
+        bool Shaking => Idle && ForgetIn < Balance.I.warnTime;
         public double TimeLeft => Idle ? ForgetIn : double.MaxValue;
         public float BeltLeft => Belt.Instance.Length - BeltDistance;
         double SinceThrow => Now - ThrowSince.Value;
@@ -116,7 +117,7 @@ namespace Demons
         void Listen()
         {
             var s = Sounds.I;
-            bool warning = Idle && ForgetIn < Balance.I.warnTime;
+            bool warning = Shaking;
             if (heard)
             {
                 var at = transform.position;
@@ -132,8 +133,10 @@ namespace Demons
                     }, at);
                 if ((Stamps.Value & ~heardStamps) != 0) Audio.Play(s.stamp, at);
                 if (heardShell && !Shelled.Value) Audio.Play(s.crack, at);
-                if (warning && !heardWarning) Audio.Play(s.warning, at);
+                if (warning && !heardWarning) Audio.Play(s.warning, All.FindAll(p => p.Shaking).Count - 1, at);
             }
+            // Fresh off the start of the belt; late joiners don't hear the thoughts already riding it.
+            else if (State.Value == PebbleState.OnBelt && BeltFrom.Value == 0 && Now - BeltSince.Value < 1) Audio.Play(s.orbSpawn, transform.position);
             heard = true;
             heardState = State.Value;
             heardStamps = Stamps.Value;
@@ -196,13 +199,13 @@ namespace Demons
 
             var color = Mix(Stamps.Value);
             if (State.Value == PebbleState.OnStation && Net.Find<Station>(Anchor.Value) is { } station && station.Workers.Value != 0 && station.Kind != StationKind.Hammer)
-                color = Color.Lerp(color, Mix((byte)(Stamps.Value | station.Workers.Value)), station.Progress.Value);
+                color = Color.Lerp(color, Mix(Scoring.Haunted(Stamps.Value, station.Workers.Value, Kind.Value == PebbleKind.Big)), station.Progress.Value);
             for (int slot = 0; slot < stampDots.Length; slot++)
                 if (stampDots[slot].gameObject.activeSelf) stampDots[slot].material.color = Demon.ColorOf(slot);
 
             if (Idle && ForgetIn < 2 && Mathf.Repeat(Time.time * 6, 1) < 0.5f) color = Color.Lerp(color, Warning, 0.8f);
             stone.material.color = color;
-            body.localPosition = Idle && ForgetIn < Balance.I.warnTime
+            body.localPosition = Shaking
                 ? new Vector3(Mathf.Sin(Time.time * 40) * 0.04f, 0, 0)
                 : Vector3.zero;
         }

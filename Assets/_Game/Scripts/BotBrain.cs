@@ -129,7 +129,8 @@ namespace Demons
                 var p = Net.Find<Pebble>(s.Item.Value);
                 if (!p) continue;
                 bool threatened = Claw.Threatened == s;
-                bool needsMe = s.NeedsWorkFrom(d, p);
+                // Re-haunting a small thought steals it; bots stay on fresh work instead of stealing back and forth.
+                bool needsMe = s.NeedsWorkFrom(d, p) && (p.Stamps.Value == 0 || p.Kind.Value == PebbleKind.Big);
                 bool done = p.Hauntable && s.Workers.Value == 0 &&
                     (s.Kind != StationKind.Desk ? !needsMe && (s.Kind == StationKind.Hammer || p.Stamps.Value != 0) : Scoring.StampCount(p.Stamps.Value) >= DesiredStamps(p));
                 float urgency = threatened ? 6 : Urgency(p);

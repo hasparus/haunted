@@ -4,21 +4,56 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
     <title>{{{ PRODUCT_NAME }}}</title>
+    <link rel="preload" href="JollyLodger.woff2" as="font" type="font/woff2" crossorigin>
     <style>
+      @font-face { font-family: "Jolly Lodger"; src: url(JollyLodger.woff2) format("woff2"); font-display: block; }
       html, body { margin: 0; height: 100%; overflow: hidden; background: #0B1E4F; }
       #unity-canvas { display: block; width: 100%; height: 100%; background: #0B1E4F; outline: none; }
-      #loading { position: fixed; left: 30%; right: 30%; top: 50%; height: 6px; background: #13306E; }
-      #loading div { height: 100%; width: 0; background: #FFD447; }
+      #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; color: #fff; pointer-events: none; }
+      #quip { font: clamp(32px, 6vw, 56px)/1.1 "Jolly Lodger", serif; text-align: center; padding: 0 16px; }
+      #bar { width: min(320px, 60vw); height: 2px; background: #13306E; }
+      #bar div { height: 100%; width: 0; background: #FFD447; transition: width .2s; }
+      #files { position: fixed; left: 16px; right: 16px; bottom: 16px; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; opacity: .55; text-align: center; white-space: pre-wrap; }
     </style>
   </head>
   <body>
     <canvas id="unity-canvas" tabindex="-1"></canvas>
-    <div id="loading"><div></div></div>
+    <div id="loading">
+      <div id="quip"></div>
+      <div id="bar"><div></div></div>
+      <div id="files"></div>
+    </div>
     <script src="Build/{{{ LOADER_FILENAME }}}"></script>
     <script>
       var canvas = document.querySelector("#unity-canvas");
       var loading = document.querySelector("#loading");
-      createUnityInstance(canvas, {
+      var quip = document.querySelector("#quip");
+      var bar = document.querySelector("#bar div");
+      var files = document.querySelector("#files");
+
+      var quips = [
+        "Reticulating org charts",
+        "Onboarding new demons",
+        "Scheduling mandatory fun",
+        "Shredding last quarter's thoughts",
+        "Calibrating the spotlight",
+        "Oiling the thought conveyor",
+        "Filing it in triplicate",
+        "Circling back",
+        "Aligning stakeholders",
+        "Pre-approving unpaid overtime",
+        "Locating the stapler",
+        "Drafting your performance review",
+        "Restocking intrusive thoughts",
+        "Taking this offline",
+        "Haunting",
+      ];
+      var q = Math.floor(Math.random() * quips.length);
+      function nextQuip() { quip.textContent = quips[q++ % quips.length] + "…"; }
+      nextQuip();
+      var quipTimer = setInterval(nextQuip, 2500);
+
+      var config = {
         arguments: [],
         dataUrl: "Build/{{{ DATA_FILENAME }}}",
         frameworkUrl: "Build/{{{ FRAMEWORK_FILENAME }}}",
@@ -29,15 +64,37 @@
         companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
         productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
         productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
-      }, function (progress) {
-        loading.firstElementChild.style.width = 100 * progress + "%";
+        // The loader adopts this object and fills it with per-URL byte counts.
+        downloadProgress: {},
+      };
+      var labels = {};
+      labels[config.dataUrl] = "data";
+      labels[config.frameworkUrl] = "framework";
+      labels[config.codeUrl] = "code";
+
+      function mb(bytes) { return (bytes / 1048576).toFixed(1); }
+
+      createUnityInstance(canvas, config, function (progress) {
+        bar.style.width = 100 * progress + "%";
+        files.textContent = Object.keys(config.downloadProgress).map(function (url) {
+          var p = config.downloadProgress[url];
+          var name = labels[url] || url.split("/").pop();
+          // Totals stay guesses until a gzip-encoded file is done, so only finished files get one.
+          return name + " " + mb(p.loaded) + " MB" + (p.finished ? " ✓" : "");
+        }).join("   ") + (progress >= 0.9 ? "\ncompiling and starting up" : "");
       }).then(function () {
+        clearInterval(quipTimer);
         loading.remove();
         canvas.focus();
       }).catch(function (message) {
-        loading.textContent = message;
-        loading.style.color = "#fff";
-        loading.style.background = "none";
+        // itch's CDN sometimes cuts long downloads short and the browser takes the stub as complete.
+        if (/Invalid binary data/.test(message) && !/[?&]retry/.test(location.search)) {
+          location.search += (location.search ? "&" : "?") + "retry";
+          return;
+        }
+        clearInterval(quipTimer);
+        quip.textContent = "Something broke. Try reloading.";
+        files.textContent = message;
       });
     </script>
   </body>
