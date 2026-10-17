@@ -54,6 +54,7 @@ jobs:
         if: ${{ !inputs.targets || contains(inputs.targets, matrix.target) }}
         with:
           fetch-depth: 0
+          lfs: true
 
       - uses: actions/cache@v4
         if: ${{ !inputs.targets || contains(inputs.targets, matrix.target) }}

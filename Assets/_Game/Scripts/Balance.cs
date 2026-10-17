@@ -44,6 +44,8 @@ namespace Demons
         [Header("Week")]
         [Tooltip("Influence needed to finish each day, Monday to Sunday.")]
         public float[] dayGoals = { 5, 12, 20, 30, 40, 50, 60 };
+        [Tooltip("Day goals are multiplied by this, indexed by demon count (1 to 4, CPUs included). Tuned for three.")]
+        public float[] goalScaleByDemons = { 0.65f, 0.85f, 1f, 1.15f };
         [Tooltip("Day each mechanic arrives: 0 = Monday. In Survival, a day lasts survivalStageSeconds.")]
         public int bigDay = 1, potDay = 2, shellDay = 3, therapyDay = 4, pillDay = 5, phoneDay = 6, handDay = 6;
 

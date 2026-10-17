@@ -10,34 +10,18 @@ namespace Demons
         [SerializeField] Transform look;
 
         Springy spring;
-        Transform progress, fill;
-        float barWidth;
+        Renderer[] parts;
+        Color[] colors;
+        Vector3 size;
         bool shown, wasReaching;
 
         void Start()
         {
-            float size = look.localScale.x;
-            barWidth = 1.3f * size;
-            var material = look.GetComponentInChildren<Renderer>(true).sharedMaterial;
-            progress = new GameObject("Progress").transform;
-            progress.SetParent(transform, false);
-            progress.localPosition = new Vector3(0, -0.6f * size, 0);
-            Bar("Track", new Color(0.04f, 0.12f, 0.31f), material, new Vector3(barWidth, 0.14f * size, 0.04f));
-            fill = Bar("Fill", new Color(1f, 0.83f, 0.28f), material, new Vector3(barWidth, 0.1f * size, 0.06f));
-            progress.gameObject.SetActive(false);
-        }
-
-        Transform Bar(string name, Color color, Material material, Vector3 scale)
-        {
-            var bar = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            Destroy(bar.GetComponent<Collider>());
-            bar.name = name;
-            bar.transform.SetParent(progress, false);
-            bar.transform.localScale = scale;
-            var renderer = bar.GetComponent<Renderer>();
-            renderer.material = new Material(material) { color = color };
-            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            return bar.transform;
+            size = look.localScale;
+            spring = look.gameObject.AddComponent<Springy>();
+            parts = look.GetComponentsInChildren<Renderer>(true);
+            colors = new Color[parts.Length];
+            for (int i = 0; i < parts.Length; i++) colors[i] = parts[i].material.color;
         }
 
         void Update()
@@ -61,16 +45,17 @@ namespace Demons
             {
                 shown = show;
                 look.gameObject.SetActive(show);
-                progress.gameObject.SetActive(show);
-                if (show) (spring ??= look.gameObject.AddComponent<Springy>()).Punch(Vector3.one * 0.8f);
+                if (show) spring.Punch(Vector3.one * 0.8f);
             }
             if (reaching && !wasReaching && !Demo) Audio.Play(Sounds.I.pillReach, look.position);
             wasReaching = reaching;
             if (!show) return;
 
-            float fraction = reaching ? 1 - left / b.pillWarning : Mathf.Clamp01(flipped / b.pillTime);
-            fill.localScale = new Vector3(barWidth * fraction, fill.localScale.y, fill.localScale.z);
-            fill.localPosition = new Vector3((fraction - 1) * barWidth / 2, 0, -0.02f);
+            // Dissolves while the controls stay flipped: shrinks and fades out as the effect wears off.
+            float left01 = reaching ? 1 : Mathf.Clamp01(flipped / b.pillTime);
+            spring.Rest(size * Mathf.Lerp(0.3f, 1, left01));
+            for (int i = 0; i < parts.Length; i++)
+                parts[i].material.color = new Color(colors[i].r, colors[i].g, colors[i].b, colors[i].a * Mathf.Lerp(0.15f, 1, left01));
             look.localRotation = reaching
                 ? Quaternion.Euler(0, 0, Mathf.Sin(Time.time * 30) * 20 * (1 - left / b.pillWarning))
                 : Quaternion.Euler(0, 0, Mathf.Sin(Time.time * 2) * 4);

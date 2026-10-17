@@ -42,6 +42,8 @@ namespace Demons
         public Transform Hand;
         [SerializeField] Renderer body, head;
         [SerializeField] Transform marker;
+        Vector3 markerAt;
+        float markerSize;
         [SerializeField] GameObject scribble;
 
         [NonSerialized] public Station Using;
@@ -137,6 +139,9 @@ namespace Demons
             }
             marker.SetParent(null);
             DontDestroyOnLoad(marker.gameObject);
+            marker.GetComponent<MeshFilter>().sharedMesh = RingMesh();
+            marker.localScale = Vector3.zero;
+            marker.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             Paint();
         }
 
@@ -200,10 +205,43 @@ namespace Demons
 
             Component target = GrabTarget();
             if (!target && Carrying.Value == Net.None) target = UseTarget();
-            marker.gameObject.SetActive(target);
-            if (!target) return;
-            var p = target is Belt belt ? belt.ClosestPoint(transform.position) : target.transform.position;
-            marker.position = new Vector3(p.x, 0.03f, p.z);
+            if (target)
+            {
+                var p = target is Belt belt ? belt.ClosestPoint(transform.position) : target.transform.position;
+                markerAt = new Vector3(p.x, 0.03f, p.z);
+                if (markerSize < 0.05f) marker.position = markerAt;
+            }
+            float k = 1 - Mathf.Exp(-22 * Time.deltaTime);
+            markerSize = Mathf.Lerp(markerSize, target ? 1 : 0, k);
+            marker.position = Vector3.Lerp(marker.position, markerAt, k);
+            marker.localScale = new Vector3(MarkerRadius, 1, MarkerRadius) * markerSize;
+            marker.gameObject.SetActive(markerSize > 0.01f);
+        }
+
+        const float MarkerRadius = 0.5f;
+        static Mesh ringMesh;
+
+        // Flat annulus of unit outer radius, faces both ways.
+        static Mesh RingMesh()
+        {
+            if (ringMesh) return ringMesh;
+            const int sides = 48;
+            const float inner = 0.8f;
+            var vertices = new Vector3[sides * 2];
+            var normals = new Vector3[sides * 2];
+            var triangles = new int[sides * 12];
+            for (int i = 0; i < sides; i++)
+            {
+                float a = i * Mathf.PI * 2 / sides;
+                var dir = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
+                vertices[i * 2] = dir;
+                vertices[i * 2 + 1] = dir * inner;
+                normals[i * 2] = normals[i * 2 + 1] = Vector3.up;
+                int o = i * 2, n = (i + 1) % sides * 2, t = i * 12;
+                int[] quad = { o, o + 1, n, n, o + 1, n + 1, o, n, o + 1, n, n + 1, o + 1 };
+                quad.CopyTo(triangles, t);
+            }
+            return ringMesh = new Mesh { name = "Ring", vertices = vertices, normals = normals, triangles = triangles };
         }
 
         // Dash-throws keep the dash speed for a moment after the dash ends.

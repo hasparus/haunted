@@ -82,7 +82,15 @@ namespace Demons
 
         static double Now => Net.Now;
         public bool Inverted => IsSpawned && Now < InvertedUntil.Value;
-        public float Goal => Balance.I.dayGoals[Mathf.Min(Day.Value, Balance.I.dayGoals.Length - 1)];
+        public float Goal
+        {
+            get
+            {
+                var b = Balance.I;
+                float scale = b.goalScaleByDemons[Mathf.Clamp(Demon.All.Count - 1, 0, b.goalScaleByDemons.Length - 1)];
+                return Mathf.Round(b.dayGoals[Mathf.Min(Day.Value, b.dayGoals.Length - 1)] * scale);
+            }
+        }
         public string DayName => Days[Day.Value % Days.Length];
 
         public static bool Has(Feature f) => f == Feature.None || !Instance || Instance.Unlocked(f);

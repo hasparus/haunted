@@ -164,8 +164,8 @@ namespace Demons.Editor
             so.FindProperty("startSceneWhenAllFall").stringValue = "Office";
             so.ApplyModifiedPropertiesWithoutUndo();
 
-            FloorLabel("FIRST WEEK\nAT WORK", null, new Vector3(-9f, 0, 16.5f), 0.28f);
-            FloorLabel("INFINITE\nSURVIVAL", null, new Vector3(9f, 0, 16.5f), 0.28f);
+            FloorLabel("FIRST WEEK\nAT WORK", null, new Vector3(-9f, 0, 16.5f), 0.34f, Jolly);
+            FloorLabel("INFINITE\nSURVIVAL", null, new Vector3(9f, 0, 16.5f), 0.34f, Jolly);
             FloorLabel("best here: {best}\n\nTOP SCORES\n{top}", null, new Vector3(9f, 0, 12.6f), 0.13f);
             Prim(PrimitiveType.Cube, "ModeDivider", null, new Vector3(0, 0.01f, 16f), new Vector3(0.15f, 0.02f, 8f), Mat("Divider", Gray(0.75f)));
             FloorLabel("JUMP OFF TO START", null, new Vector3(0, 0, 10.6f), 0.14f);
@@ -307,9 +307,9 @@ namespace Demons.Editor
             var look = new GameObject("Look");
             look.transform.SetParent(go.transform, false);
             look.transform.localScale = Vector3.one * size;
-            var pill = Prim(PrimitiveType.Capsule, "Pill", look.transform, Vector3.zero, new Vector3(0.6f, 0.55f, 0.6f), Mat("Pill", new Color(0.55f, 0.75f, 1f)));
+            var pill = Prim(PrimitiveType.Capsule, "Pill", look.transform, Vector3.zero, new Vector3(0.6f, 0.55f, 0.6f), Fade(Mat("Pill", new Color(0.55f, 0.75f, 1f))));
             pill.transform.localRotation = Quaternion.Euler(0, 0, 90);
-            Prim(PrimitiveType.Sphere, "Cap", look.transform, new Vector3(0.3f, 0, 0), Vector3.one * 0.62f, Mat("PillCap", Gray(0.95f)));
+            Prim(PrimitiveType.Sphere, "Cap", look.transform, new Vector3(0.3f, 0, 0), Vector3.one * 0.62f, Fade(Mat("PillCap", Gray(0.95f))));
             look.SetActive(false);
             Set(meds, "look", look.transform);
         }
@@ -389,6 +389,24 @@ namespace Demons.Editor
             importer.wrapMode = TextureWrapMode.Clamp;
             importer.SaveAndReimport();
             return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        }
+
+        // Alpha-blended Lit that still writes depth, so overlapping parts sort while fading.
+        static Material Fade(Material m)
+        {
+            m.SetFloat("_Surface", 1);
+            m.SetFloat("_Blend", 0);
+            m.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            m.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            m.SetFloat("_SrcBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+            m.SetFloat("_DstBlendAlpha", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            m.SetFloat("_ZWriteControl", 1);
+            m.SetFloat("_ZWrite", 1);
+            m.SetOverrideTag("RenderType", "Transparent");
+            m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            EditorUtility.SetDirty(m);
+            return m;
         }
 
         static Material Additive(string name, Color color, Texture2D texture)
@@ -585,11 +603,11 @@ namespace Demons.Editor
                     .transform.localRotation = Quaternion.Euler(0, -side * 45, 0);
         }
 
-        static void FloorLabel(string text, Transform parent, Vector3 pos, float size = 0.115f)
+        static void FloorLabel(string text, Transform parent, Vector3 pos, float size = 0.115f, Font font = null)
         {
             var t = Point("FloorLabel", parent, new Vector3(pos.x, 0.02f, pos.z));
             t.rotation = Quaternion.Euler(90, 0, 0);
-            var tm = TextLabel(t, text);
+            var tm = TextLabel(t, text, font);
             tm.characterSize = size;
             tm.alignment = TextAlignment.Center;
             tm.color = Gray(0.85f);
@@ -603,7 +621,10 @@ namespace Demons.Editor
             TextLabel(t, text);
         }
 
-        static TextMesh TextLabel(Transform t, string text)
+        static Font Plex => AssetDatabase.LoadAssetAtPath<Font>($"{Root}/Resources/UI/Fonts/IBMPlexSerif-Regular.ttf");
+        static Font Jolly => AssetDatabase.LoadAssetAtPath<Font>($"{Root}/Resources/UI/Fonts/JollyLodger-Regular.ttf");
+
+        static TextMesh TextLabel(Transform t, string text, Font font = null)
         {
             var tm = t.gameObject.AddComponent<TextMesh>();
             tm.text = text;
@@ -611,7 +632,7 @@ namespace Demons.Editor
             tm.characterSize = 0.12f;
             tm.fontSize = 48;
             tm.color = Gray(0.05f);
-            tm.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            tm.font = font ? font : Plex;
             t.GetComponent<MeshRenderer>().sharedMaterial = tm.font.material;
             return tm;
         }
