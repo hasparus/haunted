@@ -8,7 +8,7 @@ Shader "Haunted/Paper"
         _Hatch("Hatching in shade", Range(0, 1)) = 0.7
         _Tiles("Floor tiles", Range(0, 1)) = 0
         _TileSize("Tile size", Float) = 1.6
-        _Outline("Ink outline (px)", Range(0, 4)) = 1.8
+        _Outline("Ink outline (px)", Range(0, 4)) = 1.0
         _PoolRadius("Light pool radius", Float) = 9
     }
 
