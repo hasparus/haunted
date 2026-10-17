@@ -36,9 +36,12 @@ namespace Demons
 
         public static Spotlight Instance;
 
+        const float DemoReach = 6;
+
         void Awake()
         {
-            Instance = this;
+            // A demo light (the headquarters' lesson, an Office exhibit) is never the one bots dodge in the Office.
+            if (!Demo || !Instance) Instance = this;
             home = transform.position;
             ring = BuildRing();
         }
@@ -90,6 +93,8 @@ namespace Demons
             foreach (var d in Demon.All)
             {
                 bool lit = lighting && Flat(d.transform.position - transform.position) < Balance.I.spotRadius * Scale && d.transform.position.y > -1;
+                // Another light may be lighting this demon; a demo light only ever unlights what it lit.
+                if (Demo && !lit && Flat(d.transform.position - home) > DemoReach) continue;
                 if (lit == d.Lit.Value) continue;
                 d.Lit.Value = lit;
                 if (!lit) continue;

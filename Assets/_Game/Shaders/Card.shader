@@ -14,7 +14,8 @@ Shader "Haunted/Card"
         Tags { "Queue" = "Transparent" "RenderType" = "Transparent" "RenderPipeline" = "UniversalPipeline" "IgnoreProjector" = "True" }
         Blend SrcAlpha OneMinusSrcAlpha
         Cull Off
-        ZWrite Off
+        // Writes its feet's depth (see Vert) and cuts its see-through edge, so cards hide each other by where they stand.
+        ZWrite On
 
         Pass
         {
@@ -89,6 +90,7 @@ Shader "Haunted/Card"
                 // Rim light from the lamp, upper right: where the drawing ends in that direction, a thin warm edge.
                 half beyond = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + float2(0.012, 0.01)).a;
                 c.rgb += half3(1, 0.83, 0.28) * saturate(c.a - beyond) * (0.2 + 0.3 * pool);
+                clip(c.a - 0.5);
                 return c;
             }
             ENDHLSL

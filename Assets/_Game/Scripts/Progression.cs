@@ -135,6 +135,9 @@ namespace Demons
 
         float Elapsed => (float)(Now - startTime);
 
+        // Whether the First Week at Work brings in a mechanic on a day: the basics (None) on Monday, the rest on their unlock days.
+        public static bool Introduces(int day, Feature f) => f == Feature.None ? day == 0 : UnlockDay(f) == day;
+
         static int UnlockDay(Feature f)
         {
             var b = Balance.I;

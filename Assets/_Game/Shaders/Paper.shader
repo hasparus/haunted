@@ -13,6 +13,7 @@ Shader "Haunted/Paper"
         _Slats("Belt slats", Range(0, 1)) = 0
         _Silhouette("Silhouette ink (for round things)", Range(0, 1)) = 0
         _DepthPull("Depth pulled towards the camera (m)", Float) = 0
+        _Anchor("Depth taken from this world point (xyz) when w is 1", Vector) = (0, 0, 0, 0)
     }
 
     SubShader
@@ -41,6 +42,7 @@ Shader "Haunted/Paper"
                 half4 _BaseColor;
                 half _Hatch, _Tiles;
                 float _TileSize, _Outline, _PoolRadius, _Slats, _Silhouette, _DepthPull;
+                float4 _Anchor;
             CBUFFER_END
             float4 _PoolCenter; // xz of the floor point under the middle of the board, set by MindFx
             float _BeltTravel; // how far the belt has moved, set by Belt
@@ -73,8 +75,11 @@ Shader "Haunted/Paper"
                 Varyings o;
                 o.positionWS = TransformObjectToWorld(v.positionOS.xyz);
                 o.positionCS = TransformWorldToHClip(o.positionWS);
-                // Thoughts are pulled forward in depth only, so one rolling against a wall isn't cut by it.
-                float4 pulled = TransformWorldToHClip(o.positionWS + normalize(GetCameraPositionWS() - o.positionWS) * _DepthPull);
+                // Thoughts are pulled forward in depth only, so one rolling against a wall isn't cut by it. A thought can
+                // also take its whole depth from a point on the floor, the way the cards stand at their feet, so it hides
+                // and is hidden by the drawings like the desk, belt or demon it is on.
+                float3 depthAt = _Anchor.w > 0 ? _Anchor.xyz : o.positionWS;
+                float4 pulled = TransformWorldToHClip(depthAt + normalize(GetCameraPositionWS() - depthAt) * _DepthPull);
                 o.positionCS.z = pulled.z / pulled.w * o.positionCS.w;
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
                 o.fog = ComputeFogFactor(o.positionCS.z);
@@ -120,7 +125,7 @@ Shader "Haunted/Paper"
 
                 // The belt's slats, drawn as pale ridges on its top that roll along with the thoughts.
                 if (_Slats > 0 && n.y > 0.5)
-                    albedo += _Slats * 0.16 * (1 - smoothstep(0.02, 0.07, abs(frac((i.positionWS.x - _BeltTravel) / 0.45) - 0.5) - 0.38));
+                    albedo = albedo * (1 - 0.3 * _Slats) + _Slats * 0.12 * (1 - smoothstep(0.02, 0.07, abs(frac((i.positionWS.x - _BeltTravel) / 0.45) - 0.5) - 0.38));
 
                 float4 shadowCoord = TransformWorldToShadowCoord(i.positionWS);
                 Light sun = GetMainLight(shadowCoord);

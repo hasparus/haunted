@@ -23,8 +23,9 @@ namespace Demons
         void Update()
         {
             look.SetActive(active.Value);
-            if (active.Value && Time.time < writeUntil + 0.2f)
-                look.transform.localRotation = Quaternion.Euler(Mathf.Sin(Time.time * 40) * 15, 0, 30);
+            // Leans like a writing hand holds it, in the screen's plane, and scratches side to side while writing.
+            float scratch = active.Value && Time.time < writeUntil + 0.2f ? Mathf.Sin(Time.time * 40) * 15 : 0;
+            if (Camera.main) look.transform.rotation = Camera.main.transform.rotation * Quaternion.Euler(0, 0, -25 + scratch);
             if (!IsServer || !IsSpawned) return;
 
             active.Value = Enabled;
