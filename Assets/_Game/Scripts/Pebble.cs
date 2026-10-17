@@ -98,7 +98,7 @@ namespace Demons
                     spring.Punch(Vector3.one * 0.5f);
                     byte fresh = (byte)(now & ~was);
                     Fx.Splat(transform.position, Mix(fresh != 0 ? fresh : now));
-                    MindFx.Ripple(transform.position, 0.6f);
+                    MindFx.Ripple(transform.position, 0.3f);
                     Fx.Stain(transform.position + new Vector3(Random.Range(-0.4f, 0.4f), 0, -0.75f), Mix(fresh != 0 ? fresh : now));
                 }
             };

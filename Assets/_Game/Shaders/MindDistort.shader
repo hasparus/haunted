@@ -75,7 +75,8 @@ Shader "Haunted/MindDistort"
                     if (rp.w <= 0) continue;
                     float2 dc = (uv - rp.xy) * float2(aspect, 1);
                     float dist = length(dc);
-                    half band = saturate(1 - abs(dist - rp.z * 0.28) / 0.035) * (1 - rp.z) * rp.w;
+                    // Stronger ripples reach further: a delivery crosses a good part of the screen, a finished haunt stays a tight ring.
+                    half band = saturate(1 - abs(dist - rp.z * 0.28 * rp.w) / (0.035 * rp.w)) * (1 - rp.z) * rp.w;
                     uv -= dc / max(dist, 1e-4) * band * 0.018 * float2(1 / aspect, 1);
                     rippleInk = max(rippleInk, band);
                 }
