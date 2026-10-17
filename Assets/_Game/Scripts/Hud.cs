@@ -9,7 +9,7 @@ namespace Demons
     {
         static readonly string[] Columns = { "Revenue", "Haunts", "Deliveries", "Assists", "Throws", "Dashes" };
 
-        VisualElement top, scores, crackPips, net, offline, joining, online, notice, cpu, cardWrap, card, reviewWrap, table, sign;
+        VisualElement top, scores, crackPips, review, net, offline, joining, online, notice, cpu, cardWrap, card, reviewWrap, table, sign;
         Label cardHint, day, dayInfo, revenue, netStatus, noticeTitle, noticeBody, cardTitle, cardBody, paused, reviewTitle, reviewBody, signHint, signWait;
         TextField code, signature;
         Button removeCpu;
@@ -24,7 +24,7 @@ namespace Demons
 
         static Hud instance;
 
-        // The boss's card on screen, for MindFx to set alight.
+        // The boss's card or the Performance Review on screen, for MindFx to set alight.
         public static bool CardShown { get; private set; }
         public static Rect CardBounds { get; private set; }
         public static Vector2 PanelSize { get; private set; }
@@ -180,7 +180,7 @@ namespace Demons
             pausedWrap.Add(paused);
 
             reviewWrap = UI.Box("center", hud);
-            var review = UI.Box("review", reviewWrap);
+            review = UI.Box("review", reviewWrap);
             reviewTitle = UI.Text("Performance Review", "review-title", UI.Jolly);
             review.Add(reviewTitle);
             var starRow = UI.Box("stars", review);
@@ -228,10 +228,10 @@ namespace Demons
             bool showCard = progress && Net.Now < progress.CardUntil.Value;
             bool showReview = showCard && progress.Review.Value;
             UI.Show(cardWrap, showCard && !showReview);
-            CardShown = showCard && !showReview && card.resolvedStyle.display == DisplayStyle.Flex;
+            CardShown = showCard;
             if (CardShown)
             {
-                CardBounds = card.worldBound;
+                CardBounds = (showReview ? review : card).worldBound;
                 PanelSize = hud.worldBound.size;
             }
             if (!showCard) lastCard = null;

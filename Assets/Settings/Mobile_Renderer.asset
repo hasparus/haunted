@@ -57,7 +57,7 @@ MonoBehaviour:
   m_TileOnlyMode: 0
 --- !u!114 &7613510508826005269
 MonoBehaviour:
-  m_ObjectHideFlags: 0
+  m_ObjectHideFlags: 1
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
@@ -68,7 +68,7 @@ MonoBehaviour:
   m_Name: MindDistort
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.FullScreenPassRendererFeature
   m_Active: 1
-  injectionPoint: 550
+  injectionPoint: 600
   fetchColorBuffer: 1
   requirements: 0
   passMaterial: {fileID: 2100000, guid: f110cfdc270ae4938b984ef5e49d1753, type: 2}
