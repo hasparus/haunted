@@ -53,6 +53,8 @@ namespace Demons
         public float[] goalScaleByDemons = { 0.65f, 0.85f, 1f, 1.15f };
         [Tooltip("Day each mechanic arrives: 0 = Monday. In Survival, a day lasts survivalStageSeconds.")]
         public int bigDay = 1, potDay = 2, shellDay = 3, therapyDay = 4, pillDay = 5, phoneDay = 6, handDay = 6;
+        [Tooltip("Performance Review stars: finish the week within this many seconds for one, two, three stars.")]
+        public float[] weekStarSeconds = { 900, 720, 600 };
 
         [Header("Week events")]
         public float pillTime = 10f;
@@ -87,6 +89,8 @@ namespace Demons
         public float survivalRampSeconds = 150f;
         [Tooltip("Seconds between new mechanics (one 'day' each).")]
         public float survivalStageSeconds = 30f;
+        [Tooltip("Performance Review stars: survive this many seconds for one, two, three stars.")]
+        public float[] survivalStarSeconds = { 120, 240, 360 };
         [Tooltip("Seconds until interruptions come at their shortest gap.")]
         public float survivalHardAt = 360f;
 

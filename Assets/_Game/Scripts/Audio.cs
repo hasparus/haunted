@@ -75,12 +75,15 @@ namespace Demons
         public static void Play(AudioClip[] clips, Vector3? at = null) => Play(Any(clips), at, Sounds.I.sfxVolume * SoundLevel, Sounds.I.pitchJitter);
 
         // For cues the designer orders mildest first: worse situations pick later clips.
-        public static void Play(AudioClip[] clips, int severity, Vector3? at = null) =>
-            Play(clips is { Length: > 0 } ? clips[Mathf.Clamp(severity, 0, clips.Length - 1)] : null, at, Sounds.I.sfxVolume * SoundLevel, Sounds.I.pitchJitter);
+        public static void Play(AudioClip[] clips, int severity, Vector3? at = null) => Play(Nth(clips, severity), at, Sounds.I.sfxVolume * SoundLevel, Sounds.I.pitchJitter);
 
         public static void Ui(AudioClip[] clips) => Play(Any(clips), null, Sounds.I.uiVolume * SoundLevel, 0);
 
+        public static void Ui(AudioClip[] clips, int index) => Play(Nth(clips, index), null, Sounds.I.uiVolume * SoundLevel, 0);
+
         static AudioClip Any(AudioClip[] clips) => clips is { Length: > 0 } ? clips[Random.Range(0, clips.Length)] : null;
+
+        static AudioClip Nth(AudioClip[] clips, int i) => clips is { Length: > 0 } ? clips[Mathf.Clamp(i, 0, clips.Length - 1)] : null;
 
         static void Play(AudioClip clip, Vector3? at, float volume, float jitter)
         {

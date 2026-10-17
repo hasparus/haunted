@@ -79,6 +79,7 @@ namespace Demons
         [Tooltip("Pill swallowed: controls flip")] public AudioClip[] pillTaken;
         [Tooltip("Meds wear off: controls back to normal")] public AudioClip[] pillEnd;
         [Tooltip("Performance Review appears")] public AudioClip[] review;
+        [Tooltip("Performance Review stars light up one by one: one clip per star, the third a short fanfare")] public AudioClip[] star;
         [Tooltip("Leaderboard signed")] public AudioClip[] signed;
 
         [Header("UI")]

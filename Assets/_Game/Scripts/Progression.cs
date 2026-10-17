@@ -66,6 +66,7 @@ namespace Demons
         public NetworkVariable<float> Best = new();
         public NetworkVariable<float> Peak = new();
         public NetworkVariable<bool> Review = new();
+        public NetworkVariable<int> Stars = new();
         public NetworkVariable<bool> Signing = new();
 
         // True while the host types a name for the leaderboard; game input and menus stay out of the way.
@@ -160,6 +161,7 @@ namespace Demons
             DayGoal.Value = 0;
             Peak.Value = 0;
             Review.Value = false;
+            Stars.Value = 0;
             InvertedUntil.Value = 0;
             PillAt.Value = 0;
             Interrupt.Value = Feature.None;
@@ -191,9 +193,10 @@ namespace Demons
         [Rpc(SendTo.Everyone)]
         void CallRpc(Vector3 at, FixedString128Bytes line) => Hud.Bubble(at, line.ToString());
 
-        void End(string text)
+        void End(string text, int stars)
         {
             over = true;
+            Stars.Value = stars;
             endAt = Now + 12;
             Review.Value = true;
             ShowCard(text, 12);
@@ -234,7 +237,7 @@ namespace Demons
                 if (DayGoal.Value <= 0 && Demon.All.Count > 0) DayGoal.Value = GoalFor(Day.Value);
                 if (DayGoal.Value > 0 && influence >= DayGoal.Value)
                 {
-                    if (Day.Value == Days.Length - 1) End("THE WEEKEND IS OVER\nYou haunted him through his whole first week.");
+                    if (Day.Value == Days.Length - 1) End("THE WEEKEND IS OVER\nYou haunted him through his whole first week.", System.Array.FindAll(Balance.I.weekStarSeconds, s => Elapsed <= s).Length);
                     else
                     {
                         Day.Value++;
@@ -265,7 +268,7 @@ namespace Demons
                     PlayerPrefs.Save();
                     signers = Demon.All.FindAll(d => !Bots.IsBot(d)).Count;
                     bool assisted = Bots.All.Count > 0;
-                    End($"YOU'VE BEEN DOWNSIZED\nHe's coping now. Please return your badge at reception.\nPeak influence {Peak.Value:0}  ·  best {Best.Value:0}");
+                    End($"YOU'VE BEEN DOWNSIZED\nHe's coping now. Please return your badge at reception.\nPeak influence {Peak.Value:0}  ·  best {Best.Value:0}", System.Array.FindAll(Balance.I.survivalStarSeconds, s => Elapsed >= s).Length);
                     if (Peak.Value > 0 && signers > 0 && !assisted)
                     {
                         Signing.Value = true;
