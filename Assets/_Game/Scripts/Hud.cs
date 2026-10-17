@@ -15,8 +15,15 @@ namespace Demons
         Button removeCpu;
         VisualElement footer;
         string footerShape;
-        string chipShape, tableShape;
+        string tableShape;
+        int chipShape = -1;
         readonly float[] scoreSeen = new float[Scoring.MaxDemons];
+        readonly List<Demon> chips = new();
+        (int day, bool week) dayShown = (int.MinValue, false);
+        (bool week, float value) infoShown = (false, float.NaN);
+        float revenueShown = float.NaN;
+        (int players, bool lobby, bool typing) hintFor = (-1, false, false);
+        List<(string text, bool key)> hint;
         bool signFocused, codeFocused, reviewing;
         StarRow reviewStars, cardStars;
         Label cardStarsFor;
@@ -314,28 +321,49 @@ namespace Demons
 
             UI.Show(paused.parent, live && state.Paused && !Menu.Open && !showCard);
 
-            var hint = live ? JoinHint(state) : null;
+            var hintNow = (live ? LocalPlayers.All.Count : -1, live && state.IsLobby, Progression.Typing);
+            if (hintNow != hintFor)
+            {
+                hintFor = hintNow;
+                hint = live ? JoinHint(state) : null;
+                if (hint != null) RefreshFooter(hint);
+            }
             UI.Show(footer.parent, hint != null && !Menu.Open);
-            if (hint != null) RefreshFooter(hint);
         }
 
         void RefreshTop(GameState state, Progression progress)
         {
             bool week = progress && progress.Mode.Value == GameMode.Week;
-            UI.Set(day, !progress ? "" : week ? progress.DayTitle : "Survival");
-            UI.Set(dayInfo, !progress ? "" : week ? $"goal {progress.Goal:0} zł" : $"best {progress.Best.Value:0} zł");
-            UI.Set(revenue, $"Revenue: {state.Influence.Value:0.#} zł");
+            var dayNow = (progress ? progress.Day.Value : -1, week);
+            if (dayNow != dayShown)
+            {
+                dayShown = dayNow;
+                UI.Set(day, !progress ? "" : week ? progress.DayTitle : "Survival");
+            }
+            var infoNow = (week, !progress ? float.NaN : week ? progress.Goal : progress.Best.Value);
+            if (infoNow != infoShown)
+            {
+                infoShown = infoNow;
+                UI.Set(dayInfo, !progress ? "" : week ? $"goal {infoNow.Item2:0} zł" : $"best {infoNow.Item2:0} zł");
+            }
+            if (state.Influence.Value != revenueShown)
+            {
+                revenueShown = state.Influence.Value;
+                UI.Set(revenue, $"Revenue: {revenueShown:0.#} zł");
+            }
             RefreshCracks(progress);
 
-            var demons = Demon.All.FindAll(d => d.Slot.Value >= 0);
-            demons.Sort((a, b) => a.Slot.Value.CompareTo(b.Slot.Value));
-            var shape = new StringBuilder();
-            foreach (var d in demons) shape.Append(d.Slot.Value).Append(':').Append(d.ColorIndex.Value).Append(',');
-            if (shape.ToString() != chipShape)
+            chips.Clear();
+            for (int slot = 0; slot < Scoring.MaxDemons; slot++)
+                foreach (var d in Demon.All)
+                    if (d.Slot.Value == slot) chips.Add(d);
+            int shape = 0;
+            foreach (var d in chips) shape = shape * 64 + d.Slot.Value * 16 + d.ColorIndex.Value + 1;
+            if (shape != chipShape)
             {
-                chipShape = shape.ToString();
+                chipShape = shape;
                 scores.Clear();
-                foreach (var d in demons)
+                foreach (var d in chips)
                 {
                     var score = UI.Text("", "hud-score", UI.Jolly);
                     score.style.color = d.Tint;
@@ -343,12 +371,12 @@ namespace Demons
                 }
                 System.Array.Fill(scoreSeen, float.NaN);
             }
-            for (int i = 0; i < demons.Count && i < scores.childCount; i++)
+            for (int i = 0; i < chips.Count && i < scores.childCount; i++)
             {
-                int slot = demons[i].Slot.Value;
+                int slot = chips[i].Slot.Value;
                 var value = (state.Prestige.Count > slot ? state.Prestige[slot] : 0) / Scoring.PrestigePerPower;
                 var score = (Label)scores[i];
-                UI.Set(score, $"{value:0.#} zł");
+                if (value != scoreSeen[slot]) UI.Set(score, $"{value:0.#} zł");
                 if (value > scoreSeen[slot]) Hop(score);
                 scoreSeen[slot] = value;
             }
