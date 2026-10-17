@@ -20,6 +20,8 @@ namespace Demons
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Create()
         {
+            // Headless runs (CI, soak tests) have nobody to listen.
+            if (Application.isBatchMode) AudioListener.volume = 0;
             var go = new GameObject("Audio");
             DontDestroyOnLoad(go);
             instance = go.AddComponent<Audio>();
