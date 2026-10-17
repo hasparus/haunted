@@ -46,7 +46,7 @@ namespace Demons
         [System.NonSerialized] public int PlacedBy = -1;
 
         static double Now => Net.Now;
-        float BeltDistance => BeltFrom.Value + (float)(Now - BeltSince.Value) * Balance.I.beltSpeed;
+        public float BeltDistance => BeltFrom.Value + (float)(Belt.Travel(Now) - Belt.Travel(BeltSince.Value));
         bool Idle => State.Value is PebbleState.Floor or PebbleState.OnStation;
         double ForgetIn => LastTouched.Value + Balance.I.forgetTime - Now;
         public double TimeLeft => Idle ? ForgetIn : double.MaxValue;
@@ -286,7 +286,7 @@ namespace Demons
             var station = Station.All.Find(s => s.CanTake && Flat(s.Slot.position - at) < 0.7f && at.y < s.Slot.position.y + 0.5f);
             var belt = Belt.Instance;
             if (station) PutOn(station);
-            else if (Flat(belt.ClosestPoint(at) - at) < 0.5f && at.y < 1f) PutOnBelt(belt.DistanceAt(at));
+            else if (Flat(belt.ClosestPoint(at) - at) < 0.5f && at.y < 1f && belt.FreeSpot(at, this) is { } spot) PutOnBelt(spot);
             else if (at.y < -3) FlyAway();
             else if (SinceThrow > 4 || (SinceThrow > 0.3 && rb.linearVelocity.sqrMagnitude < 0.25f && Grounded(at))) Drop(at);
         }
@@ -338,6 +338,7 @@ namespace Demons
 
         void ReachHost()
         {
+            if (Stamps.Value == 0 && Progression.Instance is { Mode: { Value: GameMode.Survival } }) GameState.Instance.Missed(transform.position);
             GameState.Instance.Deliver(this);
         }
 

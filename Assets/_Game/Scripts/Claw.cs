@@ -100,7 +100,7 @@ namespace Demons
                     else Go(Phase.Rising, Duration(Phase.Rising), new Vector3(transform.position.x, High, transform.position.z));
                     break;
                 case Phase.Carrying:
-                    if (carried && carried.IsSpawned) carried.LetGo(Belt.Instance.DistanceAt(transform.position));
+                    if (carried && carried.IsSpawned) carried.LetGo(Belt.Instance.FreeSpot(transform.position, carried) ?? Belt.Instance.DistanceAt(transform.position));
                     carried = null;
                     Go(Phase.Rising, Duration(Phase.Rising), new Vector3(transform.position.x, High, transform.position.z));
                     break;

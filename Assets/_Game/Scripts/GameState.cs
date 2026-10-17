@@ -149,6 +149,12 @@ namespace Demons
             NetworkManager.SceneManager.LoadScene(startSceneWhenAllFall, UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
 
+        public void Missed(Vector3 at)
+        {
+            Influence.Value -= Balance.I.survivalMissPenalty;
+            PopupRpc(at, $"\u2212{Balance.I.survivalMissPenalty:0.#}", -1);
+        }
+
         public void Forgotten(Vector3 at)
         {
             Influence.Value -= Balance.I.forgottenPenalty;

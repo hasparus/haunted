@@ -118,8 +118,18 @@ namespace Demons
             };
         }
 
-        public float SpawnRateScale =>
-            Mode.Value == GameMode.Survival ? 0.75f + Elapsed / Balance.I.survivalRampSeconds : 1;
+        public NetworkVariable<double> StartedAt = new();
+
+        // Belt distance travelled by time t. Survival speeds the belt up linearly instead of crowding it.
+        public double BeltTravel(double t)
+        {
+            var b = Balance.I;
+            if (Mode.Value != GameMode.Survival) return t * b.beltSpeed;
+            double start = StartedAt.Value, e = System.Math.Max(0, t - start);
+            return b.beltSpeed * (System.Math.Min(t, start) + 0.75 * e + e * e / (2 * b.survivalRampSeconds));
+        }
+
+        public float FireLine => Mathf.Max(Balance.I.survivalFloor, Peak.Value - Balance.I.survivalDrop);
 
         void Awake() => Instance = this;
 
@@ -155,6 +165,7 @@ namespace Demons
             Interrupt.Value = Feature.None;
             Best.Value = PlayerPrefs.GetFloat(BestKey, 0);
             startTime = Now;
+            StartedAt.Value = startTime;
             nextCall = Now + 20;
             nextPill = Now + 30;
             nextInterrupt = Now + 8;
@@ -243,7 +254,7 @@ namespace Demons
                     Best.Value = Peak.Value;
                     PlayerPrefs.SetFloat(BestKey, Best.Value);
                 }
-                if (influence < Balance.I.survivalFloor)
+                if (influence < FireLine)
                 {
                     PlayerPrefs.Save();
                     signers = Demon.All.FindAll(d => !Bots.IsBot(d)).Count;

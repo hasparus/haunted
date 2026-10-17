@@ -89,11 +89,20 @@ namespace Demons
             sprite = new GameObject("Sprite").AddComponent<SpriteRenderer>();
             sprite.transform.SetParent(visual, false);
             foreach (var r in visual.GetComponentsInChildren<MeshRenderer>())
-                if (r == body || r == head) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+                if (r == body || r == head) r.enabled = false;
                 else if (r.name == "Nose") r.enabled = false;
+
+            // An invisible card turned toward the sun casts the drawing's own silhouette.
+            var card = new GameObject("Shadow");
+            card.transform.SetParent(visual, false);
+            card.AddComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
+            shadow = card.AddComponent<MeshRenderer>();
+            shadow.sharedMaterial = new Material(Resources.Load<Material>("SpriteShadow"));
+            shadow.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
         }
 
         SpriteRenderer sprite;
+        MeshRenderer shadow;
         static Sprite front, side, back;
 
         // Billboard toward the camera; pick the drawing from where the demon faces on screen.
@@ -111,6 +120,14 @@ namespace Demons
             bool sideways = Mathf.Abs(x) > Mathf.Abs(z);
             sprite.sprite = sideways ? side : z > 0 ? back : front;
             sprite.flipX = sideways && x < 0;
+
+            if (!sprite.sprite) return;
+            var light = RenderSettings.sun ? RenderSettings.sun.transform.forward : new Vector3(0.4f, -1, 0.6f);
+            var size = sprite.sprite.bounds.size;
+            shadow.transform.rotation = Quaternion.LookRotation(Flat(light).normalized);
+            shadow.transform.localScale = new Vector3(sprite.flipX ? -size.x : size.x, size.y, 1);
+            shadow.transform.position = sprite.transform.position + Vector3.up * size.y * sprite.transform.lossyScale.y / 2;
+            if (shadow.sharedMaterial.mainTexture != sprite.sprite.texture) shadow.sharedMaterial.mainTexture = sprite.sprite.texture;
         }
 
         public override void OnNetworkSpawn()
@@ -235,7 +252,7 @@ namespace Demons
             if (!target && Carrying.Value == Net.None) target = UseTarget();
             if (target)
             {
-                var p = target is Belt belt ? belt.ClosestPoint(transform.position) : target.transform.position;
+                var p = target is Belt belt ? belt.PointAt(belt.FreeSpot(transform.position) ?? belt.DistanceAt(transform.position)) : target.transform.position;
                 markerAt = new Vector3(p.x, 0.03f, p.z);
                 if (markerSize < 0.05f) marker.position = markerAt;
             }
@@ -344,7 +361,7 @@ namespace Demons
             var station = Nearest(Station.All, s => s.CanTake, s => s.Slot.position, from, facing, slack);
             if (station) return station;
             var belt = Belt.Instance;
-            return InReach(from, belt.ClosestPoint(from), slack) ? belt : null;
+            return InReach(from, belt.ClosestPoint(from), slack) && belt.FreeSpot(from) != null ? belt : null;
         }
 
         public Station UseTarget() => UseTarget(transform.position, transform.forward, 0);
@@ -402,7 +419,9 @@ namespace Demons
             if (held)
             {
                 if (target is Station station) held.PutOn(station);
-                else if (target is Belt belt) held.PutOnBelt(belt.DistanceAt(from));
+                else if (target is Belt belt) held.PutOnBelt(belt.FreeSpot(from, held).Value);
+                // A full stretch of belt refuses the thought rather than dropping it on the floor.
+                else if (InReach(from, Belt.Instance.ClosestPoint(from), Slack)) return;
                 else held.Toss(this, from, facing, Flat(momentum) * Balance.I.dropInherit + Vector3.up * Balance.I.dropLift);
             }
             else if (target is Pebble pebble) pebble.Hold(this);

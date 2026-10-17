@@ -46,7 +46,7 @@ namespace Demons.PlayTests
         public IEnumerator SurvivalWithBotsRunsClean()
         {
             yield return StartOffice(GameMode.Survival, 3);
-            float peak = 0, end = Time.time + 540, nextCheck = Time.time + 30;
+            float peak = 0, end = Time.time + 540, nextCheck = Time.time + 30, firedAt = -1;
             int startFrame = Time.frameCount;
             float startReal = Time.realtimeSinceStartup;
             var travelled = new Dictionary<Demon, float>();
@@ -54,6 +54,7 @@ namespace Demons.PlayTests
             while (Time.time < end)
             {
                 if (GameState.Instance) peak = Mathf.Max(peak, GameState.Instance.Influence.Value);
+                if (Progression.Instance && Progression.Instance.Review.Value && firedAt < 0) firedAt = Time.time - (end - 540);
                 foreach (var d in Demon.All)
                 {
                     if (last.TryGetValue(d, out var was)) travelled[d] = travelled.GetValueOrDefault(d) + Vector3.Distance(was, d.transform.position);
@@ -70,7 +71,8 @@ namespace Demons.PlayTests
                 }
                 yield return null;
             }
-            Debug.Log($"[soak] survival peak influence {peak}, demons {Demon.All.Count}, haunts {Demon.All.ConvertAll(d => d.Haunts.Value).Sum()}, deliveries {Demon.All.ConvertAll(d => d.Deliveries.Value).Sum()}, throws {Demon.All.ConvertAll(d => d.Throws.Value).Sum()}, fps {(Time.frameCount - startFrame) / (Time.realtimeSinceStartup - startReal):0}");
+            Debug.Log($"[soak] belt speed {Belt.Travel(Net.Now + 1) - Belt.Travel(Net.Now):0.0}, net now {Net.Now:0}, influence {GameState.Instance.Influence.Value:0.0}, fire line {Progression.Instance.FireLine:0}");
+            Debug.Log($"[soak] survival peak influence {peak}, fired at {firedAt:0}s, demons {Demon.All.Count}, haunts {Demon.All.ConvertAll(d => d.Haunts.Value).Sum()}, deliveries {Demon.All.ConvertAll(d => d.Deliveries.Value).Sum()}, throws {Demon.All.ConvertAll(d => d.Throws.Value).Sum()}, fps {(Time.frameCount - startFrame) / (Time.realtimeSinceStartup - startReal):0}");
             Assert.AreEqual(3, Demon.All.Count);
             Assert.Greater(peak, 1f, "bots never scored; the core loop is broken");
         }

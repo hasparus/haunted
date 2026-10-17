@@ -15,7 +15,12 @@ namespace Demons
 
         [Header("Thought pebbles")]
         public float beltSpeed = 1.1f;
+        [Tooltip("Seconds between thoughts at base belt speed. In Survival the belt speeds up instead of spawning denser.")]
         public float spawnInterval = 3f;
+        [Tooltip("Thoughts on the belt never sit closer than this.")]
+        public float beltGap = 0.8f;
+        [Tooltip("How far along the belt a dropped thought may slide to find room.")]
+        public float beltDropLeeway = 1.2f;
         public float forgetTime = 10f;
         public float warnTime = 4f;
         public float flyAwayTime = 1.5f;
@@ -74,7 +79,11 @@ namespace Demons
         [Header("Survival")]
         [Tooltip("Game over below this influence.")]
         public float survivalFloor = -5f;
-        [Tooltip("Spawn rate starts at 0.75x and gains +1x every this many seconds.")]
+        [Tooltip("Also game over this far below the run's peak influence.")]
+        public float survivalDrop = 12f;
+        [Tooltip("Influence lost when an unhaunted thought reaches him in Survival.")]
+        public float survivalMissPenalty = 1f;
+        [Tooltip("Belt speed starts at 0.75x and gains +1x every this many seconds.")]
         public float survivalRampSeconds = 150f;
         [Tooltip("Seconds between new mechanics (one 'day' each).")]
         public float survivalStageSeconds = 30f;

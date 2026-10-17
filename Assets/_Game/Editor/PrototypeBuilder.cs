@@ -33,6 +33,7 @@ namespace Demons.Editor
             if (!File.Exists($"{Root}/Resources/Sounds.asset"))
                 AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<Sounds>(), $"{Root}/Resources/Sounds.asset");
 
+            BuildSpriteShadow();
             var pebble = BuildPebble();
             var demon = BuildDemon();
 
@@ -519,6 +520,7 @@ namespace Demons.Editor
             sun.type = LightType.Directional;
             sun.shadows = LightShadows.Soft;
             sun.transform.rotation = Quaternion.Euler(55, -25, 0);
+            RenderSettings.sun = sun;
 
             Prim(PrimitiveType.Cube, "Floor", null, new Vector3(0, -0.1f, 0), new Vector3(half.x * 2, 0.2f, half.y * 2), Mat("Floor", Gray(0.32f)), collider: true);
             float wx = half.x + 0.25f, wz = half.y + 0.25f;
@@ -599,6 +601,25 @@ namespace Demons.Editor
             if (kind != StationKind.Desk) Label($"<b>{kind}</b>", visual, new Vector3(0, 0.5f, -0.7f), cam);
             Set(st, "visual", visual.gameObject);
             return st;
+        }
+
+        // Alpha-clipped Lit used by invisible cards so drawings cast their own silhouettes.
+        static void BuildSpriteShadow()
+        {
+            var path = $"{Root}/Resources/SpriteShadow.mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (!m)
+            {
+                m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                AssetDatabase.CreateAsset(m, path);
+            }
+            m.SetTexture("_BaseMap", Art("Devil_Front").texture);
+            m.SetFloat("_AlphaClip", 1);
+            m.SetFloat("_Cutoff", 0.5f);
+            m.SetFloat("_Cull", 0);
+            m.EnableKeyword("_ALPHATEST_ON");
+            m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
+            EditorUtility.SetDirty(m);
         }
 
         static Sprite Art(string name)

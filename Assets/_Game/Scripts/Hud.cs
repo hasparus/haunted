@@ -213,7 +213,7 @@ namespace Demons
         {
             var text = progress == null ? ""
                 : progress.Mode.Value == GameMode.Week ? $"{progress.DayName}  ·  goal {progress.Goal:0}  ·  "
-                : $"Survival  ·  best {progress.Best.Value:0}  ·  ";
+                : $"Survival  ·  best {progress.Best.Value:0}  ·  fired below {progress.FireLine:0}  ·  ";
             UI.Set(status, text + $"influence {state.Influence.Value:0.0}");
 
             var demons = Demon.All.FindAll(d => d.Slot.Value >= 0);
