@@ -34,7 +34,12 @@ namespace Demons
             new(1f, 0.45f, 0.8f),
         };
 
-        public static Color ColorOf(int slot) => All.Find(d => d.Slot.Value == slot) is { } d ? d.Tint : Palette[slot];
+        public static Color ColorOf(int slot)
+        {
+            foreach (var d in All)
+                if (d.Slot.Value == slot) return d.Tint;
+            return Palette[slot];
+        }
 
         public static bool ColorTaken(int index, Demon except) => All.Exists(d => d != except && d.ColorIndex.Value == index);
 

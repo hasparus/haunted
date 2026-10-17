@@ -21,7 +21,12 @@ namespace Demons
 
         static LocalPlayer[] preview;
 
-        public static LocalPlayer Find(int index) => All.Find(p => p.Index == index);
+        public static LocalPlayer Find(int index)
+        {
+            foreach (var p in All)
+                if (p.Index == index) return p;
+            return null;
+        }
 
         public static int Humans => All.FindAll(p => !Bots.IsBot(p.Device)).Count;
 
@@ -147,12 +152,7 @@ namespace Demons
                 else p.Move.actionMap.Disable();
         }
 
-        static bool AnyPressed(params KeyControl[] keys)
-        {
-            foreach (var k in keys)
-                if (k.wasPressedThisFrame) return true;
-            return false;
-        }
+        static bool AnyPressed(KeyControl a, KeyControl b) => a.wasPressedThisFrame || b.wasPressedThisFrame;
 
         // Solo spans the whole keyboard, so it can't share one with the split halves.
         static bool Clashes(string a, string b) => a == b || a == "Solo" || b == "Solo";
