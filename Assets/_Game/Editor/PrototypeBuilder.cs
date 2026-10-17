@@ -60,7 +60,7 @@ namespace Demons.Editor
 
             var body = new GameObject("Body").transform;
             body.SetParent(root.transform, false);
-            var stone = Prim(PrimitiveType.Sphere, "Stone", body, Vector3.zero, Vector3.one * 0.5f, Mat("Pebble", Gray(0.85f)));
+            var stone = Prim(PrimitiveType.Sphere, "Stone", body, Vector3.zero, Vector3.one * 0.5f, Ink("Pebble", Gray(0.85f)));
 
             var dots = new Renderer[Scoring.MaxDemons];
             for (int i = 0; i < dots.Length; i++)
@@ -78,7 +78,7 @@ namespace Demons.Editor
             Prim(PrimitiveType.Cube, "WingR", wings.transform, new Vector3(0.35f, 0.1f, 0), new Vector3(0.45f, 0.03f, 0.25f), Mat("Wing", Color.white));
             wings.SetActive(false);
 
-            var shell = Prim(PrimitiveType.Sphere, "Shell", body, Vector3.zero, Vector3.one * 0.62f, Mat("Shell", Gray(0.28f)));
+            var shell = Prim(PrimitiveType.Sphere, "Shell", body, Vector3.zero, Vector3.one * 0.62f, Ink("Shell", Gray(0.28f)));
             shell.SetActive(false);
 
             Set(p, "body", body);
@@ -537,7 +537,7 @@ namespace Demons.Editor
             beltGo.transform.position = new Vector3(0, 0, beltZ);
             beltGo.AddComponent<NetworkObject>();
             var belt = beltGo.AddComponent<Belt>();
-            Prim(PrimitiveType.Cube, "Conveyor", beltGo.transform, new Vector3((beltStart + beltEnd) / 2, 0.25f, 0), new Vector3(beltEnd - beltStart + 0.4f, 0.5f, 1), Paper("Belt", new Color(0.14f, 0.13f, 0.16f)), collider: true);
+            Prim(PrimitiveType.Cube, "Conveyor", beltGo.transform, new Vector3((beltStart + beltEnd) / 2, 0.25f, 0), new Vector3(beltEnd - beltStart + 0.4f, 0.5f, 1), Paper("Belt", new Color(0.14f, 0.13f, 0.16f), slats: true), collider: true);
             Set(belt, "start", Point("Start", beltGo.transform, new Vector3(beltStart, 0.75f, 0)));
             Set(belt, "end", Point("End", beltGo.transform, new Vector3(beltEnd, 0.75f, 0)));
             Set(belt, "pebblePrefab", pebble);
@@ -587,13 +587,18 @@ namespace Demons.Editor
                     // The drawing's footprint: blocks demons and casts the desk's shadow.
                     var top = Prim(PrimitiveType.Cube, "Top", visual, new Vector3(0, 0.385f, -0.14f), new Vector3(1.7f, 0.77f, 0.72f), Mat("Desk", Gray(0.72f)), collider: true);
                     top.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
-                    // Billboard drawing standing on the footprint's front edge; the thought sits just in front of its middle.
+                    // Billboard drawing standing on the footprint's front edge.
                     var art = Point("Art", visual, new Vector3(0, 0, -0.5f)).gameObject.AddComponent<SpriteRenderer>();
                     art.sprite = Art(desksBuilt++ % 2 == 0 ? "Station_Blank" : "Station_Desk2");
                     art.transform.rotation = cam.transform.rotation;
                     art.transform.localScale = Vector3.one * 1.8f / art.sprite.bounds.size.x;
                     art.color = new Color(0.86f, 0.81f, 0.72f);
-                    st.Slot = Point("Slot", go.transform, new Vector3(0, 0.65f, -0.42f));
+                    art.sharedMaterial = Resources.Load<Material>("Fx/Card");
+                    // The thought sits on the drawing (the plain desk's middle, the legged desk's top slab), a hair towards
+                    // the camera, so it looks centred from every desk's angle.
+                    var bounds = art.sprite.bounds;
+                    var on = art.transform.TransformPoint(new Vector3(0, bounds.min.y + bounds.size.y * (art.sprite.name == "Station_Desk2" ? 0.735f : 0.5f), 0));
+                    st.Slot = Point("Slot", go.transform, go.transform.InverseTransformPoint(on - cam.transform.forward * 0.3f));
                     var phone = Prim(PrimitiveType.Cube, "Phone", visual, new Vector3(0.45f, 0.95f, -0.15f), new Vector3(0.35f, 0.18f, 0.22f), Mat("Phone", new Color(0.98f, 0.8f, 0.08f)));
                     phone.SetActive(false);
                     Set(st, "phone", phone);
@@ -716,12 +721,23 @@ namespace Demons.Editor
 
         static Material Unlit(string name, Color color) => Mat(name, color, "Universal Render Pipeline/Unlit");
 
+        // Paper with a silhouette outline instead of face edges, for the round thoughts and their shells.
+        static Material Ink(string name, Color color)
+        {
+            var m = Paper(name, color);
+            m.SetFloat("_Outline", 0);
+            m.SetFloat("_Silhouette", 1);
+            m.SetFloat("_DepthPull", 0.45f);
+            return m;
+        }
+
         // The inked-paper look for the office's own geometry; see Haunted/Paper.
-        static Material Paper(string name, Color color, bool tiles = false)
+        static Material Paper(string name, Color color, bool tiles = false, bool slats = false)
         {
             var m = Mat(name, color, "Haunted/Paper");
             m.shader = Shader.Find("Haunted/Paper");
             m.SetFloat("_Tiles", tiles ? 1 : 0);
+            m.SetFloat("_Slats", slats ? 1 : 0);
             return m;
         }
 

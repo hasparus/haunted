@@ -10,6 +10,9 @@ namespace Demons
         static readonly Color Light = new(1, 0.91f, 0.69f), Ink = new(0.04f, 0.03f, 0.06f);
 
         readonly List<(float born, List<Vector2[]> paths)> cracks = new();
+
+        // Where each open crack spills its light, for MindFx: viewport position (y up) and strength.
+        public static readonly List<Vector3> Glows = new();
         float sealing, floodAt = -10;
 
         public CrackLights()
@@ -25,6 +28,16 @@ namespace Demons
             while (cracks.Count < open) cracks.Add((Time.unscaledTime, Grow()));
             while (cracks.Count > open) cracks.RemoveAt(cracks.Count - 1);
             sealing = seal;
+            Glows.Clear();
+            float now = Time.unscaledTime;
+            for (int i = 0; i < cracks.Count; i++)
+            {
+                var trunk = cracks[i].paths[0];
+                var p = trunk[trunk.Length * 2 / 3];
+                float grown = Mathf.Clamp01((now - cracks[i].born) / GrowTime);
+                float flicker = cracks.Count >= 3 ? 0.7f + 0.3f * Mathf.PerlinNoise(now * 9, i * 7.3f) : 1;
+                Glows.Add(new Vector3(p.x, 1 - p.y, grown * flicker * (i == cracks.Count - 1 ? 1 - seal * 0.6f : 1)));
+            }
             if (cracks.Count > 0 || Time.unscaledTime - floodAt < FloodTime) MarkDirtyRepaint();
         }
 

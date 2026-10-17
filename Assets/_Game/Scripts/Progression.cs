@@ -170,6 +170,7 @@ namespace Demons
             };
             Day.OnValueChanged += (was, now) =>
             {
+                Fx.ClearStains();
                 if (now > was) Audio.Play(Sounds.I.newDay);
             };
             Review.OnValueChanged += (_, now) =>

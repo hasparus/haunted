@@ -74,6 +74,8 @@ namespace Demons
         {
             Held.Value = false;
             SetPaused(pausers.Count > 0);
+            // The held card goes the moment someone gets back to work; Hud burns it out.
+            if (Progression.Instance) Progression.Instance.CardUntil.Value = Now;
         }
 
         [Rpc(SendTo.Server)]
@@ -201,6 +203,9 @@ namespace Demons
         void PopupRpc(Vector3 at, FixedString32Bytes text, int slot)
         {
             Hud.Popup(at, text.ToString(), slot >= 0 ? Demon.ColorOf(slot) : Color.white);
+            if (slot >= 0) Fx.Splat(at, Demon.ColorOf(slot), 24, 4.5f);
+            else Fx.Splat(at, new Color(1, 0.91f, 0.69f), 10, 2.5f);
+            MindFx.Ripple(at, slot >= 0 ? 1 : 0.5f);
             if (slot >= 0) Audio.Play(Sounds.I.deliver, at);
         }
     }

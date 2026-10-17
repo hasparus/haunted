@@ -4,12 +4,15 @@ Shader "Haunted/Paper"
 {
     Properties
     {
-        _BaseColor("Color", Color) = (1, 1, 1, 1)
+        [MainColor] _BaseColor("Color", Color) = (1, 1, 1, 1)
         _Hatch("Hatching in shade", Range(0, 1)) = 0.7
         _Tiles("Floor tiles", Range(0, 1)) = 0
         _TileSize("Tile size", Float) = 1.6
         _Outline("Ink outline (px)", Range(0, 4)) = 1.0
         _PoolRadius("Light pool radius", Float) = 9
+        _Slats("Belt slats", Range(0, 1)) = 0
+        _Silhouette("Silhouette ink (for round things)", Range(0, 1)) = 0
+        _DepthPull("Depth pulled towards the camera (m)", Float) = 0
     }
 
     SubShader
@@ -37,9 +40,23 @@ Shader "Haunted/Paper"
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
                 half _Hatch, _Tiles;
-                float _TileSize, _Outline, _PoolRadius;
+                float _TileSize, _Outline, _PoolRadius, _Slats, _Silhouette, _DepthPull;
             CBUFFER_END
             float4 _PoolCenter; // xz of the floor point under the middle of the board, set by MindFx
+            float _BeltTravel; // how far the belt has moved, set by Belt
+            float _MindTime; // unscaled seconds, set by MindFx
+            // Light spilling from open cracks (xz, unused, strength), set by MindFx: warm daylight, Don't Starve's falloff.
+            float4 _CrackGlows[5];
+            half3 CrackLight(float2 xz)
+            {
+                half sum = 0;
+                for (int g = 0; g < 5; g++)
+                    sum += _CrackGlows[g].w * exp(-0.9 * pow(length(xz - _CrackGlows[g].xy) / 3.8, 2.2));
+                return half3(1, 0.91, 0.69) * sum;
+            }
+
+            TEXTURE2D(_Stains); SAMPLER(sampler_Stains); // coloured ink stains on the floor (rgb ink, a coverage), stamped by Fx
+            float4 _StainRect; // xz min, 1 / size
 
             struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 uv : TEXCOORD0; };
             struct Varyings
@@ -56,6 +73,9 @@ Shader "Haunted/Paper"
                 Varyings o;
                 o.positionWS = TransformObjectToWorld(v.positionOS.xyz);
                 o.positionCS = TransformWorldToHClip(o.positionWS);
+                // Thoughts are pulled forward in depth only, so one rolling against a wall isn't cut by it.
+                float4 pulled = TransformWorldToHClip(o.positionWS + normalize(GetCameraPositionWS() - o.positionWS) * _DepthPull);
+                o.positionCS.z = pulled.z / pulled.w * o.positionCS.w;
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
                 o.fog = ComputeFogFactor(o.positionCS.z);
                 o.uv = v.uv;
@@ -74,7 +94,7 @@ Shader "Haunted/Paper"
             // Wobbly pencil lines: a stripe pattern whose phase drifts with noise so no line is perfectly straight.
             half Lines(float coord, float2 wobble, float width)
             {
-                float u = coord + (Noise(wobble) - 0.5) * 0.6;
+                float u = coord + (Noise(wobble) - 0.5) * 0.35;
                 return 1 - smoothstep(0, width, abs(frac(u) - 0.5) * 2 - (1 - width * 2));
             }
 
@@ -94,7 +114,13 @@ Shader "Haunted/Paper"
                     half grid = max(Lines(t.x, plane * 2.3, 0.06), Lines(t.y, plane.yx * 2.3 + 3, 0.06));
                     albedo *= 1 - grid * 0.16 * _Tiles;
                     albedo *= 0.96 + 0.08 * Hash(floor(t));
+                    half4 stain = SAMPLE_TEXTURE2D(_Stains, sampler_Stains, (i.positionWS.xz - _StainRect.xy) * _StainRect.zw);
+                    albedo = lerp(albedo, stain.rgb, smoothstep(0.4, 0.6, stain.a) * 0.9);
                 }
+
+                // The belt's slats, drawn as pale ridges on its top that roll along with the thoughts.
+                if (_Slats > 0 && n.y > 0.5)
+                    albedo += _Slats * 0.16 * (1 - smoothstep(0.02, 0.07, abs(frac((i.positionWS.x - _BeltTravel) / 0.45) - 0.5) - 0.38));
 
                 float4 shadowCoord = TransformWorldToShadowCoord(i.positionWS);
                 Light sun = GetMainLight(shadowCoord);
@@ -119,20 +145,27 @@ Shader "Haunted/Paper"
                 // Don't Starve's light falloff (a stretched exponential: soft core, long tail, no edge) around the room.
                 half pool = exp(-0.9 * pow(length(i.positionWS.xz - _PoolCenter.xy) / _PoolRadius, 2.6));
                 light *= 0.45 + 0.55 * pool;
+                light += CrackLight(i.positionWS.xz) * 1.7;
                 half3 col = albedo * light;
 
                 // Ink crosshatching in the shade: one direction where it dims, a second across it where it's dark.
                 float2 screen = i.positionCS.xy / 7.0;
                 half shade = 1 - saturate(Luminance(light) / 1.1);
-                half hatchA = Lines(screen.x + screen.y, plane * 3.1, 0.12) * smoothstep(0.35, 0.5, shade);
-                half hatchB = Lines(screen.x - screen.y, plane * 2.7 + 5, 0.12) * smoothstep(0.55, 0.7, shade);
+                // Line boil: the ink is redrawn a few times a second, like a slow hand-drawn boil.
+                float boil = floor(_MindTime * 2.5) * 7.13;
+                half hatchA = Lines(screen.x + screen.y, plane * 3.1 + boil, 0.12) * smoothstep(0.35, 0.5, shade);
+                half hatchB = Lines(screen.x - screen.y, plane * 2.7 + 5 + boil, 0.12) * smoothstep(0.55, 0.7, shade);
                 col *= 1 - _Hatch * 0.35 * max(hatchA, hatchB);
 
                 // Ink along the face's edges, the same width in pixels however far away it is.
                 float2 edge = min(i.uv, 1 - i.uv) / max(fwidth(i.uv), 1e-5);
-                half wobble = 0.7 + 0.6 * Noise(plane * 6);
+                half wobble = 0.7 + 0.6 * Noise(plane * 6 + boil);
                 half ink = 1 - smoothstep(_Outline * wobble - 0.75, _Outline * wobble + 0.75, min(edge.x, edge.y));
                 col = lerp(col, half3(0.06, 0.05, 0.08), ink * 0.85);
+
+                // Round things have no face edges to ink, so outline where the surface turns away from the camera.
+                half facing = dot(n, normalize(GetWorldSpaceViewDir(i.positionWS)));
+                col = lerp(col, half3(0.06, 0.05, 0.08), _Silhouette * (1 - smoothstep(0.35, 0.5, facing + (Noise(plane * 9 + boil) - 0.5) * 0.08)));
 
                 col = MixFog(col, i.fog);
                 return half4(col, 1);

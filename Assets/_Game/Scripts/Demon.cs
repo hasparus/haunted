@@ -74,12 +74,51 @@ namespace Demons
         }
 
         Springy spring;
+        Transform visual;
+        MaterialPropertyBlock block;
+        float flashAt = -10, frozenUntil, flashStrength = 1, flashShown;
+        Vector3 frozenAt;
+        static readonly int FlashId = Shader.PropertyToID("_Flash");
+
+        // Impact on this demon's drawing alone: a paper-white flash and, for a hit-stop, the card holding still for a
+        // few frames while the networked body underneath carries on, then catching up. Never touches the simulation.
+        public void Hit(float stop = 0.08f, float flash = 1)
+        {
+            if (!Mood.Effects) return;
+            flashAt = Time.unscaledTime;
+            flashStrength = flash;
+            if (stop <= 0) return;
+            frozenUntil = Time.unscaledTime + stop;
+            frozenAt = visual.position;
+        }
+
+        float windUntil, lastWind;
+
+        void Impact()
+        {
+            // A dash streams a few wind lines past the demon.
+            if (Time.unscaledTime < windUntil && Time.unscaledTime - lastWind > 0.04f)
+            {
+                lastWind = Time.unscaledTime;
+                Fx.Wind(transform.position, transform.forward);
+            }
+            if (Time.unscaledTime < frozenUntil) visual.position = frozenAt;
+            else if (visual.localPosition != Vector3.zero)
+                visual.localPosition = Vector3.MoveTowards(visual.localPosition, Vector3.zero, Time.unscaledDeltaTime * 25);
+            float flash = flashStrength * Mathf.Clamp01(1 - (Time.unscaledTime - flashAt) / 0.18f);
+            if (flash == flashShown) return;
+            flashShown = flash;
+            block ??= new MaterialPropertyBlock();
+            sprite.GetPropertyBlock(block);
+            block.SetFloat(FlashId, flash);
+            sprite.SetPropertyBlock(block);
+        }
 
         // Everything but the floor marker moves under a Visual pivot, so squash and stretch never scales the networked root.
         void Awake()
         {
             rb = GetComponent<Rigidbody>();
-            var visual = new GameObject("Visual").transform;
+            visual = new GameObject("Visual").transform;
             var parts = new List<Transform>();
             foreach (Transform child in transform)
                 if (child != marker) parts.Add(child);
@@ -89,6 +128,7 @@ namespace Demons
 
             // The drawing stands in for the capsule, which stays behind as an invisible shadow caster.
             sprite = new GameObject("Sprite").AddComponent<SpriteRenderer>();
+            sprite.sharedMaterial = Resources.Load<Material>("Fx/Card");
             sprite.transform.SetParent(visual, false);
             foreach (var r in visual.GetComponentsInChildren<MeshRenderer>())
                 if (r == body || r == head) r.enabled = false;
@@ -105,6 +145,7 @@ namespace Demons
         // tilt, so it sorts by where the demon stands and covers what's behind it. Picks the drawing from where the demon faces.
         void LateUpdate()
         {
+            Impact();
             var cam = Camera.main;
             if (!cam) return;
             if (cam != tilted)
@@ -142,12 +183,17 @@ namespace Demons
             ColorIndex.OnValueChanged += (_, _) => Paint();
             ColorIndex.OnValueChanged += (_, _) => Audio.Play(Sounds.I.colorPick, transform.position);
             Scribble.OnValueChanged += (was, now) =>
+            {
                 Audio.Play(now > was ? Sounds.I.penScribble : now > 0 ? Sounds.I.penMash : Sounds.I.penEscape, transform.position);
+                if (now > was) Hit(0.08f);
+            };
             Carrying.OnValueChanged += (was, now) => spring.Punch(now != Net.None ? new Vector3(0.22f, -0.22f, 0.22f) : new Vector3(-0.1f, 0.14f, -0.1f));
             Dashes.OnValueChanged += (was, now) =>
             {
                 spring.Punch(new Vector3(-0.15f, -0.08f, 0.35f));
-                if (now > was) Audio.Play(Sounds.I.dash, transform.position);
+                if (now <= was) return;
+                Audio.Play(Sounds.I.dash, transform.position);
+                windUntil = Time.unscaledTime + Balance.I.dashTime + 0.05f;
             };
             Throws.OnValueChanged += (was, now) =>
             {
@@ -156,13 +202,20 @@ namespace Demons
             };
             Haunts.OnValueChanged += (was, now) =>
             {
-                if (now > was) spring.Punch(Vector3.one * 0.25f);
+                if (now <= was) return;
+                spring.Punch(Vector3.one * 0.25f);
+                Hit(0.025f, 0.3f);
+            };
+            Deliveries.OnValueChanged += (was, now) =>
+            {
+                if (now > was) Hit(0.06f);
             };
             Lit.OnValueChanged += (_, now) =>
             {
                 if (!now) return;
                 spring.Punch(new Vector3(0.25f, -0.3f, 0.25f));
                 Audio.Play(Sounds.I.lit, transform.position);
+                Hit(0.1f);
             };
             Audio.Play(Sounds.I.join, transform.position);
             rb.isKinematic = !IsOwner;
@@ -270,6 +323,7 @@ namespace Demons
             if (stride < Sounds.I.stepLength) return;
             stride = 0;
             Audio.Play(Sounds.I.step, transform.position);
+            Fx.Puff(transform.position);
         }
 
         const float MarkerRadius = 0.5f;

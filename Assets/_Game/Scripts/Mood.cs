@@ -78,7 +78,7 @@ namespace Demons
             haunted.contribution.value = 0.8f * MindFx.Mind * MindFx.Mind;
         }
 
-        // Don't Starve's insanity cube, roughly: washed out, sickly green in the shadows, a little more contrast.
+        // Don't Starve's insanity cube, roughly: washed out, cold violet in the shadows, a little more contrast (no green: jam rule).
         // Laid out the way URP's Color Lookup reads it: 32 blue slices of 32×32 side by side.
         static Texture2D HauntedLut()
         {
@@ -91,7 +91,7 @@ namespace Demons
                     {
                         var c = new Vector3(r, g, b) / (n - 1);
                         float luma = Vector3.Dot(c, new Vector3(0.3f, 0.59f, 0.11f));
-                        c = Vector3.Lerp(c, Vector3.one * luma, 0.55f) + new Vector3(-0.02f, 0.05f, 0.03f) * (1 - luma);
+                        c = Vector3.Lerp(c, Vector3.one * luma, 0.55f) + new Vector3(0.02f, -0.01f, 0.05f) * (1 - luma);
                         c = (c - Vector3.one * 0.5f) * 1.15f + Vector3.one * 0.5f;
                         pixels[g * n * n + b * n + r] = new Color(Mathf.Clamp01(c.x), Mathf.Clamp01(c.y), Mathf.Clamp01(c.z));
                     }
