@@ -11,7 +11,7 @@ namespace Demons
         const float Behind = -0.01f, LegsAt = 0, BodyAt = 0.004f, TieAt = 0.008f, HeadAt = 0.012f, FaceAt = 0.016f, Front = 0.02f;
         const float BodyWidth = 1.35f, Upper = 0.24f, Lower = 0.24f, Stride = 0.22f;
         static readonly Vector2 Shoulder = new(0.15f, 0.66f);
-        static readonly int FlashId = Shader.PropertyToID("_Flash"), AloftId = Shader.PropertyToID("_Aloft");
+        static readonly int FlashId = Shader.PropertyToID("_Flash"), AloftId = Shader.PropertyToID("_Aloft"), FeetId = Shader.PropertyToID("_Feet");
 
         static Sprite legsStand, bodyFront, bodyBack, bodySide, tieArt;
         static Sprite[] walk, headFront, headBack, headSide, faces, sideFaces;
@@ -217,6 +217,7 @@ namespace Demons
                 float at = far ? Behind : Front;
                 arms[i].GetPropertyBlock(block);
                 block.SetFloat(AloftId, at);
+                block.SetVector(FeetId, transform.position);
                 arms[i].SetPropertyBlock(block);
             }
         }

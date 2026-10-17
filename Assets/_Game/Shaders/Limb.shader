@@ -1,11 +1,13 @@
 // A demon's arm: a flat ink stroke (a LineRenderer in the drawing's plane), sorted like the drawing it belongs to
-// (Sorting.hlsl): at the floor under its origin, _Aloft nearer, so a near arm sits over the body and a far arm under it.
+// (Sorting.hlsl): at the floor under the demon's feet (_Feet: a line's mesh is in world space, so it has no origin of its
+// own), _Aloft nearer, so a near arm sits over the body and a far arm under it.
 Shader "Haunted/Limb"
 {
     Properties
     {
         _BaseColor("Ink", Color) = (0.07, 0.06, 0.09, 1)
         _Aloft("Drawn this far nearer than where it stands (m)", Float) = 0
+        _Feet("Where it stands", Vector) = (0, 0, 0, 0)
     }
 
     SubShader
@@ -27,6 +29,7 @@ Shader "Haunted/Limb"
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
                 float _Aloft;
+                float4 _Feet;
             CBUFFER_END
 
             struct Attributes { float4 positionOS : POSITION; };
@@ -36,7 +39,7 @@ Shader "Haunted/Limb"
             {
                 Varyings o;
                 o.positionCS = TransformObjectToHClip(v.positionOS.xyz);
-                float3 feet = Underneath(TransformObjectToWorld(float3(0, 0, 0)));
+                float3 feet = Underneath(_Feet.xyz);
                 o.positionCS.z = SortedZ(o.positionCS, PushedBack(feet, -_Aloft));
                 return o;
             }
