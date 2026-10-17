@@ -38,6 +38,7 @@ namespace Demons
             phase.OnValueChanged += (_, now) =>
             {
                 if (now == Phase.Carrying && !Demo) CameraRig.Shake(0.4f);
+                if (!Demo) Audio.Play(now switch { Phase.Warning => Sounds.I.clawWarning, Phase.Carrying => Sounds.I.clawGrab, _ => null });
             };
         }
 

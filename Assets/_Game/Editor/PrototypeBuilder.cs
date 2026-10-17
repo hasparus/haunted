@@ -30,6 +30,8 @@ namespace Demons.Editor
 
             if (!File.Exists($"{Root}/Resources/Balance.asset"))
                 AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<Balance>(), $"{Root}/Resources/Balance.asset");
+            if (!File.Exists($"{Root}/Resources/Sounds.asset"))
+                AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<Sounds>(), $"{Root}/Resources/Sounds.asset");
 
             var pebble = BuildPebble();
             var demon = BuildDemon();

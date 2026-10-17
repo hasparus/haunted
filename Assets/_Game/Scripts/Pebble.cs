@@ -105,6 +105,40 @@ namespace Demons
             if (IsServer) ServerTick();
             Place();
             Animate();
+            Listen();
+        }
+
+        bool heard, heardShell, heardWarning;
+        PebbleState heardState;
+        byte heardStamps;
+
+        // Polled rather than hooked: by Update every variable from this tick has landed, so Anchor matches State.
+        void Listen()
+        {
+            var s = Sounds.I;
+            bool warning = Idle && ForgetIn < Balance.I.warnTime;
+            if (heard)
+            {
+                var at = transform.position;
+                if (State.Value != heardState)
+                    Audio.Play(State.Value switch
+                    {
+                        PebbleState.Held when Net.Find<Demon>(Anchor.Value) != null => heardState == PebbleState.Thrown ? s.catchThought : s.grab,
+                        PebbleState.Floor => s.drop,
+                        PebbleState.OnStation => s.place,
+                        PebbleState.OnBelt => s.placeOnBelt,
+                        PebbleState.Flying => s.forgotten,
+                        _ => null,
+                    }, at);
+                if ((Stamps.Value & ~heardStamps) != 0) Audio.Play(s.stamp, at);
+                if (heardShell && !Shelled.Value) Audio.Play(s.crack, at);
+                if (warning && !heardWarning) Audio.Play(s.warning, at);
+            }
+            heard = true;
+            heardState = State.Value;
+            heardStamps = Stamps.Value;
+            heardShell = Shelled.Value;
+            heardWarning = warning;
         }
 
         void ServerTick()

@@ -95,8 +95,23 @@ namespace Demons
         {
             InvertedUntil.OnValueChanged += (was, now) =>
             {
-                if (now > was) CameraRig.Shake(0.5f);
+                if (now <= was) return;
+                CameraRig.Shake(0.5f);
+                Audio.Play(Sounds.I.pillTaken);
             };
+            Day.OnValueChanged += (was, now) =>
+            {
+                if (now > was) Audio.Play(Sounds.I.newDay);
+            };
+            Review.OnValueChanged += (_, now) =>
+            {
+                if (now) Audio.Play(Sounds.I.review);
+            };
+            Signing.OnValueChanged += (was, now) =>
+            {
+                if (was && !now) Audio.Play(Sounds.I.signed);
+            };
+            Audio.Play(Sounds.I.levelStart);
             if (!IsServer) return;
             Mode.Value = NextMode;
             Day.Value = 0;

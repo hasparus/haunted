@@ -49,7 +49,7 @@ namespace Demons
         LocalPlayer input;
         Rigidbody rb;
         float dashUntil, nextDash;
-        bool falling;
+        bool falling, fallen;
         float respawnAt, nextPick;
         bool usingHeld;
 
@@ -98,17 +98,31 @@ namespace Demons
             Lit.OnValueChanged += (_, _) => Paint();
             Scribble.OnValueChanged += (_, _) => Paint();
             ColorIndex.OnValueChanged += (_, _) => Paint();
+            ColorIndex.OnValueChanged += (_, _) => Audio.Play(Sounds.I.colorPick, transform.position);
+            Scribble.OnValueChanged += (was, now) =>
+                Audio.Play(now > was ? Sounds.I.penScribble : now > 0 ? Sounds.I.penMash : Sounds.I.penEscape, transform.position);
             Carrying.OnValueChanged += (was, now) => spring.Punch(now != Net.None ? new Vector3(0.22f, -0.22f, 0.22f) : new Vector3(-0.1f, 0.14f, -0.1f));
-            Dashes.OnValueChanged += (_, _) => spring.Punch(new Vector3(-0.15f, -0.08f, 0.35f));
-            Throws.OnValueChanged += (_, _) => spring.Punch(new Vector3(-0.1f, 0.05f, 0.3f));
+            Dashes.OnValueChanged += (was, now) =>
+            {
+                spring.Punch(new Vector3(-0.15f, -0.08f, 0.35f));
+                if (now > was) Audio.Play(Sounds.I.dash, transform.position);
+            };
+            Throws.OnValueChanged += (was, now) =>
+            {
+                spring.Punch(new Vector3(-0.1f, 0.05f, 0.3f));
+                if (now > was) Audio.Play(Sounds.I.throwThought, transform.position);
+            };
             Haunts.OnValueChanged += (was, now) =>
             {
                 if (now > was) spring.Punch(Vector3.one * 0.25f);
             };
             Lit.OnValueChanged += (_, now) =>
             {
-                if (now) spring.Punch(new Vector3(0.25f, -0.3f, 0.25f));
+                if (!now) return;
+                spring.Punch(new Vector3(0.25f, -0.3f, 0.25f));
+                Audio.Play(Sounds.I.lit, transform.position);
             };
+            Audio.Play(Sounds.I.join, transform.position);
             rb.isKinematic = !IsOwner;
             if (!IsOwner) rb.interpolation = RigidbodyInterpolation.None;
             if (!IsOwner) return;
@@ -138,11 +152,18 @@ namespace Demons
         {
             if (IsServer && Net.Find<Pebble>(Carrying.Value) is { } held) held.Drop(transform.position);
             All.Remove(this);
+            Audio.Play(Sounds.I.leave, transform.position);
             if (marker && marker.parent == null) Destroy(marker.gameObject);
         }
 
         void Update()
         {
+            bool down = transform.position.y < -0.5f;
+            if (down != fallen)
+            {
+                fallen = down;
+                Audio.Play(down ? Sounds.I.fall : Sounds.I.respawn, transform.position);
+            }
             if (Scribble.Value > 0) scribble.transform.Rotate(0, 400 * Time.deltaTime, 0);
             if (!IsOwner || input == null) return;
             if (usingHeld && !input.Use.enabled)

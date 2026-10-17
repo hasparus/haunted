@@ -14,6 +14,7 @@ namespace Demons
         readonly NetworkVariable<Phase> phase = new();
 
         Vector3 home;
+        Phase heard;
         Demon target;
         float retargetAt, phaseEnd;
         int strikesLeft;
@@ -39,6 +40,8 @@ namespace Demons
             bool blink = phase.Value == Phase.Aim && Mathf.Repeat(Time.time * 6, 1) < 0.4f;
             look.SetActive(active && !blink);
             look.transform.localScale = Vector3.Lerp(look.transform.localScale, Vector3.one * Scale, Time.deltaTime * 8);
+            if (phase.Value != heard && active && !Demo) Audio.Play(Sounds.I.For(phase.Value), transform.position);
+            heard = phase.Value;
             if (!IsServer || !IsSpawned) return;
             if (active && Time.time >= phaseEnd) Advance();
             if (active) Move();
