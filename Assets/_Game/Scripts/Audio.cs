@@ -88,6 +88,8 @@ namespace Demons
         static void Play(AudioClip clip, Vector3? at, float volume, float jitter)
         {
             if (!instance || !clip) return;
+            volume *= Audible(at);
+            if (volume <= 0) return;
             if (lastPlayed.TryGetValue(clip, out var last) && Time.unscaledTime - last < 0.05f) return;
             lastPlayed[clip] = Time.unscaledTime;
             var voice = instance.Voice();
@@ -109,6 +111,17 @@ namespace Demons
             return voices[next];
         }
 
+        // Off-screen sounds are silent (the HQ is bigger than the screen), fading in over the screen's outer edge.
+        static float Audible(Vector3? at)
+        {
+            var cam = Camera.main;
+            if (at == null || !cam) return 1;
+            var v = cam.WorldToViewportPoint(at.Value);
+            if (v.z < 0) return 0;
+            float outside = Mathf.Max(0, Mathf.Max(Mathf.Max(-v.x, v.x - 1), Mathf.Max(-v.y, v.y - 1)));
+            return Mathf.Clamp01(1 - outside / 0.15f);
+        }
+
         static float Pan(Vector3? at)
         {
             var cam = Camera.main;
@@ -125,7 +138,7 @@ namespace Demons
                 if (!clip) return null;
                 source = Source(owner.gameObject, true);
             }
-            source.volume = Sounds.I.sfxVolume * SoundLevel * volume;
+            source.volume = Sounds.I.sfxVolume * SoundLevel * volume * Audible(at);
             source.panStereo = Pan(at);
             if (source.clip != clip)
             {

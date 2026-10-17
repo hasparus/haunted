@@ -106,13 +106,10 @@ Shader "Haunted/MindDistort"
                     // (navy rim, electric blue, a near-white core) like a cartoon fire, over a soft blue glow.
                     float above = saturate((p.y - hi.y) / 0.15 + 0.5);
                     float tongues = Fbm(float2(p.x * 16, p.y * 3 - t * 2.4));
-                    float reach = (0.01 + 0.13 * tongues * tongues * tongues * 2) * (0.35 + 2.2 * above);
-                    // Burning out (_CardBurn 0 to 1): the flames eat in across the card from its edges, then die down.
-                    float dying = saturate((1.05 - _CardBurn) * 3);
+                    // Flaring out (_CardBurn 0 to 1): the flames surge taller, then go out with the card.
+                    float reach = (0.01 + 0.13 * tongues * tongues * tongues * 2) * (0.35 + 2.2 * above) * (1 + 1.2 * _CardBurn);
+                    float dying = 1 - smoothstep(0.55, 1, _CardBurn);
                     float flame = saturate(1 - d / reach) * step(-0.004, d) * _CardFire * dying;
-                    // Only a band at the burning front is alight; behind it the card is gone and the board shows through.
-                    float front = _CardBurn * 1.4 - Fbm(p * 14 + t) * 0.6 + d * 6;
-                    flame = max(flame, step(d, 0) * saturate(front * 5) * saturate((0.3 - front) * 5) * _CardFire * saturate((1.3 - _CardBurn) * 3));
 
                     // Wobbly band edges so the layers lick at each other instead of following the outline.
                     float edge = (Noise(p * 40 + float2(0, -t * 5)) - 0.5) * 0.18;

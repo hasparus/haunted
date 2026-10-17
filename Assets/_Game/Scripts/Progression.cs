@@ -120,7 +120,11 @@ namespace Demons
             return Mathf.Round(b.dayGoals[Mathf.Min(day, b.dayGoals.Length - 1)] * scale);
         }
         public string DayTitle => Title(Day.Value);
-        public static string Title(int day) => Days[day % Days.Length][..1] + Days[day % Days.Length][1..].ToLowerInvariant();
+        public static string Title(int day)
+        {
+            var name = Days[(day % Days.Length + Days.Length) % Days.Length];
+            return name[..1] + name[1..].ToLowerInvariant();
+        }
         int DayStars => System.Array.FindAll(Balance.I.dayStarCracks, c => cracksToday <= c).Length;
 
         public static bool Has(Feature f) => f == Feature.None || !Instance || Instance.Unlocked(f);

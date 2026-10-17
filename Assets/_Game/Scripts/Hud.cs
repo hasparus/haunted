@@ -238,7 +238,7 @@ namespace Demons
 
             bool showCard = progress && Net.Now < progress.CardUntil.Value;
             bool showReview = showCard && progress.Review.Value;
-            // A card that goes burns away over BurnTime, text and all, the flames eating in from its edges.
+            // A card that goes flares out over BurnTime: it lifts and fades while the flames around it surge and die.
             if (cardUp && !showCard)
             {
                 burnAt = Time.unscaledTime;
@@ -252,14 +252,18 @@ namespace Demons
             if (burning != null && !cardBurning)
             {
                 burning.style.opacity = StyleKeyword.Null;
-                burning.RemoveFromClassList("burning");
+                burning.style.translate = StyleKeyword.Null;
+                burning.style.scale = StyleKeyword.Null;
+                burning.style.transitionDuration = StyleKeyword.Null;
                 if (!burningOut) burning = null;
             }
-            // Opaque for the first third while it chars black, then gone; a plain fade reads as dissolving, not burning.
+            // Driven per frame, so the stylesheet's transitions are off meanwhile; they'd lag it past BurnTime.
             if (cardBurning)
             {
-                burning.AddToClassList("burning");
-                burning.style.opacity = 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.35f, 1, burn));
+                burning.style.transitionDuration = new StyleList<TimeValue>(new List<TimeValue> { new(0) });
+                burning.style.opacity = 1 - burn * burn;
+                burning.style.translate = new Translate(0, -12 * burn);
+                burning.style.scale = new Scale(Vector3.one * (1 - 0.03f * burn));
             }
             CardBurn = burningOut ? burn : 0;
 
