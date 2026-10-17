@@ -58,6 +58,8 @@ namespace Demons
         public int bigDay = 1, potDay = 2, shellDay = 3, therapyDay = 4, pillDay = 5, phoneDay = 6, handDay = 6;
         [Tooltip("Performance Review stars: finish the week within this many seconds for one, two, three stars.")]
         public float[] weekStarSeconds = { 900, 720, 600 };
+        [Tooltip("A day's stars: open at most this many cracks during it for one, two, three stars.")]
+        public int[] dayStarCracks = { 4, 2, 0 };
 
         [Header("Week events")]
         public float pillTime = 10f;

@@ -84,6 +84,8 @@ namespace Demons
         public NetworkVariable<float> Peak = new();
         public NetworkVariable<bool> Review = new();
         public NetworkVariable<int> Stars = new();
+        // Stars for the day just finished, shown on the next day's card; -1 on cards that aren't about a day.
+        public NetworkVariable<int> CardStars = new(-1);
         // Cracks of light let in by thoughts he coped with; delivered influence seals the newest (Sealing is its progress, 0 to 1).
         public NetworkVariable<int> Cracks = new();
         public NetworkVariable<float> Sealing = new();
@@ -98,6 +100,7 @@ namespace Demons
         Feature lastInterrupt;
         bool over, heardInverted, taughtCracks;
         float dayStartInfluence;
+        int cracksToday, weekStars;
         readonly float[] dayStartPrestige = new float[Scoring.MaxDemons];
         int signers;
         float typingSince;
@@ -116,8 +119,9 @@ namespace Demons
             float scale = b.goalScaleByDemons[Mathf.Clamp(Demon.All.Count - 1, 0, b.goalScaleByDemons.Length - 1)];
             return Mathf.Round(b.dayGoals[Mathf.Min(day, b.dayGoals.Length - 1)] * scale);
         }
-        public string DayName => Days[Day.Value % Days.Length];
-        public string DayTitle => DayName[..1] + DayName[1..].ToLowerInvariant();
+        public string DayTitle => Title(Day.Value);
+        public static string Title(int day) => Days[day % Days.Length][..1] + Days[day % Days.Length][1..].ToLowerInvariant();
+        int DayStars => System.Array.FindAll(Balance.I.dayStarCracks, c => cracksToday <= c).Length;
 
         public static bool Has(Feature f) => f == Feature.None || !Instance || Instance.Unlocked(f);
 
@@ -197,6 +201,8 @@ namespace Demons
             Cracks.Value = 0;
             Sealing.Value = 0;
             dayStartInfluence = 0;
+            cracksToday = weekStars = 0;
+            CardStars.Value = -1;
             System.Array.Clear(dayStartPrestige, 0, dayStartPrestige.Length);
             taughtCracks = false;
             InvertedUntil.Value = 0;
@@ -214,9 +220,10 @@ namespace Demons
         }
 
         // Held cards pause the game until someone gets back to work; game time stands still, so they leave right after.
-        void ShowCard(string text, float seconds = 4, bool hold = false)
+        void ShowCard(string text, float seconds = 4, bool hold = false, int stars = -1)
         {
             Card.Value = text;
+            CardStars.Value = stars;
             hold &= GameState.Instance && GameState.Instance.IsSpawned;
             if (hold) GameState.Instance.Hold();
             CardUntil.Value = Now + (hold ? 0.3f : seconds);
@@ -247,6 +254,7 @@ namespace Demons
         {
             if (over || !IsSpawned) return;
             Cracks.Value++;
+            cracksToday++;
             Sealing.Value = 0;
             if (Cracks.Value >= Balance.I.maxCracks)
             {
@@ -277,6 +285,7 @@ namespace Demons
         void GoodDay()
         {
             ShowCard($"HE HAD A GOOD DAY\nHe's coping. Try {DayTitle} again.\n{Roast}", 4, hold: true);
+            cracksToday = 0;
             var state = GameState.Instance;
             state.Influence.Value = dayStartInfluence;
             for (int i = 0; i < dayStartPrestige.Length && i < state.Prestige.Count; i++) state.Prestige[i] = dayStartPrestige[i];
@@ -337,9 +346,12 @@ namespace Demons
                 if (DayGoal.Value <= 0 && Demon.All.Count > 0) DayGoal.Value = GoalFor(Day.Value);
                 if (DayGoal.Value > 0 && influence >= DayGoal.Value)
                 {
-                    if (Day.Value == Days.Length - 1) End("THE WEEKEND IS OVER\nYou haunted him through his whole first week.", System.Array.FindAll(Balance.I.weekStarSeconds, s => Elapsed <= s).Length);
+                    weekStars += DayStars;
+                    if (Day.Value == Days.Length - 1) End($"THE WEEKEND IS OVER\nYou haunted him through his whole first week.\nDays: {weekStars} of {Days.Length * 3} stars", System.Array.FindAll(Balance.I.weekStarSeconds, s => Elapsed <= s).Length);
                     else
                     {
+                        int stars = DayStars;
+                        cracksToday = 0;
                         Day.Value++;
                         DayGoal.Value = GoalFor(Day.Value);
                         Cracks.Value = 0;
@@ -347,7 +359,7 @@ namespace Demons
                         dayStartInfluence = influence;
                         var prestige = GameState.Instance.Prestige;
                         for (int i = 0; i < dayStartPrestige.Length && i < prestige.Count; i++) dayStartPrestige[i] = prestige[i];
-                        ShowCard(DayCards[Day.Value], hold: true);
+                        ShowCard(DayCards[Day.Value], hold: true, stars: stars);
                         if (Day.Value == UnlockDay(Feature.Pill)) nextPill = Now + 12;
                     }
                 }

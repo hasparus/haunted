@@ -1004,6 +1004,16 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  Cracks:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  Sealing:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   Signing:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -1447,7 +1457,7 @@ SpriteRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: ce6db5d24caae4f44855c0c45ee652c1, type: 3}
-  m_Color: {r: 0.82, g: 0.82, b: 0.82, a: 1}
+  m_Color: {r: 0.86, g: 0.81, b: 0.72, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -2887,6 +2897,11 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: -1
+  Held:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   Prestige:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -4870,24 +4885,6 @@ AudioListener:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1410951142}
   m_Enabled: 1
---- !u!114 &1410951146
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1410951142}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 77b290a542bd342ec9c2a47553e3fb52, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Demons::Demons.CameraRig
-  Focus: {x: 0, y: 0, z: 0}
-  IdleExtents: {x: 15, y: 0, z: 11}
-  MinDistance: 28
-  MaxDistance: 100
-  Margin: 4
-  Follow: 0
 --- !u!20 &1410951144
 Camera:
   m_ObjectHideFlags: 0
@@ -4954,6 +4951,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1410951146
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1410951142}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77b290a542bd342ec9c2a47553e3fb52, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Demons::Demons.CameraRig
+  Focus: {x: 0, y: 0, z: 0}
+  IdleExtents: {x: 15, y: 0, z: 11}
+  MinDistance: 28
+  MaxDistance: 100
+  Margin: 4
+  Follow: 0
 --- !u!1 &1440238992
 GameObject:
   m_ObjectHideFlags: 0
@@ -5618,7 +5633,7 @@ SpriteRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: ce6db5d24caae4f44855c0c45ee652c1, type: 3}
-  m_Color: {r: 0.82, g: 0.82, b: 0.82, a: 1}
+  m_Color: {r: 0.86, g: 0.81, b: 0.72, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -6403,7 +6418,7 @@ SpriteRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: ce6db5d24caae4f44855c0c45ee652c1, type: 3}
-  m_Color: {r: 0.82, g: 0.82, b: 0.82, a: 1}
+  m_Color: {r: 0.86, g: 0.81, b: 0.72, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -7310,7 +7325,7 @@ SpriteRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: ce6db5d24caae4f44855c0c45ee652c1, type: 3}
-  m_Color: {r: 0.82, g: 0.82, b: 0.82, a: 1}
+  m_Color: {r: 0.86, g: 0.81, b: 0.72, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0

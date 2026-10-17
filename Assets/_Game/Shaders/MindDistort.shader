@@ -1,5 +1,5 @@
 // One full-screen pass for everything the host's mind does to the picture, so WebGL pays for a single extra blit:
-// Don't Starve's insanity wobble at the screen's edge, a chromatic split while the pills flip the controls,
+// paper grain and a breathing vignette, Don't Starve's insanity wobble at the screen's edge, a chromatic split while the pills flip the controls,
 // and the boss's card burning in cold blue flame, banded like ink, with heat haze around its rectangle.
 // Everything runs on _MindTime (unscaled), so it keeps moving while the card holds the game paused.
 Shader "Haunted/MindDistort"
@@ -92,6 +92,11 @@ Shader "Haunted/MindDistort"
                 col = lerp(col, half3(0.03, 0.08, 0.35), smoothstep(0.02, 0.05, flame));
                 col = lerp(col, half3(0.15, 0.45, 1.0), smoothstep(0.45, 0.48, flame + edge));
                 col = lerp(col, half3(0.82, 0.95, 1.0), smoothstep(0.82, 0.85, flame + edge));
+
+                // Paper grain, re-rolled twelve times a second like film, and Don't Starve's breathing vignette.
+                float2 pixel = floor(input.texcoord * _ScreenParams.xy / 2);
+                col *= 1 + (Hash(pixel + floor(t * 12) * 17.3) - 0.5) * 0.07;
+                col *= 1 - smoothstep(0.42, 0.95, distance(input.texcoord, 0.5)) * (0.28 + 0.06 * sin(t * 0.9));
 
                 return half4(col, 1);
             }

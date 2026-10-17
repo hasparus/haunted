@@ -20,7 +20,8 @@ namespace Demons
         public static float Mind { get; private set; }
 
         static readonly int FxTime = Shader.PropertyToID("_MindFxTime"), Wobble = Shader.PropertyToID("_MindWobble"),
-            Inverted = Shader.PropertyToID("_MindInverted"), Clock = Shader.PropertyToID("_MindTime"), CardRect = Shader.PropertyToID("_CardRect"), CardFire = Shader.PropertyToID("_CardFire");
+            Inverted = Shader.PropertyToID("_MindInverted"), Clock = Shader.PropertyToID("_MindTime"), CardRect = Shader.PropertyToID("_CardRect"), CardFire = Shader.PropertyToID("_CardFire"),
+            PoolCenter = Shader.PropertyToID("_PoolCenter");
 
         FullScreenPassRendererFeature[] passes;
         float fxTime, inverted, fire;
@@ -47,6 +48,17 @@ namespace Demons
             fire = Mathf.MoveTowards(fire, Hud.CardShown ? 1 : 0, dt * 4);
             float wobble = Distortion ? Mind * Mind : 0;
 
+            // Haunted/Paper lights the floor around the point under the board's middle, a third of the way up the screen.
+            var cam = Camera.main;
+            if (cam)
+            {
+                var ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.32f));
+                if (new Plane(Vector3.up, Vector3.zero).Raycast(ray, out float hit))
+                {
+                    var pool = ray.GetPoint(hit);
+                    Shader.SetGlobalVector(PoolCenter, new Vector4(pool.x, pool.z));
+                }
+            }
             Shader.SetGlobalFloat(FxTime, fxTime);
             Shader.SetGlobalFloat(Clock, Time.unscaledTime % 1000);
             Shader.SetGlobalFloat(Wobble, wobble);
@@ -59,7 +71,7 @@ namespace Demons
                 Shader.SetGlobalVector(CardRect, new Vector4(b.xMin / size.x, 1 - b.yMax / size.y, b.xMax / size.x, 1 - b.yMin / size.y));
             }
 
-            bool want = Mood.Effects && (wobble > 0.001f || inverted > 0.001f || fire > 0.001f);
+            bool want = Mood.Effects;
             if (want == active) return;
             active = want;
             foreach (var pass in passes) pass.SetActive(want);

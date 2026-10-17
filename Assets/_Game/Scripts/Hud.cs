@@ -18,9 +18,8 @@ namespace Demons
         string chipShape, tableShape;
         readonly float[] scoreSeen = new float[Scoring.MaxDemons];
         bool signFocused, codeFocused, reviewing;
-        readonly VisualElement[] stars = new VisualElement[3];
-        float reviewAt;
-        int starsLit;
+        StarRow reviewStars, cardStars;
+        Label cardStarsFor;
 
         static Hud instance;
 
@@ -170,6 +169,10 @@ namespace Demons
             card = UI.Box("card", cardWrap);
             cardTitle = UI.Text("", "card-title", UI.Jolly);
             cardBody = UI.Text("", "card-body");
+            cardStarsFor = UI.Text("", "card-stars-for");
+            card.Add(cardStarsFor);
+            cardStars = new StarRow();
+            card.Add(cardStars);
             card.Add(cardTitle);
             card.Add(cardBody);
             cardHint = UI.Text("Haunt or pick up to get back to work.", "card-hint");
@@ -183,8 +186,8 @@ namespace Demons
             review = UI.Box("review", reviewWrap);
             reviewTitle = UI.Text("Performance Review", "review-title", UI.Jolly);
             review.Add(reviewTitle);
-            var starRow = UI.Box("stars", review);
-            for (int i = 0; i < stars.Length; i++) stars[i] = Star(starRow);
+            reviewStars = new StarRow();
+            review.Add(reviewStars);
             reviewBody = UI.Text("", "review-body");
             review.Add(reviewBody);
             table = UI.Box("table", review);
@@ -235,14 +238,10 @@ namespace Demons
                 PanelSize = hud.worldBound.size;
             }
             if (!showCard) lastCard = null;
-            if (showCard && !showReview) RefreshCard(progress.Card.Value.ToString());
+            if (showCard && !showReview) RefreshCard(progress.Card.Value.ToString(), progress);
             UI.Show(cardHint, live && state.Held.Value);
             UI.Show(reviewWrap, showReview);
-            if (showReview && !reviewing)
-            {
-                reviewAt = Time.unscaledTime;
-                LightStars(0);
-            }
+            if (showReview && !reviewing) reviewStars.Show(progress.Stars.Value);
             reviewing = showReview;
             if (showReview) RefreshReview(state, progress);
 
@@ -338,8 +337,18 @@ namespace Demons
             codeFocused = NetBootstrap.TypingCode;
         }
 
-        void RefreshCard(string text)
+        void RefreshCard(string text, Progression progress)
         {
+            // A new day's card first reviews the day before it.
+            int stars = progress.CardStars.Value;
+            UI.Show(cardStars, stars >= 0);
+            UI.Show(cardStarsFor, stars >= 0);
+            if (text != lastCard && stars >= 0)
+            {
+                UI.Set(cardStarsFor, $"{Progression.Title(progress.Day.Value - 1)}'s review");
+                cardStars.Show(stars);
+            }
+            if (stars >= 0) cardStars.Tick();
             if (text != lastCard)
             {
                 lastCard = text;
@@ -367,13 +376,7 @@ namespace Demons
                 UI.Balance(reviewBody, 760);
             }
 
-            // Earned stars light up one by one once the review has landed.
-            int lit = Mathf.Clamp(Mathf.FloorToInt((Time.unscaledTime - reviewAt - 0.8f) / 0.5f) + 1, 0, progress.Stars.Value);
-            if (lit > starsLit)
-            {
-                Audio.Ui(Sounds.I.star, lit - 1);
-                LightStars(lit);
-            }
+            reviewStars.Tick();
 
             var demons = Demon.All.FindAll(d => d.Slot.Value >= 0);
             var prestige = state.Prestige;
@@ -415,40 +418,6 @@ namespace Demons
                 signature.schedule.Execute(() => signature.Focus());
             }
             signFocused = mine;
-        }
-
-        void LightStars(int count)
-        {
-            starsLit = count;
-            for (int i = 0; i < stars.Length; i++)
-            {
-                stars[i].EnableInClassList("star--lit", i < count);
-                stars[i].MarkDirtyRepaint();
-            }
-        }
-
-        // Drawn rather than typed: neither UI font has a star glyph.
-        static VisualElement Star(VisualElement parent)
-        {
-            var star = UI.Box("star", parent);
-            star.generateVisualContent += ctx =>
-            {
-                var r = star.contentRect;
-                float outer = Mathf.Min(r.width, r.height) / 2, inner = outer * 0.45f;
-                var p = ctx.painter2D;
-                p.fillColor = star.resolvedStyle.color;
-                p.BeginPath();
-                for (int i = 0; i < 10; i++)
-                {
-                    float angle = Mathf.PI * (i / 5f - 0.5f);
-                    var point = r.center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * (i % 2 == 0 ? outer : inner);
-                    if (i == 0) p.MoveTo(point);
-                    else p.LineTo(point);
-                }
-                p.ClosePath();
-                p.Fill();
-            };
-            return star;
         }
 
         // Alternating words and keycaps: [("Join", false), ("Space", true), ("solo keyboard", false), ...].
