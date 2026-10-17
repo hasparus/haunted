@@ -69,12 +69,36 @@ namespace Demons
             if (scrim == null) return;
             shape = null;
             scrim.RemoveFromClassList("scrim--open");
-            scrim.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
-            if (open) scrim.schedule.Execute(() => scrim.AddToClassList("scrim--open"));
+            // Fades both ways: shown a frame before it fades in, hidden only once it has faded out.
+            if (open)
+            {
+                scrim.style.display = DisplayStyle.Flex;
+                fadeInFrame = Time.frameCount + 1;
+                hideAt = -1;
+            }
+            else hideAt = Time.unscaledTime + 0.18f;
+        }
+
+        int fadeInFrame = -1;
+        float hideAt = -1;
+
+        void Fade()
+        {
+            if (fadeInFrame >= 0 && Time.frameCount >= fadeInFrame)
+            {
+                fadeInFrame = -1;
+                scrim.AddToClassList("scrim--open");
+            }
+            if (hideAt >= 0 && Time.unscaledTime >= hideAt)
+            {
+                hideAt = -1;
+                scrim.style.display = DisplayStyle.None;
+            }
         }
 
         void Update()
         {
+            if (scrim != null) Fade();
             if (NetBootstrap.TypingCode || Progression.Typing) return;
             var kb = Keyboard.current;
             bool toggle = kb != null && kb.escapeKey.wasPressedThisFrame;

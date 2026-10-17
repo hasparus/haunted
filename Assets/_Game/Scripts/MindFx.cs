@@ -52,6 +52,15 @@ namespace Demons
 
         void Awake() => passes = System.Array.FindAll(Resources.FindObjectsOfTypeAll<FullScreenPassRendererFeature>(), f => f.name == "MindDistort");
 
+        // Shader globals outlive play mode; leave the editor's view clean.
+        void OnDestroy()
+        {
+            Shader.SetGlobalFloat(CardFire, 0);
+            Shader.SetGlobalFloat(CardBurnId, 0);
+            Shader.SetGlobalVectorArray(RipplesId, new Vector4[ripples.Length]);
+            Shader.SetGlobalVectorArray(GlowsId, new Vector4[glows.Length]);
+        }
+
         void Update()
         {
             var progress = Progression.Instance && Progression.Instance.IsSpawned ? Progression.Instance : null;
@@ -60,7 +69,8 @@ namespace Demons
             Mind = Mathf.MoveTowards(Mind, Mathf.Max(Mood.Gloom * 0.5f, danger), dt);
             fxTime += dt * 0.2f * (1 - (1 - Mind) * (1 - Mind));
             inverted = Mathf.MoveTowards(inverted, progress && progress.Inverted ? 1 : 0, dt * 3);
-            fire = Hud.CardShown ? Mathf.MoveTowards(fire, 1, dt * 4) : Mathf.MoveTowards(fire, 0, dt * 14);
+            // Out the moment the card has gone; the card's own exit already faded the flames.
+            fire = Hud.CardShown ? Mathf.MoveTowards(fire, 1, dt * 4) : 0;
             float wobble = Distortion ? Mind * Mind : 0;
 
             // Haunted/Paper lights the floor around the point under the board's middle, a third of the way up the screen.

@@ -80,7 +80,7 @@ namespace Demons
                 if (Ringing.Value) phone.transform.localRotation = Quaternion.Euler(0, Mathf.Sin(Time.time * 50) * 12, 0);
             }
             if (IsServer && IsSpawned && !Locked) Work();
-            hum = Audio.Loop(hum, this, Hum());
+            hum = Audio.Loop(hum, this, Hum(), Slot.position);
         }
 
         AudioSource hum;

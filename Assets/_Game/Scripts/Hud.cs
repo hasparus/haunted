@@ -27,11 +27,11 @@ namespace Demons
         public static bool CardShown { get; private set; }
         public static Rect CardBounds { get; private set; }
         public static Vector2 PanelSize { get; private set; }
-        // 0 while a card is up; 0 to 1 as it burns away, then on to ShardsGone while its paper shards burn out.
+        // 0 while a card is up, 0 to 1 as it burns away.
         public static float CardBurn { get; private set; }
 
-        static float burnTime = 0.125f;
-        const float ShardsGone = 3.2f;
+        const float BurnTime = 0.16f;
+        CardSplit split;
         bool cardUp;
         float burnAt = -10;
         VisualElement burning;
@@ -239,27 +239,56 @@ namespace Demons
 
             bool showCard = progress && Net.Now < progress.CardUntil.Value;
             bool showReview = showCard && progress.Review.Value;
-            // A card that goes burns away over burnTime, text and all, the flames eating in from its edges;
-            // MindFx then draws its paper shards drifting up and burning out where it was.
+            // A card that goes cracks in half and its halves drop away (CardSplit); the review lifts and fades.
+            // Either way over BurnTime, the flames fading with it.
             if (cardUp && !showCard)
             {
                 burnAt = Time.unscaledTime;
                 burning = reviewWrap.resolvedStyle.display == DisplayStyle.Flex ? review : card;
                 burnRect = burning.worldBound;
+                split?.RemoveFromHierarchy();
+                split = null;
+                if (burning == card)
+                {
+                    var origin = hud.worldBound.position;
+                    split = new CardSplit(card, new Rect(burnRect.position - origin, burnRect.size));
+                    hud.Add(split);
+                    UI.Show(cardWrap, false);
+                    burning = null;
+                }
             }
             cardUp = showCard;
-            float burn = showCard ? 0 : (Time.unscaledTime - burnAt) / burnTime;
-            bool burningOut = !showCard && burning != null && burn < ShardsGone;
-            bool cardBurning = burningOut && burn < 1;
+            float burn = showCard ? 0 : (Time.unscaledTime - burnAt) / BurnTime;
+            bool burningOut = !showCard && (burning != null || split != null) && burn < 1;
+            if (split != null)
+            {
+                if (burningOut) split.Tick(burn);
+                else
+                {
+                    split.RemoveFromHierarchy();
+                    split = null;
+                }
+            }
+            bool cardBurning = burningOut && burning != null;
             if (burning != null && !cardBurning)
             {
                 burning.style.opacity = StyleKeyword.Null;
+                burning.style.translate = StyleKeyword.Null;
+                burning.style.scale = StyleKeyword.Null;
+                burning.style.transitionDuration = StyleKeyword.Null;
                 if (!burningOut) burning = null;
             }
-            if (cardBurning) burning.style.opacity = 1 - burn * burn;
+            // Driven per frame, so the stylesheet's transitions are off meanwhile; they'd lag it past BurnTime.
+            if (cardBurning)
+            {
+                burning.style.transitionDuration = new StyleList<TimeValue>(new List<TimeValue> { new(0) });
+                burning.style.opacity = 1 - burn;
+                burning.style.translate = new Translate(0, -12 * burn);
+                burning.style.scale = new Scale(Vector3.one * (1 - 0.03f * burn));
+            }
             CardBurn = burningOut ? burn : 0;
 
-            if (!cardBurning)
+            if (!cardBurning && split == null)
             {
                 UI.Show(cardWrap, showCard && !showReview);
                 UI.Show(reviewWrap, showReview);

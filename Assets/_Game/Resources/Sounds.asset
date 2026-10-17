@@ -20,7 +20,7 @@ MonoBehaviour:
   tensionLayer: {fileID: 0}
   conveyorLoop: {fileID: 8300000, guid: 6b00cd98c4971924896dc9ef9b61cf45, type: 3}
   headRoom: {fileID: 8300000, guid: 894db2f825305fc4383279fc2222f7d4, type: 3}
-  musicVolume: 0.6
+  musicVolume: 0.54
   pausedMusic: 0.4
   musicFade: 1
   sfxVolume: 1
