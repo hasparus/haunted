@@ -15,6 +15,7 @@ Shader "Haunted/Paper"
         [ToggleUI] _Scenery("Scenery: covers only the floor (walls, belt, floor)", Float) = 0
         _Anchor("Where it stands (xyz), when w is 1", Vector) = (0, 0, 0, 0)
         _AnchorFrom("The point of it that stands there", Vector) = (0, 0, 0, 0)
+        _Fade("Shown (dithered, stays opaque)", Range(0, 1)) = 1
     }
 
     SubShader
@@ -43,7 +44,7 @@ Shader "Haunted/Paper"
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
                 half _Hatch, _Tiles;
-                float _TileSize, _Outline, _PoolRadius, _Slats, _Silhouette, _Scenery;
+                float _TileSize, _Outline, _PoolRadius, _Slats, _Silhouette, _Scenery, _Fade;
                 float4 _Anchor, _AnchorFrom;
             CBUFFER_END
             float4 _PoolCenter; // xz of the floor point under the middle of the board, set by MindFx
@@ -109,6 +110,10 @@ Shader "Haunted/Paper"
 
             half4 Frag(Varyings i) : SV_Target
             {
+                // Fading in through an ordered dither, so a half-shown thing still writes depth and sorts.
+                uint2 cell = uint2(i.positionCS.xy) % 4;
+                static const float bayer[16] = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
+                clip(_Fade - (bayer[cell.y * 4 + cell.x] + 0.5) / 16);
                 float3 n = normalize(i.normalWS);
                 // Planar coordinates on whichever face this is, so the paper doesn't smear on walls.
                 float2 plane = abs(n.y) > 0.5 ? i.positionWS.xz : (abs(n.x) > 0.5 ? i.positionWS.zy : i.positionWS.xy);

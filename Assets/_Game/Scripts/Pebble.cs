@@ -137,11 +137,17 @@ namespace Demons
             Sort();
         }
 
-        static readonly int AnchorId = Shader.PropertyToID("_Anchor"), AnchorFromId = Shader.PropertyToID("_AnchorFrom");
+        const float FallTime = 1.1f, FallFrom = 3f;
+
+        // 0 to 1 while fresh off the start of the belt, drifting down onto it; 1 otherwise.
+        float Fallen => State.Value == PebbleState.OnBelt && BeltFrom.Value == 0 ? Mathf.Clamp01((float)(Now - BeltSince.Value) / FallTime) : 1;
+
+        static readonly int AnchorId = Shader.PropertyToID("_Anchor"), AnchorFromId = Shader.PropertyToID("_AnchorFrom"), FadeId = Shader.PropertyToID("_Fade");
         const float SortStep = 0.05f, HeldAhead = 1.2f;
         MaterialPropertyBlock sortBlock;
         Renderer[] parts;
         Vector3 sortedAt = Vector3.positiveInfinity, sortedFrom;
+        float sortedFade;
 
         // Where the thought stands for sorting (plans/sorting.md), handed to Haunted/Paper: a step in front of the desk
         // drawing it sits on, at the belt's front edge, in hand a step behind the carrier facing up the screen and
@@ -166,13 +172,16 @@ namespace Demons
                     at = demon.transform.position + towards * (Vector3.Dot(demon.transform.forward, up) > 0.3f ? -SortStep : HeldAhead);
                     break;
             }
-            if (at == sortedAt && p == sortedFrom) return;
+            float fade = Fallen;
+            if (at == sortedAt && p == sortedFrom && fade == sortedFade) return;
             sortedAt = at;
             sortedFrom = p;
+            sortedFade = fade;
             sortBlock ??= new MaterialPropertyBlock();
             parts ??= GetComponentsInChildren<Renderer>(true);
             sortBlock.SetVector(AnchorId, new Vector4(at.x, at.y, at.z, 1));
             sortBlock.SetVector(AnchorFromId, p);
+            sortBlock.SetFloat(FadeId, fade);
             foreach (var r in parts)
                 if (r is not TrailRenderer) r.SetPropertyBlock(sortBlock);
         }
@@ -273,9 +282,9 @@ namespace Demons
 
             if (Idle && ForgetIn < 2 && Mathf.Repeat(Time.time * 6, 1) < 0.5f) color = Color.Lerp(color, Warning, 0.8f);
             stone.material.color = color;
-            body.localPosition = Shaking
-                ? new Vector3(Mathf.Sin(Time.time * 40) * 0.04f, 0, 0)
-                : Vector3.zero;
+            // Falls at an even pace and only slows as it settles onto the belt.
+            body.localPosition = (Shaking ? new Vector3(Mathf.Sin(Time.time * 40) * 0.04f, 0, 0) : Vector3.zero)
+                + Vector3.up * (FallFrom * (1 - Mathf.Sin(Fallen * Mathf.PI / 2)));
         }
 
         static readonly Color Warning = new(1f, 0.83f, 0.28f);
