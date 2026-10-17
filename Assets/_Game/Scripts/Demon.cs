@@ -375,7 +375,7 @@ namespace Demons
                     : ball ? p.y - ball.Radius : 0;
                 markerAt = new Vector3(p.x, y + 0.03f, p.z);
                 // Just behind its thought, or where it lies on the floor.
-                markerFeet = ball && ball.State.Value != PebbleState.Floor ? ball.SortedAt + Camera.main.transform.forward * 0.01f : markerAt;
+                markerFeet = target == ball && ball.State.Value != PebbleState.Floor ? ball.SortedAt + Camera.main.transform.forward * 0.01f : markerAt;
                 if (markerSize < 0.05f) marker.position = markerAt;
             }
             float k = 1 - Mathf.Exp(-22 * Time.deltaTime);
