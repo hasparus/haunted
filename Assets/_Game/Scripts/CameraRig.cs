@@ -12,6 +12,24 @@ namespace Demons
         Camera cam;
         Vector3 direction, center;
         float distance;
+        static float trauma;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => trauma = 0;
+
+        public const string ShakeKey = "screen_shake";
+
+        public static bool ShakeEnabled
+        {
+            get => PlayerPrefs.GetInt(ShakeKey, 1) == 1;
+            set => PlayerPrefs.SetInt(ShakeKey, value ? 1 : 0);
+        }
+
+        // Trauma 0..1; the offset grows with its square and decays over about a second.
+        public static void Shake(float amount)
+        {
+            if (ShakeEnabled) trauma = Mathf.Min(1, trauma + amount);
+        }
 
         void Awake()
         {
@@ -38,7 +56,15 @@ namespace Demons
             float k = 1 - Mathf.Exp(-3 * Time.deltaTime);
             center = Vector3.Lerp(center, bounds.center, k);
             distance = Mathf.Lerp(distance, Mathf.Clamp(needed, MinDistance, MaxDistance), k);
-            transform.position = center + direction * distance;
+            transform.position = center + direction * distance + Tremor();
+        }
+
+        Vector3 Tremor()
+        {
+            if (trauma <= 0) return Vector3.zero;
+            trauma = Mathf.Max(0, trauma - Time.unscaledDeltaTime * 1.4f);
+            float t = Time.unscaledTime * 22f, size = trauma * trauma * 0.7f;
+            return (transform.right * (Mathf.PerlinNoise(t, 0.1f) - 0.5f) + transform.up * (Mathf.PerlinNoise(0.7f, t) - 0.5f)) * 2 * size;
         }
     }
 }

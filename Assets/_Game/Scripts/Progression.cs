@@ -92,6 +92,10 @@ namespace Demons
 
         public override void OnNetworkSpawn()
         {
+            InvertedUntil.OnValueChanged += (was, now) =>
+            {
+                if (now > was) CameraRig.Shake(0.5f);
+            };
             if (!IsServer) return;
             Mode.Value = NextMode;
             Day.Value = 0;

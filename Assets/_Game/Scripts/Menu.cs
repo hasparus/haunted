@@ -122,7 +122,7 @@ namespace Demons
         {
             var players = LocalPlayers.All.FindAll(p => !Bots.IsBot(p.Device));
             var joins = LocalPlayers.JoinOptions().ConvertAll(o => o.key == "A" ? "A on a gamepad" : o.key);
-            var key = new StringBuilder().Append(string.Join(",", joins));
+            var key = new StringBuilder().Append(string.Join(",", joins)).Append(CameraRig.ShakeEnabled);
             foreach (var p in players) key.Append('|').Append(p.Index).Append(p.Scheme).Append(LocalPlayers.DemonOf(p) is { } d ? d.ColorIndex.Value : -1);
             foreach (var d in Demon.All) key.Append(',').Append(d.ColorIndex.Value);
             if (key.ToString() == shape) return;
@@ -144,6 +144,8 @@ namespace Demons
             var actions = new VisualElement();
             actions.AddToClassList("actions");
             panel.Add(actions);
+            Action<int> toggleShake = _ => CameraRig.ShakeEnabled = !CameraRig.ShakeEnabled;
+            AddRow(actions, "Screen shake", toggleShake, null).Add(Value(CameraRig.ShakeEnabled ? "On" : "Off", toggleShake));
             AddRow(actions, "Resume", null, () => Show(false));
             if (!LocalPlayers.InBrowser && !Application.isEditor) AddRow(actions, "Quit", null, Application.Quit);
 

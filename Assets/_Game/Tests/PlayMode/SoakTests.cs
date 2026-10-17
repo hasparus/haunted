@@ -62,6 +62,8 @@ namespace Demons.PlayTests
                 if (Time.time >= nextCheck)
                 {
                     nextCheck = Time.time + 30;
+                    foreach (var bot in Bots.All)
+                        Debug.Log($"[soak] t={Time.time:0} bot at {(bot.Demon ? bot.Demon.transform.position.ToString("F1") : "-")}: {bot.brain.Doing}");
                     foreach (var d in Demon.All)
                         Assert.Greater(travelled.GetValueOrDefault(d), 0.5f, $"demon {d.Slot.Value} stood still for 30s in {SceneManager.GetActiveScene().name} at {d.transform.position}, carrying {Net.Find<Pebble>(d.Carrying.Value)?.Kind.Value}, lit {d.Lit.Value}, scribble {d.Scribble.Value}");
                     travelled.Clear();
@@ -90,6 +92,25 @@ namespace Demons.PlayTests
             while (SceneManager.GetActiveScene().name != "Workshop" && Time.unscaledTime < back) yield return null;
             Assert.AreEqual("Workshop", SceneManager.GetActiveScene().name, $"week never ended: day {(Progression.Instance ? Progression.Instance.Day.Value : -1)}, influence {(GameState.Instance ? GameState.Instance.Influence.Value : float.NaN)}");
             Assert.AreEqual(2, Demon.All.Count);
+        }
+
+        // Not an assertion: measures how long two autopilots take per day, for tuning the goals.
+        [UnityTest, Explicit, Timeout(900000)]
+        public IEnumerator WeekPacing()
+        {
+            yield return StartOffice(GameMode.Week, 2);
+            float start = Time.time;
+            int day = 0;
+            while (Time.time - start < 1200 && SceneManager.GetActiveScene().name == "Office")
+            {
+                if (Progression.Instance && Progression.Instance.Day.Value != day)
+                {
+                    day = Progression.Instance.Day.Value;
+                    Debug.Log($"[pacing] reached day {day} at {Time.time - start:0}s, influence {GameState.Instance.Influence.Value:0.0}");
+                }
+                yield return null;
+            }
+            Debug.Log($"[pacing] stopped at day {day} after {Time.time - start:0}s, scene {SceneManager.GetActiveScene().name}");
         }
     }
 }

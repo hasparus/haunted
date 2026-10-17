@@ -66,7 +66,10 @@ namespace Demons
             col.enabled = false;
             if (!bouncy) bouncy = new PhysicsMaterial("Pebble") { bounciness = Balance.I.throwBounce, bounceCombine = PhysicsMaterialCombine.Maximum, dynamicFriction = 1, staticFriction = 1, frictionCombine = PhysicsMaterialCombine.Maximum };
             col.sharedMaterial = bouncy;
+            spring = gameObject.AddComponent<Springy>();
         }
+
+        Springy spring;
 
         public override void OnNetworkSpawn()
         {
@@ -77,7 +80,17 @@ namespace Demons
                 Kind.Value = SpawnKind;
                 Shelled.Value = SpawnShelled;
             }
-            Stamps.OnValueChanged += (_, _) => Paint();
+            Stamps.OnValueChanged += (was, now) =>
+            {
+                Paint();
+                if (now != 0 && now != was) spring.Punch(Vector3.one * 0.5f);
+            };
+            State.OnValueChanged += (_, now) =>
+            {
+                if (now is PebbleState.Floor or PebbleState.OnStation) spring.Punch(new Vector3(0.3f, -0.3f, 0.3f));
+                else if (now == PebbleState.Held) spring.Punch(Vector3.one * 0.2f);
+                else if (now == PebbleState.Flying) CameraRig.Shake(0.25f);
+            };
             Kind.OnValueChanged += (_, _) => Paint();
             Shelled.OnValueChanged += (_, _) => Paint();
             Paint();
@@ -143,14 +156,17 @@ namespace Demons
             var color = Mix(Stamps.Value);
             if (State.Value == PebbleState.OnStation && Net.Find<Station>(Anchor.Value) is { } station && station.Workers.Value != 0 && station.Kind != StationKind.Hammer)
                 color = Color.Lerp(color, Mix((byte)(Stamps.Value | station.Workers.Value)), station.Progress.Value);
-            stone.material.color = color;
             for (int slot = 0; slot < stampDots.Length; slot++)
                 if (stampDots[slot].gameObject.activeSelf) stampDots[slot].material.color = Demon.ColorOf(slot);
 
+            if (Idle && ForgetIn < 2 && Mathf.Repeat(Time.time * 6, 1) < 0.5f) color = Color.Lerp(color, Warning, 0.8f);
+            stone.material.color = color;
             body.localPosition = Idle && ForgetIn < Balance.I.warnTime
                 ? new Vector3(Mathf.Sin(Time.time * 40) * 0.04f, 0, 0)
                 : Vector3.zero;
         }
+
+        static readonly Color Warning = new(1f, 0.83f, 0.28f);
 
         static Color Mix(byte stamps)
         {
@@ -302,7 +318,7 @@ namespace Demons
             Release();
             State.Value = PebbleState.Flying;
             flyStart = Time.timeAsDouble;
-            if (Kind.Value != PebbleKind.Pill) GameState.Instance.Forgotten();
+            if (Kind.Value != PebbleKind.Pill) GameState.Instance.Forgotten(transform.position);
         }
 
         void Release()

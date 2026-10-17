@@ -18,13 +18,49 @@ namespace Demons
         string chipShape, tableShape;
         bool signFocused, codeFocused;
 
+        static Hud instance;
+        VisualElement hud;
+        string lastCard;
+        readonly List<(Label label, Vector3 at, float born)> popups = new();
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        static void Create() => UI.Create<Hud>("Hud", 50);
+        static void Create() => instance = UI.Create<Hud>("Hud", 50);
+
+        // A number that floats up from a spot in the world and fades.
+        public static void Popup(Vector3 at, string text, Color color)
+        {
+            if (!instance || instance.hud == null) return;
+            var label = UI.Text(text, "popup", UI.Jolly);
+            label.style.color = color;
+            instance.hud.Add(label);
+            instance.popups.Add((label, at, Time.time));
+        }
+
+        void RefreshPopups()
+        {
+            var cam = Camera.main;
+            for (int i = popups.Count - 1; i >= 0; i--)
+            {
+                var (label, at, born) = popups[i];
+                float age = Time.time - born;
+                if (age > 1.3f || !cam)
+                {
+                    label.RemoveFromHierarchy();
+                    popups.RemoveAt(i);
+                    continue;
+                }
+                var screen = cam.WorldToScreenPoint(at + Vector3.up * (1.2f + age * 1.6f));
+                var point = RuntimePanelUtils.ScreenToPanel(hud.panel, new Vector2(screen.x, Screen.height - screen.y));
+                label.style.left = point.x;
+                label.style.top = point.y;
+                label.style.opacity = 1 - Mathf.Pow(age / 1.3f, 3);
+            }
+        }
 
         void Start()
         {
             var root = UI.Root(this);
-            var hud = UI.Box("hud", root);
+            hud = UI.Box("hud", root);
 
             top = UI.Box("hud-top", hud);
             status = UI.Text("", "hud-status");
@@ -94,6 +130,7 @@ namespace Demons
         void Update()
         {
             if (top == null) return;
+            RefreshPopups();
             var state = GameState.Instance;
             bool live = state && state.IsSpawned;
             var progress = Progression.Instance && Progression.Instance.IsSpawned ? Progression.Instance : null;
@@ -106,6 +143,7 @@ namespace Demons
             bool showCard = progress && Net.Now < progress.CardUntil.Value;
             bool showReview = showCard && progress.Review.Value;
             UI.Show(cardWrap, showCard && !showReview);
+            if (!showCard) lastCard = null;
             if (showCard && !showReview) RefreshCard(progress.Card.Value.ToString());
             UI.Show(reviewWrap, showReview);
             if (showReview) RefreshReview(state, progress);
@@ -170,6 +208,12 @@ namespace Demons
 
         void RefreshCard(string text)
         {
+            if (text != lastCard)
+            {
+                lastCard = text;
+                card.RemoveFromClassList("card--in");
+                card.schedule.Execute(() => card.AddToClassList("card--in"));
+            }
             int split = text.IndexOf('\n');
             UI.Set(cardTitle, split < 0 ? text : text[..split]);
             UI.Set(cardBody, split < 0 ? "" : text[(split + 1)..]);

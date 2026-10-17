@@ -35,6 +35,10 @@ namespace Demons
         public override void OnNetworkSpawn()
         {
             if (IsServer) phase.Value = Phase.Idle;
+            phase.OnValueChanged += (_, now) =>
+            {
+                if (now == Phase.Carrying && !Demo) CameraRig.Shake(0.4f);
+            };
         }
 
         void Jump(Vector3 to) => GetComponent<NetworkTransform>().Teleport(to, transform.rotation, transform.localScale);

@@ -68,7 +68,20 @@ namespace Demons
             PickColorRpc(color);
         }
 
-        void Awake() => rb = GetComponent<Rigidbody>();
+        Springy spring;
+
+        // Everything but the floor marker moves under a Visual pivot, so squash and stretch never scales the networked root.
+        void Awake()
+        {
+            rb = GetComponent<Rigidbody>();
+            var visual = new GameObject("Visual").transform;
+            var parts = new List<Transform>();
+            foreach (Transform child in transform)
+                if (child != marker) parts.Add(child);
+            visual.SetParent(transform, false);
+            foreach (var part in parts) part.SetParent(visual, false);
+            spring = visual.gameObject.AddComponent<Springy>();
+        }
 
         public override void OnNetworkSpawn()
         {
@@ -85,6 +98,17 @@ namespace Demons
             Lit.OnValueChanged += (_, _) => Paint();
             Scribble.OnValueChanged += (_, _) => Paint();
             ColorIndex.OnValueChanged += (_, _) => Paint();
+            Carrying.OnValueChanged += (was, now) => spring.Punch(now != Net.None ? new Vector3(0.22f, -0.22f, 0.22f) : new Vector3(-0.1f, 0.14f, -0.1f));
+            Dashes.OnValueChanged += (_, _) => spring.Punch(new Vector3(-0.15f, -0.08f, 0.35f));
+            Throws.OnValueChanged += (_, _) => spring.Punch(new Vector3(-0.1f, 0.05f, 0.3f));
+            Haunts.OnValueChanged += (was, now) =>
+            {
+                if (now > was) spring.Punch(Vector3.one * 0.25f);
+            };
+            Lit.OnValueChanged += (_, now) =>
+            {
+                if (now) spring.Punch(new Vector3(0.25f, -0.3f, 0.25f));
+            };
             rb.isKinematic = !IsOwner;
             if (!IsOwner) rb.interpolation = RigidbodyInterpolation.None;
             if (!IsOwner) return;

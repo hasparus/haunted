@@ -13,7 +13,7 @@ namespace Demons
         public bool Idle => steps.Count == 0;
 
         internal readonly HashSet<GamepadButton> held = new();
-        internal readonly BotBrain brain = new();
+        public readonly BotBrain brain = new();
         public bool Auto;
         readonly Queue<Func<bool>> steps = new();
 
@@ -100,7 +100,9 @@ namespace Demons
                 if (steps.Peek()()) steps.Dequeue();
             }
             else if (Auto) brain.Think(this);
-            var state = new GamepadState { leftStick = Stick };
+            // Pills flip everyone's controls; the autopilot adapts like a player would.
+            bool flipped = Auto && Progression.Instance && Progression.Instance.Inverted;
+            var state = new GamepadState { leftStick = flipped ? -Stick : Stick };
             foreach (var b in held) state = state.WithButton(b);
             InputSystem.QueueStateEvent(Pad, state);
         }

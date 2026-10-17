@@ -363,6 +363,12 @@
 }
 
 .card {
+    scale: 0.82 0.82;
+    rotate: -3deg;
+    opacity: 0;
+    transition-property: scale, rotate, opacity;
+    transition-duration: 0.38s, 0.38s, 0.14s;
+    transition-timing-function: ease-out-back, ease-out-back, ease-out-cubic;
     max-width: 620px;
     padding: 18px 30px 22px 30px;
     background-color: rgba(11, 30, 79, 0.94);
@@ -519,5 +525,21 @@
     color: var(--muted);
     -unity-text-align: middle-center;
     margin: 8px 0 0 0;
+    padding: 0;
+}
+
+.card--in {
+    scale: 1 1;
+    rotate: 0;
+    opacity: 1;
+}
+
+.popup {
+    position: absolute;
+    font-size: 52px;
+    translate: -50% -50%;
+    -unity-text-outline-width: 1.5px;
+    -unity-text-outline-color: #0B1E4F;
+    margin: 0;
     padding: 0;
 }

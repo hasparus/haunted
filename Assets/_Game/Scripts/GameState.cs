@@ -1,3 +1,4 @@
+using Unity.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
@@ -122,7 +123,9 @@ namespace Demons
         public void Deliver(Pebble pebble)
         {
             var prestige = new float[Scoring.MaxDemons];
-            Influence.Value += Scoring.Deliver(pebble.Stamps.Value, pebble.LastHolder.Value, prestige, pebble.Weight);
+            float gained = Scoring.Deliver(pebble.Stamps.Value, pebble.LastHolder.Value, prestige, pebble.Weight);
+            Influence.Value += gained;
+            if (gained > 0) PopupRpc(pebble.transform.position, $"+{gained:0.#}", pebble.LastHolder.Value);
             if (pebble.Stamps.Value != 0 && Demon.All.Find(d => d.Slot.Value == pebble.LastHolder.Value) is { } deliverer)
                 deliverer.Deliveries.Value++;
             for (int slot = 0; slot < Scoring.MaxDemons; slot++)
@@ -146,6 +149,14 @@ namespace Demons
             NetworkManager.SceneManager.LoadScene(startSceneWhenAllFall, UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
 
-        public void Forgotten() => Influence.Value -= Scoring.ForgottenPenalty;
+        public void Forgotten(Vector3 at)
+        {
+            Influence.Value -= Scoring.ForgottenPenalty;
+            PopupRpc(at, $"\u2212{Scoring.ForgottenPenalty:0.#}", -1);
+        }
+
+        [Rpc(SendTo.Everyone)]
+        void PopupRpc(Vector3 at, FixedString32Bytes text, int slot) =>
+            Hud.Popup(at, text.ToString(), slot >= 0 ? Demon.ColorOf(slot) : Color.white);
     }
 }

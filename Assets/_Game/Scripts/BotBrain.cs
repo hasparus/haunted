@@ -23,6 +23,7 @@ namespace Demons
         public static void ClearClaims() => claims.Clear();
 
         Object claimed;
+        public string Doing = "";
         List<Vector3> path;
         Vector3 pathGoal;
         float repathAt, stuckFor, sidestepUntil, nextDash, nextTap;
@@ -42,15 +43,16 @@ namespace Demons
             }
             if (d.Scribble.Value > 0)
             {
+                Doing = "scribbled";
                 Release();
                 TapNow(bot, GamepadButton.West);
                 return;
             }
-            if (d.Lit.Value && Object.FindFirstObjectByType<Spotlight>() is { } light)
+            if (d.Lit.Value && Object.FindAnyObjectByType<Spotlight>() is { } light)
             {
+                Doing = "lit";
                 Release();
-                var away = d.transform.position - light.transform.position;
-                bot.Stick = new Vector2(away.x, away.z).normalized;
+                Steer(bot, d, Escape(d.transform.position, light.transform.position), arrive: false);
                 return;
             }
             if (FollowHumansOffLedge(bot, d)) return;
@@ -64,6 +66,7 @@ namespace Demons
             }
             if (best.Score == float.MinValue)
             {
+                Doing = "idle";
                 Release();
                 return;
             }
@@ -74,11 +77,28 @@ namespace Demons
                 if (best.Claim) claims[best.Claim] = this;
                 claimed = best.Claim;
             }
+            Doing = $"{(best.Claim ? best.Claim.name : "-")} {best.Act} {best.Button} score {best.Score:0.0} at {best.Goal:F1} carrying {d.Carrying.Value != Net.None}";
             if (Steer(bot, d, best.Goal))
             {
                 if (best.Act == Act.Hold) bot.held.Add(best.Button);
                 else TapNow(bot, best.Button);
             }
+        }
+
+        // The reachable spot farthest from the light; running straight away just pins you in a corner.
+        static Vector3 Escape(Vector3 me, Vector3 light)
+        {
+            var room = GameState.Instance.RoomHalfExtents - new Vector2(1.2f, 1.2f);
+            Vector3 best = me;
+            float bestDistance = -1;
+            for (int i = 0; i < 8; i++)
+            {
+                var p = me + Quaternion.Euler(0, i * 45, 0) * Vector3.forward * 4;
+                p = new Vector3(Mathf.Clamp(p.x, -room.x, room.x), 0, Mathf.Clamp(p.z, -room.y, room.y));
+                float distance = Dist(p, light);
+                if (distance > bestDistance) (best, bestDistance) = (p, distance);
+            }
+            return best;
         }
 
         public void Release()
