@@ -137,6 +137,7 @@ namespace Demons.Editor
         static void BuildOffice(Pebble pebble, Demon demon, NetworkPrefabsList prefabs)
         {
             var cam = NewRoom(pebble, demon, prefabs, new Vector2(8.5f, 5.5f), walls: true, beltZ: 5f, beltStart: -9.8f, beltEnd: 9.8f);
+            cam.gameObject.AddComponent<CameraRig>().Follow = false;
             foreach (var pos in new[] { new Vector3(-6.5f, 0, -1.5f), new Vector3(-2.2f, 0, 0.6f), new Vector3(2.2f, 0, 0.6f), new Vector3(6.5f, 0, -1.5f) })
                 BuildStation(pos, cam);
             BuildStation(new Vector3(-4.5f, 0, -4f), cam, StationKind.Hammer, Feature.Shell);

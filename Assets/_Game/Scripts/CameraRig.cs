@@ -8,9 +8,11 @@ namespace Demons
         public Vector3 Focus;
         public Vector3 IdleExtents = new(15, 0, 11);
         public float MinDistance = 28f, MaxDistance = 100f, Margin = 4f;
+        [Tooltip("Off: the camera stays where the scene put it and only shakes.")]
+        public bool Follow = true;
 
         Camera cam;
-        Vector3 direction, center;
+        Vector3 direction, center, home;
         float distance;
         static float trauma;
 
@@ -38,6 +40,7 @@ namespace Demons
         void Awake()
         {
             cam = GetComponent<Camera>();
+            home = transform.position;
             direction = -transform.forward;
             center = Focus;
             distance = MinDistance;
@@ -45,6 +48,11 @@ namespace Demons
 
         void LateUpdate()
         {
+            if (!Follow)
+            {
+                transform.position = home + Tremor();
+                return;
+            }
             var bounds = new Bounds(Focus, IdleExtents * 2);
             bool any = false;
             foreach (var d in Demon.All)
