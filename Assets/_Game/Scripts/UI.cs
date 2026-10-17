@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
 
 namespace Demons
@@ -6,11 +7,11 @@ namespace Demons
     public static class UI
     {
         static PanelSettings settings;
-        static Font plex, plexBold, jolly;
+        static FontAsset plex, plexBold, jolly;
 
-        public static Font Plex => plex ??= Resources.Load<Font>("UI/Fonts/IBMPlexSerif-Regular");
-        public static Font PlexBold => plexBold ??= Resources.Load<Font>("UI/Fonts/IBMPlexSerif-SemiBold");
-        public static Font Jolly => jolly ??= Resources.Load<Font>("UI/Fonts/JollyLodger-Regular");
+        public static FontAsset Plex => plex ??= Resources.Load<FontAsset>("UI/Fonts/IBMPlexSerif-Regular");
+        public static FontAsset PlexBold => plexBold ??= Resources.Load<FontAsset>("UI/Fonts/IBMPlexSerif-SemiBold");
+        public static FontAsset Jolly => jolly ??= Resources.Load<FontAsset>("UI/Fonts/JollyLodger-Regular");
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics()
@@ -47,17 +48,17 @@ namespace Demons
         {
             var root = owner.GetComponent<UIDocument>().rootVisualElement;
             root.styleSheets.Add(Resources.Load<StyleSheet>("UI/Game"));
-            root.style.unityFontDefinition = FontDefinition.FromFont(Plex);
+            root.style.unityFontDefinition = FontDefinition.FromSDFFont(Plex);
             root.pickingMode = PickingMode.Ignore;
             return root;
         }
 
-        public static Label Text(string text, string cls, Font font = null)
+        public static Label Text(string text, string cls, FontAsset font = null)
         {
             var label = new Label(text);
             label.AddToClassList(cls);
             label.pickingMode = PickingMode.Ignore;
-            if (font) label.style.unityFontDefinition = FontDefinition.FromFont(font);
+            if (font) label.style.unityFontDefinition = FontDefinition.FromSDFFont(font);
             return label;
         }
 

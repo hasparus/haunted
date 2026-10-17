@@ -122,6 +122,14 @@ namespace Demons
             UI.Button("+ CPU demon", Bots.AddCpu, cpu);
             removeCpu = UI.Button("\u2212 CPU demon", Bots.RemoveCpu, cpu);
             online = UI.Box("hud-net-row", net);
+            Button copy = null;
+            copy = UI.Button("Copy code", () =>
+            {
+                Clipboard.Copy(NetBootstrap.Instance.Code);
+                copy.style.minWidth = copy.resolvedStyle.width;
+                copy.text = "Copied";
+                copy.schedule.Execute(() => copy.text = "Copy code").ExecuteLater(1500);
+            }, online);
             UI.Button("Leave room", () => NetBootstrap.Instance.Leave(), online);
             netStatus = UI.Text("", "hud-net-status");
             net.Add(netStatus);

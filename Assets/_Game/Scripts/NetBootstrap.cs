@@ -133,6 +133,8 @@ namespace Demons
 
         public bool Online => session != null;
 
+        public string Code => session?.Code;
+
         public async void Leave()
         {
             if (session == null || busy) return;

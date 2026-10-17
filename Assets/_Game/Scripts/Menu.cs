@@ -226,7 +226,7 @@ namespace Demons
                 head.Add(chip);
             }
             var name = Text($"PLAYER {number}", "player-name");
-            name.style.unityFontDefinition = FontDefinition.FromFont(UI.PlexBold);
+            name.style.unityFontDefinition = FontDefinition.FromSDFFont(UI.PlexBold);
             head.Add(name);
             block.Add(head);
 
