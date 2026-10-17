@@ -84,9 +84,9 @@ namespace Demons
             foreach (var c in copy.GetComponentsInChildren<Collider>()) Destroy(c);
             foreach (var t in copy.GetComponentsInChildren<TrailRenderer>()) Destroy(t);
             // Sorted as scenery like the pipe, at its real depth, so the rim hides it as it sinks.
-            var scenery = new MaterialPropertyBlock();
-            scenery.SetFloat("_Scenery", 1);
-            foreach (var r in copy.GetComponentsInChildren<Renderer>()) r.SetPropertyBlock(scenery);
+            foreach (var r in copy.GetComponentsInChildren<Renderer>())
+                foreach (var m in r.materials)
+                    if (m.HasProperty("_Scenery")) m.EnableKeyword("_SCENERY");
             swallowing.Add((copy, copy.position, copy.lossyScale, Time.time));
             spring.Punch(new Vector3(0.12f, -0.1f, 0.12f));
         }
