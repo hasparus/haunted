@@ -173,13 +173,16 @@ namespace Demons
             nextInterrupt = Now + 8;
             ShowCard(Mode.Value == GameMode.Week
                 ? DayCards[0]
-                : "INFINITE SURVIVAL\nIt starts easy. It doesn't stay easy.");
+                : "INFINITE SURVIVAL\nIt starts easy. It doesn't stay easy.", hold: true);
         }
 
-        void ShowCard(string text, float seconds = 4)
+        // Held cards pause the game while they're up; game time stands still, so they leave right after.
+        void ShowCard(string text, float seconds = 4, bool hold = false)
         {
             Card.Value = text;
-            CardUntil.Value = Now + seconds;
+            hold &= GameState.Instance && GameState.Instance.IsSpawned;
+            if (hold) GameState.Instance.Hold(seconds);
+            CardUntil.Value = Now + (hold ? 0.3f : seconds);
         }
 
         void PillTaken()
@@ -242,7 +245,7 @@ namespace Demons
                     {
                         Day.Value++;
                         DayGoal.Value = GoalFor(Day.Value);
-                        ShowCard(DayCards[Day.Value]);
+                        ShowCard(DayCards[Day.Value], hold: true);
                         if (Day.Value == UnlockDay(Feature.Pill)) nextPill = Now + 12;
                     }
                 }
@@ -254,7 +257,7 @@ namespace Demons
                 {
                     Day.Value = stage;
                     var arriving = System.Array.Find(SurvivalCards, c => UnlockDay(c.feature) == stage);
-                    if (arriving.card != null) ShowCard(arriving.card, 3);
+                    if (arriving.card != null) ShowCard(arriving.card, 3, hold: true);
                     if (stage == UnlockDay(Feature.Pill)) nextPill = Now + 12;
                 }
                 if (influence > Peak.Value) Peak.Value = influence;
@@ -268,7 +271,7 @@ namespace Demons
                     PlayerPrefs.Save();
                     signers = Demon.All.FindAll(d => !Bots.IsBot(d)).Count;
                     bool assisted = Bots.All.Count > 0;
-                    End($"YOU'VE BEEN DOWNSIZED\nHe's coping now. Please return your badge at reception.\nPeak influence {Peak.Value:0}  ·  best {Best.Value:0}", System.Array.FindAll(Balance.I.survivalStarSeconds, s => Elapsed >= s).Length);
+                    End($"YOU'VE BEEN DOWNSIZED\nHe's coping now. Please return your badge at reception.\nPeak KPIs {Peak.Value:0}  ·  best {Best.Value:0}", System.Array.FindAll(Balance.I.survivalStarSeconds, s => Elapsed >= s).Length);
                     if (Peak.Value > 0 && signers > 0 && !assisted)
                     {
                         Signing.Value = true;

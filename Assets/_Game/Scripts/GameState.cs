@@ -49,15 +49,25 @@ namespace Demons
             }
         }
 
-        // Paused while anyone, on any machine, has the menu open.
+        // Paused while anyone, on any machine, has the menu open, or while a held card is up.
         readonly HashSet<ulong> pausers = new();
+        double heldUntil;
+
+        // Server: pause for this many real seconds, e.g. while the boss's card is read.
+        public void Hold(float seconds)
+        {
+            heldUntil = NetworkManager.ServerTime.Time + seconds;
+            SetPaused(true);
+        }
+
+        bool Holding => heldUntil > NetworkManager.ServerTime.Time;
 
         [Rpc(SendTo.Server)]
         public void PauseRpc(bool pause, RpcParams rpc = default)
         {
             if (pause) pausers.Add(rpc.Receive.SenderClientId);
             else pausers.Remove(rpc.Receive.SenderClientId);
-            SetPaused(pausers.Count > 0);
+            SetPaused(pausers.Count > 0 || Holding);
         }
 
         void SetPaused(bool pause)
@@ -73,7 +83,7 @@ namespace Demons
 
         void Dropped(ulong client)
         {
-            if (pausers.Remove(client)) SetPaused(pausers.Count > 0);
+            if (pausers.Remove(client)) SetPaused(pausers.Count > 0 || Holding);
         }
 
         public override void OnNetworkDespawn()
@@ -139,6 +149,11 @@ namespace Demons
             {
                 wasPaused = Paused;
                 Time.timeScale = Paused ? 0 : 1;
+            }
+            if (IsServer && IsSpawned && heldUntil > 0 && !Holding)
+            {
+                heldUntil = 0;
+                SetPaused(pausers.Count > 0);
             }
             if (!IsServer || loading || string.IsNullOrEmpty(startSceneWhenAllFall) || Demon.All.Count == 0) return;
             foreach (var d in Demon.All)

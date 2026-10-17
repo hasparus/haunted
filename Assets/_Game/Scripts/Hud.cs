@@ -213,7 +213,7 @@ namespace Demons
             reviewing = showReview;
             if (showReview) RefreshReview(state, progress);
 
-            UI.Show(paused.parent, live && state.Paused && !Menu.Open);
+            UI.Show(paused.parent, live && state.Paused && !Menu.Open && !showCard);
 
             var hint = live ? JoinHint(state) : null;
             UI.Show(footer.parent, hint != null && !Menu.Open);
@@ -225,7 +225,7 @@ namespace Demons
             var text = progress == null ? ""
                 : progress.Mode.Value == GameMode.Week ? $"{progress.DayName}  ·  goal {progress.Goal:0}  ·  "
                 : $"Survival  ·  best {progress.Best.Value:0}  ·  fired below {progress.FireLine:0}  ·  ";
-            UI.Set(status, text + $"influence {state.Influence.Value:0.0}");
+            UI.Set(status, text + $"KPIs {state.Influence.Value:0.0}");
 
             var demons = Demon.All.FindAll(d => d.Slot.Value >= 0);
             demons.Sort((a, b) => a.Slot.Value.CompareTo(b.Slot.Value));
