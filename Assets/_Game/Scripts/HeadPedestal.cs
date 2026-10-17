@@ -9,15 +9,27 @@ namespace Demons
     {
         public static readonly List<HeadPedestal> All = new();
 
-        const float Reach = 1f;
+        const float Reach = 1f, Vanish = 0.075f;
+        static readonly int BlurId = Shader.PropertyToID("_Blur");
 
         public int Head;
         [SerializeField] GameObject shown;
         [SerializeField] TextMesh label;
 
         Color free;
+        Renderer[] art;
+        MaterialPropertyBlock block;
+        Vector3 centre;
+        bool worn;
+        float wornAt = -10;
 
-        void Awake() => free = label.color;
+        void Awake()
+        {
+            free = label.color;
+            art = shown.GetComponentsInChildren<Renderer>();
+            block = new MaterialPropertyBlock();
+            centre = transform.InverseTransformPoint(art[0].bounds.center);
+        }
 
         void OnEnable() => All.Add(this);
 
@@ -45,10 +57,30 @@ namespace Demons
                          && LocalPlayers.Find(d.LocalIndex.Value) is { } player)
                     press = $"Press {LocalPlayers.KeysOf(player, p => p.Grab)}";
             }
-            if (shown.activeSelf != !wearer) shown.SetActive(!wearer);
+            if (worn != (bool)wearer)
+            {
+                worn = wearer;
+                wornAt = Time.time;
+            }
+            Vanishing(worn ? Mathf.Clamp01((Time.time - wornAt) / Vanish) : 0);
             label.color = wearer ? wearer.Tint : free;
             var text = press ?? Demon.Names[Head];
             if (label.text != text) label.text = text;
+        }
+
+        // Put on: the head shrinks into its middle, stretching up and going out of focus.
+        void Vanishing(float k)
+        {
+            if (shown.activeSelf != k < 1) shown.SetActive(k < 1);
+            float s = (1 - k) * (1 - k);
+            shown.transform.localScale = new Vector3(s, s * (1 + 0.8f * k), s);
+            shown.transform.localPosition = centre - Vector3.Scale(centre, shown.transform.localScale);
+            foreach (var r in art)
+            {
+                r.GetPropertyBlock(block);
+                block.SetFloat(BlurId, 0.04f * k);
+                r.SetPropertyBlock(block);
+            }
         }
     }
 }

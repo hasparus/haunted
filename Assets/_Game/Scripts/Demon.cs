@@ -70,7 +70,7 @@ namespace Demons
         [SerializeField] Renderer body, head;
         [SerializeField] Transform marker;
         Vector3 markerAt;
-        float markerSize;
+        float markerSize, markerRadius = MarkerRadius;
         [SerializeField] GameObject scribble;
 
         [NonSerialized] public Station Using;
@@ -359,13 +359,18 @@ namespace Demons
             if (target)
             {
                 var p = target is Belt belt ? belt.PointAt(belt.FreeSpot(transform.position) ?? belt.DistanceAt(transform.position)) : target.transform.position;
-                markerAt = new Vector3(p.x, 0.03f, p.z);
+                // Around a thought's base: on the belt's top for one on (or going onto) the belt, on the floor otherwise.
+                var ball = target as Pebble ?? (target is Belt ? Net.Find<Pebble>(Carrying.Value) : null);
+                markerRadius = ball ? ball.Radius * 1.5f : MarkerRadius;
+                float y = target is Belt || ball && ball.State.Value == PebbleState.OnBelt ? Belt.Instance.PointAt(0).y - Pebble.SmallRadius
+                    : ball ? p.y - ball.Radius : 0;
+                markerAt = new Vector3(p.x, y + 0.03f, p.z);
                 if (markerSize < 0.05f) marker.position = markerAt;
             }
             float k = 1 - Mathf.Exp(-22 * Time.deltaTime);
             markerSize = Mathf.Lerp(markerSize, target ? 1 : 0, k);
             marker.position = Vector3.Lerp(marker.position, markerAt, k);
-            marker.localScale = new Vector3(MarkerRadius, 1, MarkerRadius) * markerSize;
+            marker.localScale = new Vector3(markerRadius, 1, markerRadius) * markerSize;
             marker.gameObject.SetActive(markerSize > 0.01f);
         }
 
