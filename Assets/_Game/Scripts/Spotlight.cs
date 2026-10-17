@@ -15,6 +15,7 @@ namespace Demons
 
         Vector3 home;
         Phase heard;
+        LineRenderer ring;
         Demon target;
         float retargetAt, phaseEnd;
         int strikesLeft;
@@ -32,14 +33,39 @@ namespace Demons
         {
             Instance = this;
             home = transform.position;
+            ring = BuildRing();
+        }
+
+        // Strike telegraph: a hollow ring the size of the strike, filled in when it lands.
+        LineRenderer BuildRing()
+        {
+            var line = new GameObject("Ring").AddComponent<LineRenderer>();
+            line.transform.SetParent(transform, false);
+            line.useWorldSpace = false;
+            line.loop = true;
+            line.positionCount = 48;
+            line.widthMultiplier = 0.12f;
+            line.sharedMaterial = look.GetComponentInChildren<Renderer>(true).sharedMaterial;
+            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            float radius = Balance.I.spotRadius * Balance.I.strikeScale;
+            for (int i = 0; i < line.positionCount; i++)
+            {
+                float a = i * Mathf.PI * 2 / line.positionCount;
+                line.SetPosition(i, new Vector3(Mathf.Cos(a) * radius, 0.03f, Mathf.Sin(a) * radius));
+            }
+            line.enabled = false;
+            return line;
         }
 
         void Update()
         {
             bool active = Active;
-            bool blink = phase.Value == Phase.Aim && Mathf.Repeat(Time.time * 6, 1) < 0.4f;
-            look.SetActive(active && !blink);
-            look.transform.localScale = Vector3.Lerp(look.transform.localScale, Vector3.one * Scale, Time.deltaTime * 8);
+            bool aiming = active && phase.Value == Phase.Aim;
+            ring.enabled = aiming;
+            if (aiming) ring.transform.localScale = new Vector3(1, 0, 1) * (1 + 0.06f * Mathf.Sin(Time.time * 20)) + Vector3.up;
+            look.SetActive(active && !aiming);
+            if (phase.Value == Phase.Strike && heard != Phase.Strike) look.transform.localScale = Vector3.one * Scale * 0.55f;
+            look.transform.localScale = Vector3.Lerp(look.transform.localScale, Vector3.one * Scale, Time.deltaTime * (phase.Value == Phase.Strike ? 20 : 8));
             if (phase.Value != heard && active && !Demo) Audio.Play(Sounds.I.For(phase.Value), transform.position);
             heard = phase.Value;
             if (!IsServer || !IsSpawned) return;

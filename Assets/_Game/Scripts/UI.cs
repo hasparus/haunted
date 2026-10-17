@@ -72,7 +72,11 @@ namespace Demons
 
         public static Button Button(string text, System.Action click, VisualElement parent)
         {
-            var button = new Button(click) { text = text };
+            var button = new Button(() =>
+            {
+                Audio.Ui(Sounds.I.button);
+                click();
+            }) { text = text };
             button.AddToClassList("button");
             parent.Add(button);
             return button;

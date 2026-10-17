@@ -58,6 +58,7 @@ namespace Demons
         static void Show(bool open)
         {
             Open = open;
+            Audio.Ui(open ? Sounds.I.menuOpen : Sounds.I.menuClose);
             LocalPlayers.SetEnabled(!open);
             if (GameState.Instance && GameState.Instance.IsSpawned) GameState.Instance.PauseRpc(open);
             if (instance) instance.Present(open);
@@ -107,8 +108,16 @@ namespace Demons
             if (rows.Count == 0) return;
             if (move != 0) Focus((cursor + move + rows.Count) % rows.Count);
             var row = rows[cursor];
-            if (step != 0) row.Step?.Invoke(step);
-            if (press) (row.Press ?? (() => row.Step?.Invoke(1)))();
+            if (step != 0 && row.Step != null)
+            {
+                row.Step(step);
+                Audio.Ui(Sounds.I.menuChange);
+            }
+            if (press)
+            {
+                Audio.Ui(Sounds.I.menuSelect);
+                (row.Press ?? (() => row.Step?.Invoke(1)))();
+            }
         }
 
         static int Pressed(params ButtonControl[] buttons)
@@ -120,6 +129,7 @@ namespace Demons
 
         void Focus(int index)
         {
+            if (index != cursor) Audio.Ui(Sounds.I.menuMove);
             cursor = index;
             for (int i = 0; i < rows.Count; i++) rows[i].Element.EnableInClassList("row--focus", i == cursor);
         }
@@ -261,7 +271,9 @@ namespace Demons
             row.RegisterCallback<ClickEvent>(_ =>
             {
                 Focus(index);
-                press?.Invoke();
+                if (press == null) return;
+                Audio.Ui(Sounds.I.menuSelect);
+                press();
             });
             parent.Add(row);
             return row;
@@ -288,6 +300,7 @@ namespace Demons
             arrow.RegisterCallback<ClickEvent>(e =>
             {
                 step(direction);
+                Audio.Ui(Sounds.I.menuChange);
                 e.StopPropagation();
             });
             return arrow;

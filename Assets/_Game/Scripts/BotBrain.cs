@@ -56,7 +56,7 @@ namespace Demons
                 Steer(bot, d, Escape(d.transform.position, light.transform.position), arrive: false);
                 return;
             }
-            if (FollowHumansOffLedge(bot, d)) return;
+            if (FollowHumansOffLedge(bot, d) || Duckling(bot, d)) return;
 
             var best = new Task { Score = float.MinValue };
             foreach (var task in Tasks(d))
@@ -199,6 +199,38 @@ namespace Demons
             var half = state.RoomHalfExtents;
             var edge = new Vector3(Mathf.Clamp(state.FirstFallX, -half.x + 1, half.x - 1), 0, half.y + 3);
             Steer(bot, d, edge, arrive: false);
+            return true;
+        }
+
+        // In the lobby CPUs trail the humans in a line: each one follows the CPU ahead, the first follows a human.
+        bool Duckling(Bot bot, Demon d)
+        {
+            var state = GameState.Instance;
+            if (!state || !state.IsLobby) return false;
+            Demon leader = null;
+            for (int i = Bots.All.FindIndex(b => b.brain == this) - 1; i >= 0 && !leader; i--) leader = Bots.All[i].Demon;
+            if (!leader)
+            {
+                float nearest = float.MaxValue;
+                foreach (var other in Demon.All)
+                    if (!Bots.IsBot(other) && Dist(other.transform.position, d.transform.position) < nearest)
+                        (leader, nearest) = (other, Dist(other.transform.position, d.transform.position));
+            }
+            if (!leader) return false;
+
+            Doing = "duckling";
+            Release();
+            var half = state.RoomHalfExtents - Vector2.one;
+            var behind = leader.transform.position - leader.transform.forward * 1.2f;
+            behind = new Vector3(Mathf.Clamp(behind.x, -half.x, half.x), 0, Mathf.Clamp(behind.z, -half.y, half.y));
+            float gap = Dist(d.transform.position, behind);
+            if (gap < 0.4f)
+            {
+                bot.Stick = Vector2.zero;
+                return true;
+            }
+            Steer(bot, d, behind, arrive: false);
+            bot.Stick *= Mathf.Clamp01(gap / 1.5f);
             return true;
         }
 
