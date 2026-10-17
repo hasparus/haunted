@@ -141,7 +141,7 @@ namespace Demons.Editor
             BuildSpotlight(new Vector3(0, 0.02f, 0), demo: false);
             BuildClaw(new Vector3(0, 7f, 0), demo: false);
             BuildPen(new Vector3(0, 2.2f, -4.5f), demo: false);
-            BuildMeds(new Vector3(0, 1.8f, 6.4f), demo: false);
+            BuildMeds(new Vector3(0, 2.1f, 5.9f), demo: false, size: 2.2f);
             new GameObject("Progression").AddComponent<NetworkObject>().gameObject.AddComponent<Progression>();
             SaveScene(OfficePath);
         }
@@ -296,7 +296,7 @@ namespace Demons.Editor
             Set(pen, "look", look);
         }
 
-        static void BuildMeds(Vector3 pos, bool demo)
+        static void BuildMeds(Vector3 pos, bool demo, float size = 1)
         {
             var go = new GameObject(demo ? "MedsDemo" : "Meds");
             go.transform.position = pos;
@@ -304,6 +304,7 @@ namespace Demons.Editor
             meds.Demo = demo;
             var look = new GameObject("Look");
             look.transform.SetParent(go.transform, false);
+            look.transform.localScale = Vector3.one * size;
             var pill = Prim(PrimitiveType.Capsule, "Pill", look.transform, Vector3.zero, new Vector3(0.6f, 0.55f, 0.6f), Mat("Pill", new Color(0.55f, 0.75f, 1f)));
             pill.transform.localRotation = Quaternion.Euler(0, 0, 90);
             Prim(PrimitiveType.Sphere, "Cap", look.transform, new Vector3(0.3f, 0, 0), Vector3.one * 0.62f, Mat("PillCap", Gray(0.95f)));
