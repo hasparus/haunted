@@ -19,13 +19,12 @@ namespace Demons
             var visual = new GameObject("Visual").transform;
             visual.SetParent(root, false);
 
-            // An open pipe in the belt's colours: its dark paper outside (without the rolling slats, inked along its
-            // sides), a lighter rim like the belt's lit top, and darker still inside, with a floor thoughts drop through.
+            // An open pipe in the belt's colours: its dark paper outside (without the rolling slats), a lighter rim like
+            // the belt's lit top, and darker still inside, with a floor thoughts drop through. No silhouette ink: on a
+            // round side it boils like the whole pipe being redrawn.
             var outside = new Material(paper);
             outside.SetFloat("_Slats", 0);
-            outside.SetFloat("_Silhouette", 1);
             var rim = new Material(outside) { color = new Color(0.26f, 0.26f, 0.3f) };
-            rim.SetFloat("_Silhouette", 0);
             var inside = new Material(rim) { color = new Color(0.05f, 0.05f, 0.07f) };
             var pipe = new GameObject("Pipe");
             pipe.transform.SetParent(visual, false);
