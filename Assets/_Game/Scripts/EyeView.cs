@@ -13,7 +13,17 @@ namespace Demons
         [Tooltip("Viewport height of the eyes' top edge.")]
         public float top = 1.08f;
 
+        static readonly int PhotoId = Shader.PropertyToID("_Photo"), OffsetId = Shader.PropertyToID("_Offset"),
+            ZoomId = Shader.PropertyToID("_Zoom"), AspectId = Shader.PropertyToID("_PhotoAspect");
+
+        // The EyePhotos scene picks the day to look at; the game follows the week.
+        public static int Preview = -1;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => Preview = -1;
+
         Renderer view;
+        MaterialPropertyBlock block;
         Camera cam;
         int shown = -1, wanted;
         float blink = 1;
@@ -21,13 +31,13 @@ namespace Demons
         void Start()
         {
             view = GetComponent<Renderer>();
-            view.material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Background;
             cam = Camera.main;
         }
 
         void LateUpdate()
         {
-            if (Progression.Instance is { IsSpawned: true } p) wanted = p.Day.Value % 7;
+            if (Preview >= 0) wanted = Preview;
+            else if (Progression.Instance is { IsSpawned: true } p) wanted = p.Day.Value % 7;
             if (wanted != shown && blink >= 1) blink = 0;
             if (blink < 1)
             {
@@ -41,13 +51,22 @@ namespace Demons
             float w = screenHeight * cam.aspect * width, h = w / Aspect;
             transform.SetPositionAndRotation(cam.ViewportToWorldPoint(new Vector3(0.5f, top - h / screenHeight / 2, Depth)), cam.transform.rotation);
             transform.localScale = new Vector3(w, h * open, 1);
+            Place();
         }
 
-        void Show(int day)
+        // Read every frame, so moving a photo in the EyePhotos scene shows at once.
+        void Place()
         {
-            shown = day;
-            var texture = Resources.Load<Texture2D>($"Eyes/day{day}");
-            if (texture) view.material.SetTexture("_BaseMap", texture);
+            var day = EyePhotos.I && shown >= 0 ? EyePhotos.I.days[shown] : null;
+            if (day == null || !day.photo) return;
+            block ??= new MaterialPropertyBlock();
+            block.SetTexture(PhotoId, day.photo);
+            block.SetVector(OffsetId, day.offset);
+            block.SetFloat(ZoomId, day.zoom);
+            block.SetFloat(AspectId, (float)day.photo.width / day.photo.height);
+            view.SetPropertyBlock(block);
         }
+
+        void Show(int day) => shown = day;
     }
 }
