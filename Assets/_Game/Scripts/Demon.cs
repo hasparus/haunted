@@ -164,6 +164,34 @@ namespace Demons
             bool sideways = Mathf.Abs(x) > Mathf.Abs(z);
             sprite.sprite = sideways ? side : z > 0 ? back : front;
             sprite.flipX = sideways && x < 0;
+            if (scribble.activeSelf) Scratch(ahead.normalized);
+        }
+
+        static Material scratchInk;
+        LineRenderer scratch;
+        int scratched = -1;
+
+        // Pen scratches drawn flat over the drawing, a hair in front of it, scribbled anew several times a second.
+        void Scratch(Vector3 ahead)
+        {
+            if (!scratch)
+            {
+                scratch = scribble.AddComponent<LineRenderer>();
+                scratchInk = scratchInk ? scratchInk : new Material(Shader.Find("Universal Render Pipeline/Unlit")) { color = new Color(0.03f, 0.03f, 0.05f) };
+                scratch.sharedMaterial = scratchInk;
+                scratch.useWorldSpace = false;
+                scratch.alignment = LineAlignment.TransformZ;
+                scratch.widthMultiplier = 0.05f;
+                scratch.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                scratch.positionCount = 12;
+            }
+            scribble.transform.SetPositionAndRotation(sprite.transform.position - ahead * 0.1f, sprite.transform.rotation);
+            scribble.transform.localScale = sprite.transform.localScale;
+            int frame = Mathf.FloorToInt(Time.time * 8);
+            if (frame == scratched) return;
+            scratched = frame;
+            for (int i = 0; i < scratch.positionCount; i++)
+                scratch.SetPosition(i, new Vector3((i % 2 == 0 ? -1 : 1) * UnityEngine.Random.Range(0.2f, 0.42f), UnityEngine.Random.Range(0.4f, 1.6f), 0));
         }
 
         public override void OnNetworkSpawn()
@@ -264,7 +292,6 @@ namespace Demons
                 Audio.Play(down ? Sounds.I.fall : Sounds.I.respawn, transform.position);
             }
             Footsteps(down);
-            if (Scribble.Value > 0) scribble.transform.Rotate(0, 400 * Time.deltaTime, 0);
             if (!IsOwner || input == null) return;
             if (usingHeld && !input.Use.enabled)
             {

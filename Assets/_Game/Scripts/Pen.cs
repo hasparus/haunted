@@ -24,7 +24,7 @@ namespace Demons
         {
             look.SetActive(active.Value);
             if (active.Value && Time.time < writeUntil + 0.2f)
-                look.transform.localRotation = Quaternion.Euler(Mathf.Sin(Time.time * 40) * 15, 0, 30);
+                look.transform.localRotation = Quaternion.Euler(0, 0, -25 + Mathf.Sin(Time.time * 40) * 15);
             if (!IsServer || !IsSpawned) return;
 
             active.Value = Enabled;

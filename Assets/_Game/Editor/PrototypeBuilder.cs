@@ -119,11 +119,6 @@ namespace Demons.Editor
 
             var scribble = new GameObject("Scribble");
             scribble.transform.SetParent(root.transform, false);
-            for (int i = 0; i < 5; i++)
-            {
-                var line = Prim(PrimitiveType.Cube, $"Line{i}", scribble.transform, new Vector3(0, 0.5f + i * 0.25f, 0), new Vector3(1.15f, 0.05f, 0.05f), Mat("Ink", Gray(0.05f)));
-                line.transform.localRotation = Quaternion.Euler(i % 2 == 0 ? 18f : -22f, i * 37f, i % 3 == 0 ? -15f : 20f);
-            }
             scribble.SetActive(false);
 
             d.Hand = hand;
@@ -296,9 +291,11 @@ namespace Demons.Editor
 
             var look = new GameObject("Look");
             look.transform.SetParent(go.transform, false);
-            look.transform.localRotation = Quaternion.Euler(0, 0, 30);
-            Prim(PrimitiveType.Cylinder, "Body", look.transform, new Vector3(0, 0.3f, 0), new Vector3(0.12f, 0.45f, 0.12f), Mat("Ink", Gray(0.05f)));
-            Prim(PrimitiveType.Cylinder, "Cap", look.transform, new Vector3(0, 0.8f, 0), new Vector3(0.13f, 0.08f, 0.13f), Mat("Phone", new Color(0.98f, 0.8f, 0.08f)));
+            // Held from its capped top, nib down, the way a hand writes.
+            look.transform.localRotation = Quaternion.Euler(0, 0, -25);
+            Prim(PrimitiveType.Cylinder, "Cap", look.transform, Vector3.zero, new Vector3(0.13f, 0.08f, 0.13f), Mat("Phone", new Color(0.98f, 0.8f, 0.08f)));
+            Prim(PrimitiveType.Cylinder, "Body", look.transform, new Vector3(0, -0.5f, 0), new Vector3(0.12f, 0.45f, 0.12f), Mat("Ink", Gray(0.05f)));
+            Prim(PrimitiveType.Capsule, "Nib", look.transform, new Vector3(0, -0.95f, 0), new Vector3(0.06f, 0.1f, 0.06f), Mat("Ink", Gray(0.05f)));
             look.SetActive(false);
             Set(pen, "look", look);
         }
