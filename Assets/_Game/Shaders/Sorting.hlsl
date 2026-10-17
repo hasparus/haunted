@@ -16,6 +16,11 @@ float SortedZ(float4 positionCS, float3 at)
 
 float3 PushedBack(float3 positionWS, float metres) { return positionWS + GetViewForwardDir() * metres; }
 
+// Clip-space z for a vertex as if it were `metres` further from the camera. A constant shift in clip space, so it stays
+// linear across a triangle (re-deriving depth from a moved point per vertex is not, and a huge floor triangle reaching
+// behind the camera then covers what stands on it). The projection matrix carries the sign for reversed-Z platforms.
+float PushedZ(float4 positionCS, float metres) { return positionCS.z - UNITY_MATRIX_P[2][2] * metres; }
+
 float3 Underneath(float3 positionWS) { return float3(positionWS.x, 0, positionWS.z); }
 
 #endif

@@ -87,10 +87,9 @@ Shader "Haunted/Paper"
                 // it stands: the floor under its origin, or a point the game sets (a thought on a desk, in a hand). There
                 // its parts keep a tenth of their depth around it, so a thought's shell still covers its stone without
                 // the sphere's front reaching past the point.
-                float3 at = _Scenery > 0.5 ? PushedBack(o.positionWS, SORT_SCENERY_PUSH)
-                    : _Anchor.w > 0 ? _Anchor.xyz + (o.positionWS - _AnchorFrom.xyz) * 0.1
-                    : Underneath(TransformObjectToWorld(float3(0, 0, 0)));
-                o.positionCS.z = SortedZ(o.positionCS, at);
+                if (_Scenery > 0.5) o.positionCS.z = PushedZ(o.positionCS, SORT_SCENERY_PUSH);
+                else o.positionCS.z = SortedZ(o.positionCS, _Anchor.w > 0 ? _Anchor.xyz + (o.positionWS - _AnchorFrom.xyz) * 0.1
+                    : Underneath(TransformObjectToWorld(float3(0, 0, 0))));
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
                 o.fog = ComputeFogFactor(o.positionCS.z);
                 o.uv = v.uv;
