@@ -4,13 +4,23 @@ using System.IO;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
+using UnityEngine;
 
 namespace Demons.Editor
 {
     // Bakes the commit into Resources/commit.txt; development builds show it next to the version.
+    // The editor takes the latest tag as its version so it can join release builds.
+    [InitializeOnLoad]
     public class BuildInfo : IPreprocessBuildWithReport
     {
         const string Path = "Assets/_Game/Resources/commit.txt";
+
+        static BuildInfo()
+        {
+            if (Application.isBatchMode) return;
+            string tag = Git("describe --tags --abbrev=0")?.Trim().TrimStart('v');
+            if (!string.IsNullOrEmpty(tag) && PlayerSettings.bundleVersion != tag) PlayerSettings.bundleVersion = tag;
+        }
 
         public int callbackOrder => 0;
 
