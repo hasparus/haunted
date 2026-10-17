@@ -18,7 +18,7 @@ namespace Demons
         [Tooltip("Room tone inside his head, the whole level, under the music")] public AudioClip headRoom;
 
         [Header("Mix")]
-        [Range(0, 1)] public float musicVolume = 0.6f;
+        [Range(0, 1)] public float musicVolume = 0.54f;
         [Range(0, 1), Tooltip("Music volume multiplier while paused")] public float pausedMusic = 0.4f;
         [Tooltip("Crossfade seconds between tracks")] public float musicFade = 1f;
         [Range(0, 1)] public float sfxVolume = 1f;
