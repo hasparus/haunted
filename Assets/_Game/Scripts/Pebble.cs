@@ -341,7 +341,8 @@ namespace Demons
         void ReachHost()
         {
             if (Stamps.Value == 0) GameState.Instance.Missed(transform.position);
-            GameState.Instance.Deliver(this);
+            // The miss may have been the crack that restarted the day, which clears the belt, this thought included.
+            if (IsSpawned) GameState.Instance.Deliver(this);
         }
 
         public void Consume()
