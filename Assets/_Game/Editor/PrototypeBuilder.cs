@@ -137,6 +137,8 @@ namespace Demons.Editor
         static void BuildOffice(Pebble pebble, Demon demon, NetworkPrefabsList prefabs)
         {
             var cam = NewRoom(pebble, demon, prefabs, new Vector2(8.5f, 5.5f), walls: true, beltZ: 5f, beltStart: -9.8f, beltEnd: 9.8f);
+            desksBuilt = 0;
+            cam.gameObject.AddComponent<CameraRig>().Follow = false;
             foreach (var pos in new[] { new Vector3(-6.5f, 0, -1.5f), new Vector3(-2.2f, 0, 0.6f), new Vector3(2.2f, 0, 0.6f), new Vector3(6.5f, 0, -1.5f) })
                 BuildStation(pos, cam);
             BuildStation(new Vector3(-4.5f, 0, -4f), cam, StationKind.Hammer, Feature.Shell);
@@ -155,6 +157,7 @@ namespace Demons.Editor
             var half = new Vector2(18f, 20f);
             var spawn = new Vector3(0, 0, 7f);
             var cam = NewRoom(pebble, demon, prefabs, half, walls: false, beltZ: -1.5f, beltStart: -19.3f, beltEnd: 3f);
+            desksBuilt = 0;
             var rig = cam.gameObject.AddComponent<CameraRig>();
             rig.Focus = new Vector3(0, 0, 11.4f);
             rig.IdleExtents = new Vector3(14f, 0, 3.8f);
@@ -169,7 +172,7 @@ namespace Demons.Editor
             FloorLabel("First week at work", null, new Vector3(-9f, 0, 16.5f), 0.3f, Jolly);
             FloorLabel("Infinite survival", null, new Vector3(9f, 0, 16.5f), 0.3f, Jolly);
             FloorLabel("best here: {best}\n\nTop scores\n{top}", null, new Vector3(9f, 0, 12.6f), 0.13f);
-            Prim(PrimitiveType.Cube, "ModeDivider", null, new Vector3(0, 0.01f, 16f), new Vector3(0.15f, 0.02f, 8f), Mat("Divider", Gray(0.75f)));
+            Prim(PrimitiveType.Cube, "ModeDivider", null, new Vector3(0, 0.01f, 16f), new Vector3(0.15f, 0.02f, 8f), Paper("Divider", new Color(0.78f, 0.74f, 0.66f)));
             FloorLabel("Jump off to start", null, new Vector3(0, 0, 10.6f), 0.14f);
             FloorArrow(new Vector3(-4.2f, 0, 10.6f), 1);
             FloorArrow(new Vector3(4.2f, 0, 10.6f), 1);
@@ -516,17 +519,17 @@ namespace Demons.Editor
             sun.transform.rotation = Quaternion.Euler(55, -25, 0);
             RenderSettings.sun = sun;
 
-            Prim(PrimitiveType.Cube, "Floor", null, new Vector3(0, -0.1f, 0), new Vector3(half.x * 2, 0.2f, half.y * 2), Mat("Floor", Gray(0.32f)), collider: true);
+            Prim(PrimitiveType.Cube, "Floor", null, new Vector3(0, -0.1f, 0), new Vector3(half.x * 2, 0.2f, half.y * 2), Paper("Floor", new Color(0.3f, 0.35f, 0.37f), tiles: true), collider: true);
             float wx = half.x + 0.25f, wz = half.y + 0.25f;
             if (walls)
             {
-                Prim(PrimitiveType.Cube, "WallBack", null, new Vector3(0, 0.75f, wz), new Vector3(half.x * 2, 1.5f, 0.5f), Mat("Wall", Gray(0.5f)), collider: true);
-                Prim(PrimitiveType.Cube, "WallFront", null, new Vector3(0, 0.2f, -wz), new Vector3(half.x * 2, 0.4f, 0.5f), Mat("Wall", Gray(0.5f)), collider: true);
+                Prim(PrimitiveType.Cube, "WallBack", null, new Vector3(0, 0.75f, wz), new Vector3(half.x * 2, 1.5f, 0.5f), Paper("Wall", new Color(0.66f, 0.61f, 0.53f)), collider: true);
+                Prim(PrimitiveType.Cube, "WallFront", null, new Vector3(0, 0.2f, -wz), new Vector3(half.x * 2, 0.4f, 0.5f), Paper("Wall", new Color(0.66f, 0.61f, 0.53f)), collider: true);
                 float gapLow = beltZ - 0.8f, gapHigh = beltZ + 0.8f, top = half.y + 0.5f, bottom = -half.y - 0.5f;
                 foreach (var x in new[] { -wx, wx })
                 {
-                    Prim(PrimitiveType.Cube, "WallSide", null, new Vector3(x, 0.75f, (bottom + gapLow) / 2), new Vector3(0.5f, 1.5f, gapLow - bottom), Mat("Wall", Gray(0.5f)), collider: true);
-                    Prim(PrimitiveType.Cube, "WallSide", null, new Vector3(x, 0.75f, (gapHigh + top) / 2), new Vector3(0.5f, 1.5f, top - gapHigh), Mat("Wall", Gray(0.5f)), collider: true);
+                    Prim(PrimitiveType.Cube, "WallSide", null, new Vector3(x, 0.75f, (bottom + gapLow) / 2), new Vector3(0.5f, 1.5f, gapLow - bottom), Paper("Wall", new Color(0.66f, 0.61f, 0.53f)), collider: true);
+                    Prim(PrimitiveType.Cube, "WallSide", null, new Vector3(x, 0.75f, (gapHigh + top) / 2), new Vector3(0.5f, 1.5f, top - gapHigh), Paper("Wall", new Color(0.66f, 0.61f, 0.53f)), collider: true);
                 }
             }
 
@@ -534,7 +537,7 @@ namespace Demons.Editor
             beltGo.transform.position = new Vector3(0, 0, beltZ);
             beltGo.AddComponent<NetworkObject>();
             var belt = beltGo.AddComponent<Belt>();
-            Prim(PrimitiveType.Cube, "Conveyor", beltGo.transform, new Vector3((beltStart + beltEnd) / 2, 0.25f, 0), new Vector3(beltEnd - beltStart + 0.4f, 0.5f, 1), Mat("Belt", Gray(0.15f)), collider: true);
+            Prim(PrimitiveType.Cube, "Conveyor", beltGo.transform, new Vector3((beltStart + beltEnd) / 2, 0.25f, 0), new Vector3(beltEnd - beltStart + 0.4f, 0.5f, 1), Paper("Belt", new Color(0.14f, 0.13f, 0.16f)), collider: true);
             Set(belt, "start", Point("Start", beltGo.transform, new Vector3(beltStart, 0.75f, 0)));
             Set(belt, "end", Point("End", beltGo.transform, new Vector3(beltEnd, 0.75f, 0)));
             Set(belt, "pebblePrefab", pebble);
@@ -556,6 +559,9 @@ namespace Demons.Editor
             return cam;
         }
 
+        // Every other desk gets the second drawing; counted per room.
+        static int desksBuilt;
+
         static Station BuildStation(Vector3 pos, Camera cam, StationKind kind = StationKind.Desk, Feature requires = Feature.None)
         {
             var go = new GameObject(kind.ToString());
@@ -568,11 +574,11 @@ namespace Demons.Editor
             switch (kind)
             {
                 case StationKind.Pot:
-                    Prim(PrimitiveType.Cylinder, "Pot", visual, new Vector3(0, 0.45f, 0), new Vector3(1.1f, 0.45f, 1.1f), Mat("Pot", Gray(0.22f)), collider: true);
+                    Prim(PrimitiveType.Cylinder, "Pot", visual, new Vector3(0, 0.45f, 0), new Vector3(1.1f, 0.45f, 1.1f), Paper("Pot", new Color(0.22f, 0.2f, 0.24f)), collider: true);
                     st.Slot = Point("Slot", go.transform, new Vector3(0, 1.05f, 0));
                     break;
                 case StationKind.Hammer:
-                    Prim(PrimitiveType.Cube, "Anvil", visual, new Vector3(0, 0.4f, 0), new Vector3(1.1f, 0.8f, 1.1f), Mat("Anvil", Gray(0.45f)), collider: true);
+                    Prim(PrimitiveType.Cube, "Anvil", visual, new Vector3(0, 0.4f, 0), new Vector3(1.1f, 0.8f, 1.1f), Paper("Anvil", new Color(0.45f, 0.43f, 0.46f)), collider: true);
                     Prim(PrimitiveType.Cube, "Head", visual, new Vector3(0.35f, 1.7f, 0), new Vector3(0.5f, 0.25f, 0.25f), Mat("Nose", Gray(0.1f)));
                     Prim(PrimitiveType.Cube, "Handle", visual, new Vector3(0.35f, 1.3f, 0), new Vector3(0.08f, 0.6f, 0.08f), Mat("Nose", Gray(0.1f)));
                     st.Slot = Point("Slot", go.transform, new Vector3(0, 1.05f, 0));
@@ -583,10 +589,10 @@ namespace Demons.Editor
                     top.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
                     // Billboard drawing standing on the footprint's front edge; the thought sits just in front of its middle.
                     var art = Point("Art", visual, new Vector3(0, 0, -0.5f)).gameObject.AddComponent<SpriteRenderer>();
-                    art.sprite = Art("Station_Blank");
+                    art.sprite = Art(desksBuilt++ % 2 == 0 ? "Station_Blank" : "Station_Desk2");
                     art.transform.rotation = cam.transform.rotation;
                     art.transform.localScale = Vector3.one * 1.8f / art.sprite.bounds.size.x;
-                    art.color = Gray(0.82f);
+                    art.color = new Color(0.86f, 0.81f, 0.72f);
                     st.Slot = Point("Slot", go.transform, new Vector3(0, 0.65f, -0.42f));
                     var phone = Prim(PrimitiveType.Cube, "Phone", visual, new Vector3(0.45f, 0.95f, -0.15f), new Vector3(0.35f, 0.18f, 0.22f), Mat("Phone", new Color(0.98f, 0.8f, 0.08f)));
                     phone.SetActive(false);
@@ -709,6 +715,15 @@ namespace Demons.Editor
         }
 
         static Material Unlit(string name, Color color) => Mat(name, color, "Universal Render Pipeline/Unlit");
+
+        // The inked-paper look for the office's own geometry; see Haunted/Paper.
+        static Material Paper(string name, Color color, bool tiles = false)
+        {
+            var m = Mat(name, color, "Haunted/Paper");
+            m.shader = Shader.Find("Haunted/Paper");
+            m.SetFloat("_Tiles", tiles ? 1 : 0);
+            return m;
+        }
 
         static Color Gray(float v) => new(v, v, v);
 

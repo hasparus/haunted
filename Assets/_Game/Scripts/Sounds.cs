@@ -50,6 +50,8 @@ namespace Demons
         [Tooltip("Starts shaking: about to be forgotten. Mildest first: the Nth thought shaking at once plays the Nth clip")] public AudioClip[] warning;
         [Tooltip("Forgotten: sprouts wings and flies away")] public AudioClip[] forgotten;
         [Tooltip("A haunted thought reaches him: influence up")] public AudioClip[] deliver;
+        [Tooltip("A crack of light opens: glass tick, his relieved exhale")] public AudioClip[] crackOpen;
+        [Tooltip("Demon ink seals the newest crack")] public AudioClip[] seal;
 
         [Header("Stations")]
         [Tooltip("A demon starts haunting at a desk")] public AudioClip[] hauntStart;

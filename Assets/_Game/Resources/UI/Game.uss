@@ -296,6 +296,39 @@
     padding: 0;
 }
 
+.hud-layer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.hud-cracks {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 18px;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.hud-crack {
+    width: 12px;
+    height: 12px;
+    margin: 0 6px;
+    rotate: 45deg;
+    border-width: 2px;
+    border-color: rgba(255, 233, 176, 0.35);
+    transition-property: background-color, border-color;
+    transition-duration: 0.12s, 0.12s;
+}
+
+.hud-crack--open {
+    background-color: #FFE9B0;
+    border-color: #FFE9B0;
+}
+
 .hud-scores {
     align-items: flex-end;
 }
@@ -409,7 +442,7 @@
     transition-timing-function: ease-out-back, ease-out-back, ease-out-cubic;
     max-width: 620px;
     padding: 18px 30px 22px 30px;
-    background-color: rgba(11, 30, 79, 0.94);
+    background-color: var(--navy);
     border-radius: 14px;
     border-width: 1px;
     border-color: var(--hairline);
@@ -421,6 +454,33 @@
     color: var(--yellow);
     -unity-text-align: middle-center;
     margin: 0;
+    padding: 0;
+}
+
+.card-stars-for {
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    -unity-text-align: middle-center;
+    margin: 0;
+    padding: 0;
+}
+
+.card .stars {
+    margin: 2px 0 8px 0;
+}
+
+.card .star {
+    width: 30px;
+    height: 30px;
+    margin: 0 4px;
+}
+
+.card-hint {
+    font-size: 15px;
+    color: var(--muted);
+    -unity-text-align: middle-center;
+    margin: 12px 0 0 0;
     padding: 0;
 }
 
@@ -506,6 +566,7 @@
 }
 
 .review-body {
+    align-self: center;
     font-size: 17px;
     color: var(--muted);
     -unity-text-align: middle-center;

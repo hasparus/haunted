@@ -27,7 +27,7 @@ namespace Demons
         static readonly string[] DayCards =
         {
             "MONDAY\nFirst day at the new job. Everyone smiles a little too much.",
-            "TUESDAY\nThe boss: \"Got a minute?\"\nBig thoughts take long. Haunt them together.",
+            "TUESDAY\nBig thoughts take long. Haunt them together.",
             "WEDNESDAY\n214 unread emails. IT finally sent a tool: the pot.\nDrop a thought in and it haunts itself.",
             "THURSDAY\nHe's getting defensive.\nShelled thoughts need the hammer first.",
             "FRIDAY\nTherapy at five. Homework: write it all down.\nStay out of the light. Mash or wiggle off the pen.",
@@ -45,6 +45,23 @@ namespace Demons
             (Feature.Phone, "MOM\nAnswer the phone."),
             (Feature.Claw, "THE HAND\nSave thoughts before it lands."),
         };
+
+        // The boss, when he copes anyway.
+        static readonly string[] Roasts =
+        {
+            "\"I'm not angry. I'm documenting.\"",
+            "\"Let's take this offline. Permanently.\"",
+            "\"HR has a calendar invite for you.\"",
+            "\"Per my last email: haunt him.\"",
+            "\"I've seen interns haunt harder.\"",
+            "\"We'll circle back on your role.\"",
+            "\"Not a great look for the department.\"",
+            "\"Let's put a pin in your career.\"",
+            "\"Great work, if the goal was his wellbeing.\"",
+            "\"This will affect your performance review.\"",
+        };
+
+        static string Roast => Roasts[Random.Range(0, Roasts.Length)];
 
         static readonly string[] Calls =
         {
@@ -67,6 +84,11 @@ namespace Demons
         public NetworkVariable<float> Peak = new();
         public NetworkVariable<bool> Review = new();
         public NetworkVariable<int> Stars = new();
+        // Stars for the day just finished, shown on the next day's card; -1 on cards that aren't about a day.
+        public NetworkVariable<int> CardStars = new(-1);
+        // Cracks of light let in by thoughts he coped with; delivered influence seals the newest (Sealing is its progress, 0 to 1).
+        public NetworkVariable<int> Cracks = new();
+        public NetworkVariable<float> Sealing = new();
         public NetworkVariable<bool> Signing = new();
 
         // True while the host types a name for the leaderboard; game input and menus stay out of the way.
@@ -76,7 +98,10 @@ namespace Demons
 
         double startTime, nextCall, nextPill, nextInterrupt, interruptUntil, endAt;
         Feature lastInterrupt;
-        bool over, heardInverted;
+        bool over, heardInverted, taughtCracks;
+        float dayStartInfluence;
+        int cracksToday, weekStars;
+        readonly float[] dayStartPrestige = new float[Scoring.MaxDemons];
         int signers;
         float typingSince;
         public string Signature = "";
@@ -94,7 +119,9 @@ namespace Demons
             float scale = b.goalScaleByDemons[Mathf.Clamp(Demon.All.Count - 1, 0, b.goalScaleByDemons.Length - 1)];
             return Mathf.Round(b.dayGoals[Mathf.Min(day, b.dayGoals.Length - 1)] * scale);
         }
-        public string DayName => Days[Day.Value % Days.Length];
+        public string DayTitle => Title(Day.Value);
+        public static string Title(int day) => Days[day % Days.Length][..1] + Days[day % Days.Length][1..].ToLowerInvariant();
+        int DayStars => System.Array.FindAll(Balance.I.dayStarCracks, c => cracksToday <= c).Length;
 
         public static bool Has(Feature f) => f == Feature.None || !Instance || Instance.Unlocked(f);
 
@@ -130,7 +157,6 @@ namespace Demons
             return b.beltSpeed * (System.Math.Min(t, start) + 0.75 * e + e * e / (2 * b.survivalRampSeconds));
         }
 
-        public float FireLine => Mathf.Max(Balance.I.survivalFloor, Peak.Value - Balance.I.survivalDrop);
 
         void Awake() => Instance = this;
 
@@ -150,6 +176,16 @@ namespace Demons
             {
                 if (now) Audio.Play(Sounds.I.review);
             };
+            Cracks.OnValueChanged += (was, now) =>
+            {
+                var b = Balance.I;
+                if (now > was)
+                {
+                    CameraRig.Shake(now >= b.maxCracks ? 1 : b.crackShakeBase + b.crackShakeStep * now);
+                    Audio.Play(Sounds.I.crackOpen);
+                }
+                else if (now == was - 1) Audio.Play(Sounds.I.seal);
+            };
             Signing.OnValueChanged += (was, now) =>
             {
                 if (was && !now) Audio.Play(Sounds.I.signed);
@@ -162,6 +198,13 @@ namespace Demons
             Peak.Value = 0;
             Review.Value = false;
             Stars.Value = 0;
+            Cracks.Value = 0;
+            Sealing.Value = 0;
+            dayStartInfluence = 0;
+            cracksToday = weekStars = 0;
+            CardStars.Value = -1;
+            System.Array.Clear(dayStartPrestige, 0, dayStartPrestige.Length);
+            taughtCracks = false;
             InvertedUntil.Value = 0;
             PillAt.Value = 0;
             Interrupt.Value = Feature.None;
@@ -176,12 +219,13 @@ namespace Demons
                 : "INFINITE SURVIVAL\nIt starts easy. It doesn't stay easy.", hold: true);
         }
 
-        // Held cards pause the game while they're up; game time stands still, so they leave right after.
-        void ShowCard(string text, float seconds = 4, bool hold = false)
+        // Held cards pause the game until someone gets back to work; game time stands still, so they leave right after.
+        void ShowCard(string text, float seconds = 4, bool hold = false, int stars = -1)
         {
             Card.Value = text;
+            CardStars.Value = stars;
             hold &= GameState.Instance && GameState.Instance.IsSpawned;
-            if (hold) GameState.Instance.Hold(seconds);
+            if (hold) GameState.Instance.Hold();
             CardUntil.Value = Now + (hold ? 0.3f : seconds);
         }
 
@@ -203,6 +247,68 @@ namespace Demons
             endAt = Now + 12;
             Review.Value = true;
             ShowCard(text, 12);
+        }
+
+        // Server: a thought reached him unhaunted or was forgotten, so he coped with it.
+        public void Crack()
+        {
+            if (over || !IsSpawned) return;
+            Cracks.Value++;
+            cracksToday++;
+            Sealing.Value = 0;
+            if (Cracks.Value >= Balance.I.maxCracks)
+            {
+                if (Mode.Value == GameMode.Survival) Fired();
+                else GoodDay();
+            }
+            else if (!taughtCracks && Mode.Value == GameMode.Week)
+            {
+                taughtCracks = true;
+                ShowCard($"HE'S COPING\nUnhaunted thoughts help him. {Balance.I.maxCracks} cracks and he has a good day.", 5, hold: true);
+            }
+        }
+
+        // Server: delivered influence works on sealing the newest crack; nothing is banked while none are open.
+        public void Earned(float influence)
+        {
+            if (Cracks.Value == 0 || influence <= 0) return;
+            float sealing = Sealing.Value + influence / Balance.I.influencePerSeal;
+            while (sealing >= 1 && Cracks.Value > 0)
+            {
+                Cracks.Value--;
+                sealing -= 1;
+            }
+            Sealing.Value = Cracks.Value > 0 ? sealing : 0;
+        }
+
+        // The Week's loss: the day starts over from its opening influence with a clear belt.
+        void GoodDay()
+        {
+            ShowCard($"HE HAD A GOOD DAY\nHe's coping. Try {DayTitle} again.\n{Roast}", 4, hold: true);
+            cracksToday = 0;
+            var state = GameState.Instance;
+            state.Influence.Value = dayStartInfluence;
+            for (int i = 0; i < dayStartPrestige.Length && i < state.Prestige.Count; i++) state.Prestige[i] = dayStartPrestige[i];
+            Cracks.Value = 0;
+            Sealing.Value = 0;
+            foreach (var pebble in Pebble.All.ToArray()) pebble.Consume();
+        }
+
+        void Fired()
+        {
+            PlayerPrefs.Save();
+            signers = Demon.All.FindAll(d => !Bots.IsBot(d)).Count;
+            bool assisted = Bots.All.Count > 0;
+            End($"YOU HAVE BEEN DOWNSIZED\n{Roast}\nPlease return your badge at reception.\nPeak revenue {Peak.Value:0} zł  ·  best {Best.Value:0} zł", System.Array.FindAll(Balance.I.survivalStarSeconds, s => Elapsed >= s).Length);
+            if (Peak.Value > 0 && signers > 0 && !assisted)
+            {
+                Signing.Value = true;
+                endAt = CardUntil.Value = double.MaxValue;
+                Signature = PlayerPrefs.GetString(NameKey, "");
+                Typing = true;
+                typingSince = Time.unscaledTime;
+                LocalPlayers.SetEnabled(false);
+            }
         }
 
         public void BackToHq()
@@ -228,10 +334,10 @@ namespace Demons
             }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (UnityEngine.InputSystem.Keyboard.current is { f8Key: { wasPressedThisFrame: true } } && Mode.Value == GameMode.Survival)
+            if (UnityEngine.InputSystem.Keyboard.current is { f8Key: { wasPressedThisFrame: true } })
             {
-                Peak.Value = Mathf.Max(Peak.Value, 7);
-                GameState.Instance.Influence.Value = -10;
+                if (Mode.Value == GameMode.Survival) Peak.Value = Mathf.Max(Peak.Value, 7);
+                Crack();
             }
 #endif
             float influence = GameState.Instance.Influence.Value;
@@ -240,12 +346,20 @@ namespace Demons
                 if (DayGoal.Value <= 0 && Demon.All.Count > 0) DayGoal.Value = GoalFor(Day.Value);
                 if (DayGoal.Value > 0 && influence >= DayGoal.Value)
                 {
-                    if (Day.Value == Days.Length - 1) End("THE WEEKEND IS OVER\nYou haunted him through his whole first week.", System.Array.FindAll(Balance.I.weekStarSeconds, s => Elapsed <= s).Length);
+                    weekStars += DayStars;
+                    if (Day.Value == Days.Length - 1) End($"THE WEEKEND IS OVER\nYou haunted him through his whole first week.\nDays: {weekStars} of {Days.Length * 3} stars", System.Array.FindAll(Balance.I.weekStarSeconds, s => Elapsed <= s).Length);
                     else
                     {
+                        int stars = DayStars;
+                        cracksToday = 0;
                         Day.Value++;
                         DayGoal.Value = GoalFor(Day.Value);
-                        ShowCard(DayCards[Day.Value], hold: true);
+                        Cracks.Value = 0;
+                        Sealing.Value = 0;
+                        dayStartInfluence = influence;
+                        var prestige = GameState.Instance.Prestige;
+                        for (int i = 0; i < dayStartPrestige.Length && i < prestige.Count; i++) dayStartPrestige[i] = prestige[i];
+                        ShowCard(DayCards[Day.Value], hold: true, stars: stars);
                         if (Day.Value == UnlockDay(Feature.Pill)) nextPill = Now + 12;
                     }
                 }
@@ -265,22 +379,6 @@ namespace Demons
                 {
                     Best.Value = Peak.Value;
                     PlayerPrefs.SetFloat(BestKey, Best.Value);
-                }
-                if (influence < FireLine)
-                {
-                    PlayerPrefs.Save();
-                    signers = Demon.All.FindAll(d => !Bots.IsBot(d)).Count;
-                    bool assisted = Bots.All.Count > 0;
-                    End($"YOU HAVE BEEN DOWNSIZED\nHe's coping now. Please return your badge at reception.\nPeak revenue {Peak.Value:0} zł  ·  best {Best.Value:0} zł", System.Array.FindAll(Balance.I.survivalStarSeconds, s => Elapsed >= s).Length);
-                    if (Peak.Value > 0 && signers > 0 && !assisted)
-                    {
-                        Signing.Value = true;
-                        endAt = CardUntil.Value = double.MaxValue;
-                        Signature = PlayerPrefs.GetString(NameKey, "");
-                        Typing = true;
-                        typingSince = Time.unscaledTime;
-                        LocalPlayers.SetEnabled(false);
-                    }
                 }
             }
 

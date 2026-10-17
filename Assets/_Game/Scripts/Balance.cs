@@ -58,6 +58,8 @@ namespace Demons
         public int bigDay = 1, potDay = 2, shellDay = 3, therapyDay = 4, pillDay = 5, phoneDay = 6, handDay = 6;
         [Tooltip("Performance Review stars: finish the week within this many seconds for one, two, three stars.")]
         public float[] weekStarSeconds = { 900, 720, 600 };
+        [Tooltip("A day's stars: open at most this many cracks during it for one, two, three stars.")]
+        public int[] dayStarCracks = { 4, 2, 0 };
 
         [Header("Week events")]
         public float pillTime = 10f;
@@ -81,11 +83,15 @@ namespace Demons
         public float phoneGapMin = 20f;
         public float phoneGapMax = 35f;
 
+        [Header("Cracks")]
+        [Tooltip("Open cracks of light it takes to lose: downsized in Survival, the day restarts in the Week. Unhaunted and forgotten thoughts open them.")]
+        public int maxCracks = 5;
+        [Tooltip("Influence delivered to seal the newest crack.")]
+        public float influencePerSeal = 3f;
+        [Tooltip("Screen shake when a crack opens: base plus step per open crack (the pill is 0.5).")]
+        public float crackShakeBase = 0.15f, crackShakeStep = 0.06f;
+
         [Header("Survival")]
-        [Tooltip("Game over below this influence.")]
-        public float survivalFloor = -5f;
-        [Tooltip("Also game over this far below the run's peak influence.")]
-        public float survivalDrop = 12f;
         [Tooltip("Influence lost when an unhaunted thought reaches him in Survival.")]
         public float survivalMissPenalty = 1f;
         [Tooltip("Belt speed starts at 0.75x and gains +1x every this many seconds.")]

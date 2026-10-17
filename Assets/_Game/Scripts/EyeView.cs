@@ -32,7 +32,7 @@ namespace Demons
             if (blink < 1)
             {
                 float was = blink;
-                blink = Mathf.Min(1, blink + Time.deltaTime / BlinkTime);
+                blink = Mathf.Min(1, blink + Time.unscaledDeltaTime / BlinkTime);
                 if (was < 0.5f && blink >= 0.5f || shown < 0) Show(wanted);
             }
             float open = Mathf.SmoothStep(0, 1, Mathf.Abs(blink * 2 - 1));

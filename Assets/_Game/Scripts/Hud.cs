@@ -9,8 +9,8 @@ namespace Demons
     {
         static readonly string[] Columns = { "Revenue", "Haunts", "Deliveries", "Assists", "Throws", "Dashes" };
 
-        VisualElement top, scores, net, offline, joining, online, notice, cpu, cardWrap, card, reviewWrap, table, sign;
-        Label day, dayInfo, revenue, netStatus, noticeTitle, noticeBody, cardTitle, cardBody, paused, reviewTitle, reviewBody, signHint, signWait;
+        VisualElement top, scores, crackPips, review, net, offline, joining, online, notice, cpu, cardWrap, card, reviewWrap, table, sign;
+        Label cardHint, day, dayInfo, revenue, netStatus, noticeTitle, noticeBody, cardTitle, cardBody, paused, reviewTitle, reviewBody, signHint, signWait;
         TextField code, signature;
         Button removeCpu;
         VisualElement footer;
@@ -18,13 +18,20 @@ namespace Demons
         string chipShape, tableShape;
         readonly float[] scoreSeen = new float[Scoring.MaxDemons];
         bool signFocused, codeFocused, reviewing;
-        readonly VisualElement[] stars = new VisualElement[3];
-        float reviewAt;
-        int starsLit;
+        StarRow reviewStars, cardStars;
+        Label cardStarsFor;
 
         static Hud instance;
+
+        // The boss's card or the Performance Review on screen, for MindFx to set alight.
+        public static bool CardShown { get; private set; }
+        public static Rect CardBounds { get; private set; }
+        public static Vector2 PanelSize { get; private set; }
+        CrackLights lights;
+        VisualElement world;
         VisualElement hud;
         string lastCard;
+        int cardIn;
         readonly List<(Label label, Vector3 at, float born)> popups = new();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -36,7 +43,7 @@ namespace Demons
             if (!instance || instance.hud == null) return;
             var label = UI.Text(text, "popup", UI.Jolly);
             label.style.color = color;
-            instance.hud.Add(label);
+            instance.world.Add(label);
             instance.popups.Add((label, at, Time.time));
         }
 
@@ -47,9 +54,11 @@ namespace Demons
         public static void Bubble(Vector3 at, string line)
         {
             if (!instance || instance.hud == null) return;
-            var box = UI.Box("bubble", instance.hud);
+            var box = UI.Box("bubble", instance.world);
             box.Add(UI.Text("Ring ring", "bubble-title", UI.Jolly));
-            box.Add(UI.Text(line, "bubble-body"));
+            var body = UI.Text(line, "bubble-body");
+            box.Add(body);
+            UI.Balance(body, 250);
             instance.bubbles.Add((box, at, Time.time));
         }
 
@@ -102,6 +111,11 @@ namespace Demons
         {
             var root = UI.Root(this);
             hud = UI.Box("hud", root);
+            lights = new CrackLights();
+            hud.Add(lights);
+            // Popups and speech bubbles pinned to the world sit under the cards and the review.
+            world = UI.Box("hud-layer", hud);
+            world.pickingMode = PickingMode.Ignore;
 
             top = UI.Box("hud-top", hud);
             day = UI.Text("", "hud-day", UI.Jolly);
@@ -111,6 +125,7 @@ namespace Demons
             var right = UI.Box("hud-right", hud);
             revenue = UI.Text("", "hud-revenue", UI.Jolly);
             right.Add(revenue);
+            crackPips = UI.Box("hud-cracks", hud);
             scores = UI.Box("hud-scores", right);
 
             net = UI.Box("hud-net", hud);
@@ -154,19 +169,25 @@ namespace Demons
             card = UI.Box("card", cardWrap);
             cardTitle = UI.Text("", "card-title", UI.Jolly);
             cardBody = UI.Text("", "card-body");
+            cardStarsFor = UI.Text("", "card-stars-for");
+            card.Add(cardStarsFor);
+            cardStars = new StarRow();
+            card.Add(cardStars);
             card.Add(cardTitle);
             card.Add(cardBody);
+            cardHint = UI.Text("Haunt or pick up to get back to work.", "card-hint");
+            card.Add(cardHint);
 
             paused = UI.Text("Paused", "paused", UI.Jolly);
             var pausedWrap = UI.Box("center", hud);
             pausedWrap.Add(paused);
 
             reviewWrap = UI.Box("center", hud);
-            var review = UI.Box("review", reviewWrap);
+            review = UI.Box("review", reviewWrap);
             reviewTitle = UI.Text("Performance Review", "review-title", UI.Jolly);
             review.Add(reviewTitle);
-            var starRow = UI.Box("stars", review);
-            for (int i = 0; i < stars.Length; i++) stars[i] = Star(starRow);
+            reviewStars = new StarRow();
+            review.Add(reviewStars);
             reviewBody = UI.Text("", "review-body");
             review.Add(reviewBody);
             table = UI.Box("table", review);
@@ -202,6 +223,7 @@ namespace Demons
 
             UI.Show(top, live && !state.IsLobby);
             UI.Show(scores.parent, live && !state.IsLobby);
+            if (!live || state.IsLobby) UI.Show(crackPips, false);
             if (live && !state.IsLobby) RefreshTop(state, progress);
 
             RefreshNet(state);
@@ -209,14 +231,17 @@ namespace Demons
             bool showCard = progress && Net.Now < progress.CardUntil.Value;
             bool showReview = showCard && progress.Review.Value;
             UI.Show(cardWrap, showCard && !showReview);
-            if (!showCard) lastCard = null;
-            if (showCard && !showReview) RefreshCard(progress.Card.Value.ToString());
-            UI.Show(reviewWrap, showReview);
-            if (showReview && !reviewing)
+            CardShown = showCard;
+            if (CardShown)
             {
-                reviewAt = Time.unscaledTime;
-                LightStars(0);
+                CardBounds = (showReview ? review : card).worldBound;
+                PanelSize = hud.worldBound.size;
             }
+            if (!showCard) lastCard = null;
+            if (showCard && !showReview) RefreshCard(progress.Card.Value.ToString(), progress);
+            UI.Show(cardHint, live && state.Held.Value);
+            UI.Show(reviewWrap, showReview);
+            if (showReview && !reviewing) reviewStars.Show(progress.Stars.Value);
             reviewing = showReview;
             if (showReview) RefreshReview(state, progress);
 
@@ -230,9 +255,10 @@ namespace Demons
         void RefreshTop(GameState state, Progression progress)
         {
             bool week = progress && progress.Mode.Value == GameMode.Week;
-            UI.Set(day, !progress ? "" : week ? progress.DayName[..1] + progress.DayName[1..].ToLowerInvariant() : "Survival");
-            UI.Set(dayInfo, !progress ? "" : week ? $"goal {progress.Goal:0} zł" : $"best {progress.Best.Value:0} zł  ·  fired below {progress.FireLine:0} zł");
+            UI.Set(day, !progress ? "" : week ? progress.DayTitle : "Survival");
+            UI.Set(dayInfo, !progress ? "" : week ? $"goal {progress.Goal:0} zł" : $"best {progress.Best.Value:0} zł");
             UI.Set(revenue, $"Revenue: {state.Influence.Value:0.#} zł");
+            RefreshCracks(progress);
 
             var demons = Demon.All.FindAll(d => d.Slot.Value >= 0);
             demons.Sort((a, b) => a.Slot.Value.CompareTo(b.Slot.Value));
@@ -258,6 +284,24 @@ namespace Demons
                 UI.Set(score, $"{value:0.#} zł");
                 if (value > scoreSeen[slot]) Hop(score);
                 scoreSeen[slot] = value;
+            }
+        }
+
+        // Pips under the revenue: lit for each open crack, the newest shrinking as demon ink seals it.
+        void RefreshCracks(Progression progress)
+        {
+            int max = Balance.I.maxCracks, open = progress ? progress.Cracks.Value : 0;
+            float sealing = progress ? progress.Sealing.Value : 0;
+            lights.Refresh(open, sealing, max);
+            UI.Show(crackPips, progress);
+            while (crackPips.childCount < max) UI.Box("hud-crack", crackPips);
+            while (crackPips.childCount > max) crackPips.RemoveAt(crackPips.childCount - 1);
+            for (int i = 0; i < crackPips.childCount; i++)
+            {
+                var pip = crackPips[i];
+                pip.EnableInClassList("hud-crack--open", i < open);
+                float size = i == open - 1 ? 1 - sealing * 0.6f : 1;
+                pip.style.scale = new Scale(new Vector3(size, size, 1));
             }
         }
 
@@ -293,31 +337,46 @@ namespace Demons
             codeFocused = NetBootstrap.TypingCode;
         }
 
-        void RefreshCard(string text)
+        void RefreshCard(string text, Progression progress)
         {
+            // A new day's card first reviews the day before it.
+            int stars = progress.CardStars.Value;
+            UI.Show(cardStars, stars >= 0);
+            UI.Show(cardStarsFor, stars >= 0);
+            if (text != lastCard && stars >= 0)
+            {
+                UI.Set(cardStarsFor, $"{Progression.Title(progress.Day.Value - 1)}'s review");
+                cardStars.Show(stars);
+            }
+            if (stars >= 0) cardStars.Tick();
             if (text != lastCard)
             {
                 lastCard = text;
                 card.RemoveFromClassList("card--in");
-                card.schedule.Execute(() => card.AddToClassList("card--in"));
+                cardIn = Time.frameCount + 1;
             }
+            // A frame later, so the pop-in transition starts from the hidden state; frames, not the panel's
+            // scheduler, because the boss's card arrives with the game paused.
+            if (Time.frameCount >= cardIn) card.AddToClassList("card--in");
             int split = text.IndexOf('\n');
             UI.Set(cardTitle, split < 0 ? text : text[..split]);
-            UI.Set(cardBody, split < 0 ? "" : text[(split + 1)..]);
+            if (cardBody.text != (split < 0 ? "" : text[(split + 1)..]))
+            {
+                UI.Set(cardBody, split < 0 ? "" : text[(split + 1)..]);
+                UI.Balance(cardBody, 560);
+            }
             UI.Show(cardBody, split >= 0);
         }
 
         void RefreshReview(GameState state, Progression progress)
         {
-            UI.Set(reviewBody, progress.Card.Value.ToString());
-
-            // Earned stars light up one by one once the review has landed.
-            int lit = Mathf.Clamp(Mathf.FloorToInt((Time.unscaledTime - reviewAt - 0.8f) / 0.5f) + 1, 0, progress.Stars.Value);
-            if (lit > starsLit)
+            if (reviewBody.text != progress.Card.Value.ToString())
             {
-                Audio.Ui(Sounds.I.star, lit - 1);
-                LightStars(lit);
+                UI.Set(reviewBody, progress.Card.Value.ToString());
+                UI.Balance(reviewBody, 760);
             }
+
+            reviewStars.Tick();
 
             var demons = Demon.All.FindAll(d => d.Slot.Value >= 0);
             var prestige = state.Prestige;
@@ -359,40 +418,6 @@ namespace Demons
                 signature.schedule.Execute(() => signature.Focus());
             }
             signFocused = mine;
-        }
-
-        void LightStars(int count)
-        {
-            starsLit = count;
-            for (int i = 0; i < stars.Length; i++)
-            {
-                stars[i].EnableInClassList("star--lit", i < count);
-                stars[i].MarkDirtyRepaint();
-            }
-        }
-
-        // Drawn rather than typed: neither UI font has a star glyph.
-        static VisualElement Star(VisualElement parent)
-        {
-            var star = UI.Box("star", parent);
-            star.generateVisualContent += ctx =>
-            {
-                var r = star.contentRect;
-                float outer = Mathf.Min(r.width, r.height) / 2, inner = outer * 0.45f;
-                var p = ctx.painter2D;
-                p.fillColor = star.resolvedStyle.color;
-                p.BeginPath();
-                for (int i = 0; i < 10; i++)
-                {
-                    float angle = Mathf.PI * (i / 5f - 0.5f);
-                    var point = r.center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * (i % 2 == 0 ? outer : inner);
-                    if (i == 0) p.MoveTo(point);
-                    else p.LineTo(point);
-                }
-                p.ClosePath();
-                p.Fill();
-            };
-            return star;
         }
 
         // Alternating words and keycaps: [("Join", false), ("Space", true), ("solo keyboard", false), ...].

@@ -98,22 +98,28 @@ namespace Demons
 
         SpriteRenderer sprite;
         static Sprite front, side, back;
+        static Camera tilted;
+        static Quaternion tilt;
 
-        // Stands upright facing the camera, stretched to undo the camera's tilt, so it sorts by where the demon stands
-        // and covers what's behind it. Picks the drawing from where the demon faces on screen.
+        // Stands upright facing the camera's starting view (the live one would roll with a shake), stretched to undo its
+        // tilt, so it sorts by where the demon stands and covers what's behind it. Picks the drawing from where the demon faces.
         void LateUpdate()
         {
             var cam = Camera.main;
             if (!cam) return;
+            if (cam != tilted)
+            {
+                tilted = cam;
+                tilt = cam.transform.rotation;
+            }
             front = front ? front : Resources.Load<Sprite>("Art/Devil_Front");
             side = side ? side : Resources.Load<Sprite>("Art/Devil_Side");
             back = back ? back : Resources.Load<Sprite>("Art/Devil_Back");
-            var view = cam.transform;
-            var ahead = Flat(view.forward);
+            var ahead = Flat(tilt * Vector3.forward);
             sprite.transform.rotation = Quaternion.LookRotation(ahead);
             sprite.transform.localScale = new Vector3(1, 1 / ahead.magnitude, 1);
-            float x = Vector3.Dot(transform.forward, view.right);
-            float z = Vector3.Dot(transform.forward, Flat(view.forward).normalized);
+            float x = Vector3.Dot(transform.forward, tilt * Vector3.right);
+            float z = Vector3.Dot(transform.forward, ahead.normalized);
             bool sideways = Mathf.Abs(x) > Mathf.Abs(z);
             sprite.sprite = sideways ? side : z > 0 ? back : front;
             sprite.flipX = sideways && x < 0;
