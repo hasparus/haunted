@@ -52,7 +52,8 @@ namespace Demons.PlayTests
                 yield return null;
             }
             Assert.IsTrue(GameState.Instance && GameState.Instance.IsSpawned, "Office never came online");
-            for (int i = 0; i < 4; i++) Bots.Add().Auto = true;
+            int bots = int.TryParse(System.Environment.GetEnvironmentVariable("PERF_BOTS"), out var n) ? n : 4;
+            for (int i = 0; i < bots; i++) Bots.Add().Auto = true;
             var target = Application.isBatchMode ? new RenderTexture(1280, 720, 24) : null;
             if (target) Camera.main.targetTexture = target;
             float warm = Time.realtimeSinceStartup + 5;
