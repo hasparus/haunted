@@ -21,7 +21,7 @@ Shader "Haunted/MindDistort"
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
 
             // Set by MindFx. _CardRect is the card in uv (xMin, yMin, xMax, yMax).
-            float _MindFxTime, _MindTime, _MindWobble, _MindInverted, _CardFire;
+            float _MindFxTime, _MindTime, _MindWobble, _MindInverted, _CardFire, _CardBurn;
             float4 _CardRect;
             // Up to four ink ripples: centre in uv (xy), age 0 to 1 (z), strength (w).
             float4 _Ripples[4];
@@ -102,6 +102,9 @@ Shader "Haunted/MindDistort"
                 float tongues = Fbm(float2(p.x * 16, p.y * 3 - t * 2.4));
                 float reach = (0.01 + 0.13 * tongues * tongues * tongues * 2) * (0.35 + 2.2 * above);
                 float flame = saturate(1 - d / reach) * step(-0.004, d) * _CardFire;
+                // Burning out: the flames eat in across the card from its edges as it fades.
+                float eaten = _CardBurn * 1.4 - Fbm(p * 14 + t) * 0.6;
+                flame = max(flame, step(d, 0) * saturate((eaten + d * 6) * 4) * _CardFire);
                 // Wobbly band edges so the layers lick at each other instead of following the outline.
                 float edge = (Noise(p * 40 + float2(0, -t * 5)) - 0.5) * 0.18;
                 col += half3(0.1, 0.3, 0.9) * saturate(1 - d / 0.12) * step(0, d) * 0.3 * _CardFire;

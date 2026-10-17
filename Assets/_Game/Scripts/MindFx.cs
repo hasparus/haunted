@@ -20,7 +20,7 @@ namespace Demons
         public static float Mind { get; private set; }
 
         static readonly int FxTime = Shader.PropertyToID("_MindFxTime"), Wobble = Shader.PropertyToID("_MindWobble"),
-            Inverted = Shader.PropertyToID("_MindInverted"), Clock = Shader.PropertyToID("_MindTime"), CardRect = Shader.PropertyToID("_CardRect"), CardFire = Shader.PropertyToID("_CardFire"),
+            Inverted = Shader.PropertyToID("_MindInverted"), Clock = Shader.PropertyToID("_MindTime"), CardRect = Shader.PropertyToID("_CardRect"), CardFire = Shader.PropertyToID("_CardFire"), CardBurnId = Shader.PropertyToID("_CardBurn"),
             PoolCenter = Shader.PropertyToID("_PoolCenter"), RipplesId = Shader.PropertyToID("_Ripples");
 
         const float RippleTime = 0.6f;
@@ -59,7 +59,7 @@ namespace Demons
             Mind = Mathf.MoveTowards(Mind, Mathf.Max(Mood.Gloom * 0.5f, danger), dt);
             fxTime += dt * 0.2f * (1 - (1 - Mind) * (1 - Mind));
             inverted = Mathf.MoveTowards(inverted, progress && progress.Inverted ? 1 : 0, dt * 3);
-            fire = Mathf.MoveTowards(fire, Hud.CardShown ? 1 : 0, dt * 4);
+            fire = Hud.CardShown ? Mathf.MoveTowards(fire, 1, dt * 4) : Mathf.MoveTowards(fire, 0, dt * 14);
             float wobble = Distortion ? Mind * Mind : 0;
 
             // Haunted/Paper lights the floor around the point under the board's middle, a third of the way up the screen.
@@ -84,6 +84,7 @@ namespace Demons
             Shader.SetGlobalFloat(Wobble, wobble);
             Shader.SetGlobalFloat(Inverted, inverted);
             Shader.SetGlobalFloat(CardFire, fire);
+            Shader.SetGlobalFloat(CardBurnId, Hud.CardBurn);
             if (Hud.CardShown && Hud.PanelSize.x > 0)
             {
                 var b = Hud.CardBounds;

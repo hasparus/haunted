@@ -27,6 +27,13 @@ namespace Demons
         public static bool CardShown { get; private set; }
         public static Rect CardBounds { get; private set; }
         public static Vector2 PanelSize { get; private set; }
+        // 0 while a card is up, rising to 1 as it burns out.
+        public static float CardBurn { get; private set; }
+
+        const float BurnTime = 0.075f;
+        bool cardUp;
+        float burnAt = -10;
+        VisualElement burning;
         CrackLights lights;
         VisualElement world;
         VisualElement hud;
@@ -230,17 +237,37 @@ namespace Demons
 
             bool showCard = progress && Net.Now < progress.CardUntil.Value;
             bool showReview = showCard && progress.Review.Value;
-            UI.Show(cardWrap, showCard && !showReview);
-            CardShown = showCard;
+            // A card that goes burns out: it stays up for BurnTime, text and all, fading while the flames flare over it.
+            if (cardUp && !showCard)
+            {
+                burnAt = Time.unscaledTime;
+                burning = reviewWrap.resolvedStyle.display == DisplayStyle.Flex ? review : card;
+            }
+            cardUp = showCard;
+            float burn = showCard ? 0 : Mathf.Clamp01((Time.unscaledTime - burnAt) / BurnTime);
+            bool burningOut = !showCard && burning != null && burn < 1;
+            if (burning != null && (showCard || burn >= 1))
+            {
+                burning.style.opacity = StyleKeyword.Null;
+                burning = null;
+            }
+            if (burningOut) burning.style.opacity = 1 - burn;
+            CardBurn = burningOut ? burn : 0;
+
+            if (!burningOut)
+            {
+                UI.Show(cardWrap, showCard && !showReview);
+                UI.Show(reviewWrap, showReview);
+            }
+            CardShown = showCard || burningOut;
             if (CardShown)
             {
-                CardBounds = (showReview ? review : card).worldBound;
+                CardBounds = (burningOut ? burning : showReview ? review : card).worldBound;
                 PanelSize = hud.worldBound.size;
             }
-            if (!showCard) lastCard = null;
+            if (!showCard && !burningOut) lastCard = null;
             if (showCard && !showReview) RefreshCard(progress.Card.Value.ToString(), progress);
-            UI.Show(cardHint, live && state.Held.Value);
-            UI.Show(reviewWrap, showReview);
+            if (showCard) UI.Show(cardHint, live && state.Held.Value);
             if (showReview && !reviewing) reviewStars.Show(progress.Stars.Value);
             reviewing = showReview;
             if (showReview) RefreshReview(state, progress);

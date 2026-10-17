@@ -74,6 +74,8 @@ namespace Demons
         {
             Held.Value = false;
             SetPaused(pausers.Count > 0);
+            // The held card goes the moment someone gets back to work; Hud burns it out.
+            if (Progression.Instance) Progression.Instance.CardUntil.Value = Now;
         }
 
         [Rpc(SendTo.Server)]
