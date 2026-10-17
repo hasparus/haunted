@@ -47,6 +47,18 @@ Shaking a bit more each time is right, with three adjustments:
 2. **Keep it short and below the big events.** `CameraRig.Shake` adds trauma and the offset grows with trauma², so steps feel bigger than they are. Pill = 0.5, claw = 0.4, and forgotten thought = 0.25 already exist. Suggested: `Shake(0.15 + 0.06 × openCracks)`, which gives 0.21 → 0.39 over cracks 1 to 4, never above the pill. The final shatter gets `Shake(1)`.
 3. **Shake decorates, never informs.** It has a settings toggle (`ShakeEnabled`), so the crack, the pip, and the sound must carry the message on their own. Add a short hit-flash or chromatic punch on the crack's origin for the same impact, with less motion sickness.
 
+## Juice: what the talks say, applied here
+
+Sources: Eiserloh, *Juicing Your Cameras With Math*; Nijman, *The Art of Screenshake*; Jonasson & Purho, *Juice It or Lose It*; GMTK, *Secrets of Game Feel and Juice*.
+
+- **Trauma model (Eiserloh).** `CameraRig` already follows it: trauma 0 to 1, offset grows with trauma², linear decay, Perlin noise instead of random jitter, unscaled time. Two upgrades from the talk:
+  - Add a small **roll** (about ±1.5° × trauma²). Rotation reads as stronger shake than the same amount of translation, so the translation can shrink.
+  - Give each crack's shake a **direction**: a kick away from where the thought reached him, then Perlin noise on top. Directional kick says where the hit came from; pure noise doesn't (Nijman's "kickback").
+- **Permanence (Nijman).** Leave evidence of what happened on screen. The cracks are exactly that: the miss doesn't flash and vanish, it stays until you earn it back. That's why the cracks should stay on screen, not be a HUD pip alone.
+- **Hit-stop (Nijman).** Freeze for a few frames on impact. In this networked game it must be **local and visual only**: hold sprite animation and particles for about 60 ms when a crack lands, never pause the simulation or touch `Time.timeScale`.
+- **Layer the response (Juice It or Lose It).** One event, several channels at once: crack line, flash at its origin, glass tick, his exhale, pip change, small directional shake. Each one is subtle; together they hit hard.
+- **Restraint (GMTK).** If everything shakes and flashes, nothing stands out. Keep the loud response for things that cost you: a miss, a forgotten thought, the pill, the claw. A delivered thought gets a satisfying pop, not a shake. The seal (squelch plus the pip coming back) is the one positive event that earns extra juice, because it is the comeback moment.
+
 ## Tunables (Balance → Survival)
 
 ```
