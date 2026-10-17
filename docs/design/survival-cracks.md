@@ -1,4 +1,4 @@
-# Survival loss: cracks of light
+# Losing: cracks of light (Survival and First Week at Work)
 
 ## Problem with today's rule
 
@@ -25,7 +25,15 @@ Why 5: you can count it at a glance (3 is too harsh with four people tripping ov
 
 So the real rule is "haunt about 3 in 4 thoughts". The 5 cracks just absorb streaks. The belt ramp (0.75× +1× per 150s) eventually beats any team. Rough estimate: a team that haunts 0.5 thoughts/s falls behind at about 3 min, 0.7/s at about 5 min, 0.9/s at about 7 min, then dies 30 to 60 s later. That fits `survivalHardAt = 360`.
 
-Week mode: show the cracks, but no game over. Optional later: 5 cracks restarts the day.
+## First Week at Work: same cracks, the day can be lost
+
+The cracks run in the campaign too, with the same rule (an unhaunted or forgotten thought opens one, 3 influence seals one). Today the Week has no fail state: an unhaunted thought reaching him costs nothing, so the only pressure is how fast you reach the goal. Cracks give a bad day a cost, and the Week becomes where players learn the rule before Survival tests it.
+
+- **5 cracks → he had a good day, and the day restarts.** Card: `HE HAD A GOOD DAY\nHe's coping. Try Wednesday again.` Influence goes back to what it was when the day started (the goals are cumulative, so that's last day's goal), cracks clear, and the belt starts over. Restarting the whole week would be too harsh across 7 days for a party game; one day is a short, fair retry.
+- **Each day starts with 0 cracks.** The day card is a natural reset and every day stays a clean level with its own goal. Carrying cracks over would let one bad Wednesday snowball into Thursday's new mechanic.
+- **Monday teaches it.** The first crack ever opened shows a one-time card: `HE'S COPING\nUnhaunted thoughts help him. Five cracks and he has a good day.` Monday's slow belt makes the first crack likely and cheap.
+- **Same visuals and shake as Survival,** so nothing is new when players switch modes. The one difference is the 5th crack: the light floods in and the day card follows, instead of the DOWNSIZED card.
+- **Balance check:** the Week belt never speeds up, so a team that haunts 3 in 4 thoughts never loses a day. Losing a day means falling clearly behind, usually on the day a new mechanic arrives. That's the point where a retry is fair.
 
 ## Visuals: light breaks in, not glass breaks
 
@@ -59,7 +67,7 @@ Sources: Eiserloh, *Juicing Your Cameras With Math*; Nijman, *The Art of Screens
 - **Layer the response (Juice It or Lose It).** One event, several channels at once: crack line, flash at its origin, glass tick, his exhale, pip change, small directional shake. Each one is subtle; together they hit hard.
 - **Restraint (GMTK).** If everything shakes and flashes, nothing stands out. Keep the loud response for things that cost you: a miss, a forgotten thought, the pill, the claw. A delivered thought gets a satisfying pop, not a shake. The seal (squelch plus the pip coming back) is the one positive event that earns extra juice, because it is the comeback moment.
 
-## Tunables (Balance → Survival)
+## Tunables (Balance → new "Cracks" header, shared by both modes)
 
 ```
 maxCracks = 5
