@@ -71,7 +71,7 @@ namespace Demons
                 : progress.Mode.Value == GameMode.Week ? progress.Day.Value / 6f
                 : 0.6f;
             Gloom = Mathf.MoveTowards(Gloom, target, Time.unscaledDeltaTime * 0.25f);
-            grade.saturation.value = -30 * Gloom;
+            grade.saturation.value = -10 * Gloom;
             grade.postExposure.value = -0.35f * Gloom;
             grade.colorFilter.value = Color.Lerp(Color.white, Cold, Gloom);
             vignette.intensity.value = 0.28f + 0.17f * Gloom;
