@@ -36,7 +36,7 @@ namespace Demons
             instance.popups.Add((label, at, Time.time));
         }
 
-        const float BubbleTime = 4.5f;
+        public const float BubbleTime = 4.5f;
         readonly List<(VisualElement box, Vector3 at, float born)> bubbles = new();
 
         // A speech bubble pinned beside a world point, e.g. the phone that was just answered.

@@ -75,7 +75,7 @@ namespace Demons
 
         double startTime, nextCall, nextPill, nextInterrupt, interruptUntil, endAt;
         Feature lastInterrupt;
-        bool over;
+        bool over, heardInverted;
         int signers;
         float typingSince;
         public string Signature = "";
@@ -206,6 +206,12 @@ namespace Demons
 
         void Update()
         {
+            // Polled: the meds wear off when a clock runs out, not when a value changes.
+            if (IsSpawned)
+            {
+                if (heardInverted && !Inverted) Audio.Play(Sounds.I.pillEnd);
+                heardInverted = Inverted;
+            }
             if (!IsServer || !IsSpawned || !GameState.Instance) return;
             if (over)
             {

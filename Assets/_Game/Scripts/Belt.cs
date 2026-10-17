@@ -11,6 +11,7 @@ namespace Demons
         [SerializeField] Pebble pebblePrefab;
 
         double lastSpawn = double.NegativeInfinity;
+        AudioSource hum;
 
         public float Length => Vector3.Distance(start.position, end.position);
         public Vector3 PointAt(float distance) => Vector3.MoveTowards(start.position, end.position, distance);
@@ -39,6 +40,7 @@ namespace Demons
 
         void Update()
         {
+            hum = Audio.Loop(hum, this, IsSpawned ? Sounds.I.conveyorLoop : null, null, Sounds.I.ambienceVolume);
             if (!IsServer || Demon.All.Count == 0) return;
             // Spawns are spaced by belt distance, so a faster belt brings thoughts sooner but never bunches them.
             double travel = Travel(Net.Now);

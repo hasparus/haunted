@@ -50,7 +50,8 @@ namespace Demons
 
         readonly AudioSource[] voices = new AudioSource[Voices];
         int next;
-        AudioSource music, fading;
+        AudioSource music, fading, tension, room;
+        float tense;
 
         static bool Paused => GameState.Instance && GameState.Instance.IsSpawned && GameState.Instance.Paused;
 
@@ -59,6 +60,7 @@ namespace Demons
             for (int i = 0; i < Voices; i++) voices[i] = Source(gameObject, false);
             music = Source(gameObject, true);
             fading = Source(gameObject, true);
+            tension = Source(gameObject, true);
         }
 
         static AudioSource Source(GameObject host, bool loop)
@@ -70,15 +72,19 @@ namespace Demons
             return source;
         }
 
-        public static void Play(AudioClip[] clips, Vector3? at = null) => Play(clips, at, Sounds.I.sfxVolume * SoundLevel, Sounds.I.pitchJitter);
+        public static void Play(AudioClip[] clips, Vector3? at = null) => Play(Any(clips), at, Sounds.I.sfxVolume * SoundLevel, Sounds.I.pitchJitter);
 
-        public static void Ui(AudioClip[] clips) => Play(clips, null, Sounds.I.uiVolume * SoundLevel, 0);
+        // For cues the designer orders mildest first: worse situations pick later clips.
+        public static void Play(AudioClip[] clips, int severity, Vector3? at = null) =>
+            Play(clips is { Length: > 0 } ? clips[Mathf.Clamp(severity, 0, clips.Length - 1)] : null, at, Sounds.I.sfxVolume * SoundLevel, Sounds.I.pitchJitter);
 
-        static void Play(AudioClip[] clips, Vector3? at, float volume, float jitter)
+        public static void Ui(AudioClip[] clips) => Play(Any(clips), null, Sounds.I.uiVolume * SoundLevel, 0);
+
+        static AudioClip Any(AudioClip[] clips) => clips is { Length: > 0 } ? clips[Random.Range(0, clips.Length)] : null;
+
+        static void Play(AudioClip clip, Vector3? at, float volume, float jitter)
         {
-            if (!instance || clips == null || clips.Length == 0) return;
-            var clip = clips[Random.Range(0, clips.Length)];
-            if (!clip) return;
+            if (!instance || !clip) return;
             if (lastPlayed.TryGetValue(clip, out var last) && Time.unscaledTime - last < 0.05f) return;
             lastPlayed[clip] = Time.unscaledTime;
             var voice = instance.Voice();
@@ -108,7 +114,7 @@ namespace Demons
             return Mathf.Clamp((x - 0.5f) * 2, -1, 1) * Sounds.I.stereoSpread;
         }
 
-        public static AudioSource Loop(AudioSource source, Component owner, AudioClip clip)
+        public static AudioSource Loop(AudioSource source, Component owner, AudioClip clip, Vector3? at = null, float volume = 1)
         {
             if (!instance) return source;
             if (!source)
@@ -116,7 +122,8 @@ namespace Demons
                 if (!clip) return null;
                 source = Source(owner.gameObject, true);
             }
-            source.volume = Sounds.I.sfxVolume * SoundLevel;
+            source.volume = Sounds.I.sfxVolume * SoundLevel * volume;
+            source.panStereo = Pan(at);
             if (source.clip != clip)
             {
                 source.Stop();
@@ -134,18 +141,50 @@ namespace Demons
             if (want != music.clip)
             {
                 (music, fading) = (fading, music);
-                if (music.clip == want) music.UnPause();
+                if (music.clip == want)
+                {
+                    music.UnPause();
+                    if (want == s.weekMusic) tension.UnPause();
+                }
                 else
                 {
+                    if (music.clip && music.clip == s.weekMusic) tension.Stop();
                     music.clip = want;
                     music.volume = 0;
-                    if (want) music.Play();
+                    // Scheduled, so the tension layer can start on the very same sample.
+                    double at = AudioSettings.dspTime + 0.05;
+                    if (want) music.PlayScheduled(at);
+                    if (want && want == s.weekMusic)
+                    {
+                        tension.clip = s.tensionLayer;
+                        tension.volume = 0;
+                        if (tension.clip) tension.PlayScheduled(at);
+                    }
                 }
             }
             float step = Time.unscaledDeltaTime / Mathf.Max(0.05f, s.musicFade);
             music.volume = Mathf.MoveTowards(music.volume, s.musicVolume * MusicLevel * (Paused ? s.pausedMusic : 1), step);
             fading.volume = Mathf.MoveTowards(fading.volume, 0, step);
-            if (fading.volume == 0 && fading.isPlaying) fading.Pause();
+            if (fading.volume == 0 && fading.isPlaying)
+            {
+                fading.Pause();
+                if (fading.clip == s.weekMusic) tension.Pause();
+            }
+            Tension(s);
+            var p = Progression.Instance;
+            room = Loop(room, this, p && p.IsSpawned ? s.headRoom : null, null, s.ambienceVolume);
+        }
+
+        // Never stops while the week music plays, only fades, so it stays on the beat.
+        void Tension(Sounds s)
+        {
+            var week = !s.weekMusic ? null : music.clip == s.weekMusic ? music : fading.clip == s.weekMusic ? fading : null;
+            tense = Mathf.MoveTowards(tense, Progression.Interrupting(Feature.Therapist) ? 1 : 0, Time.unscaledDeltaTime / Mathf.Max(0.05f, s.tensionFade));
+            var clip = tension.clip;
+            tension.volume = week && clip ? week.volume * s.tensionVolume * tense : 0;
+            // While silent, snap back onto the week music if a pause or a loop seam let it slip.
+            if (week && clip && week.isPlaying && tension.volume == 0 && week.timeSamples < clip.samples && Mathf.Abs(tension.timeSamples - week.timeSamples) > 2048)
+                tension.timeSamples = week.timeSamples;
         }
 
         static AudioClip Wanted(Sounds s)
