@@ -12,59 +12,118 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90e3b382cf8f48428a0208d2d736cd11, type: 3}
   m_Name: Sounds
   m_EditorClassIdentifier: Demons::Demons.Sounds
-  headquartersMusic: {fileID: 0}
-  weekMusic: {fileID: 0}
-  survivalMusic: {fileID: 0}
+  headquartersMusic: {fileID: 8300000, guid: 5def819954595d74197257e45d7274f1, type: 3}
+  weekMusic: {fileID: 8300000, guid: 888867c34645e5a47a2b85abe5f7040b, type: 3}
+  survivalMusic: {fileID: 8300000, guid: 888867c34645e5a47a2b85abe5f7040b, type: 3}
   pillMusic: {fileID: 0}
   reviewMusic: {fileID: 0}
+  tensionLayer: {fileID: 0}
+  conveyorLoop: {fileID: 8300000, guid: 6b00cd98c4971924896dc9ef9b61cf45, type: 3}
+  headRoom: {fileID: 8300000, guid: 894db2f825305fc4383279fc2222f7d4, type: 3}
   musicVolume: 0.6
   pausedMusic: 0.4
   musicFade: 1
   sfxVolume: 1
   uiVolume: 0.8
+  ambienceVolume: 0.4
+  tensionVolume: 0.8
+  tensionFade: 2
   pitchJitter: 0.06
   stereoSpread: 0.5
-  grab: []
-  catchThought: []
-  throwThought: []
-  dash: []
-  join: []
-  leave: []
-  colorPick: []
-  fall: []
-  respawn: []
-  drop: []
-  place: []
-  placeOnBelt: []
-  warning: []
-  forgotten: []
-  deliver: []
-  hauntStart: []
-  hauntLoop: {fileID: 0}
-  stamp: []
-  potLoop: {fileID: 0}
-  hammerLoop: {fileID: 0}
-  crack: []
-  phoneRing: {fileID: 0}
-  answer: []
-  levelStart: []
-  newDay: []
-  spotHunt: []
-  spotAim: []
-  spotStrike: []
-  lit: []
-  clawWarning: []
-  clawGrab: []
-  penScribble: []
-  penMash: []
-  penEscape: []
-  pillReach: []
-  pillTaken: []
-  review: []
-  signed: []
+  grab:
+  - {fileID: 8300000, guid: 154aac2b8cc920c41b7bd3db85d17ddc, type: 3}
+  catchThought:
+  - {fileID: 8300000, guid: e253c9c5617fc1e43b1f5572c90407d9, type: 3}
+  throwThought:
+  - {fileID: 8300000, guid: 6b7e83f20278e3a43ab1f3cc215da839, type: 3}
+  dash:
+  - {fileID: 8300000, guid: 302594346fb45b04e81347dd1c68917f, type: 3}
+  join:
+  - {fileID: 8300000, guid: 7f70c32392712024d9966be8e1b87584, type: 3}
+  leave:
+  - {fileID: 8300000, guid: e439ca79f72346d498915549b40524fd, type: 3}
+  colorPick:
+  - {fileID: 8300000, guid: e607090f4af981f47b4225e4a3b05765, type: 3}
+  fall:
+  - {fileID: 8300000, guid: d30a1c62413487e4aa4302a6d28cbf75, type: 3}
+  respawn:
+  - {fileID: 8300000, guid: 5c7bb206616cae24d9d0a0a9e0763288, type: 3}
+  step:
+  - {fileID: 8300000, guid: 1c37aabce4e97f342b669632c2c3f948, type: 3}
+  stepLength: 1.5
+  orbSpawn:
+  - {fileID: 8300000, guid: 9bbbe1f8fd069954fac5f14f6a64fb12, type: 3}
+  drop:
+  - {fileID: 8300000, guid: fd887eccb9e65964babc18f4c4944a2b, type: 3}
+  place:
+  - {fileID: 8300000, guid: 443fc328c930d634791e4e26217eb141, type: 3}
+  placeOnBelt:
+  - {fileID: 8300000, guid: b11fbeecbae32a245abc1c2aae55758b, type: 3}
+  warning:
+  - {fileID: 8300000, guid: 3d6d21304b9314a4ca209c0ac7d7fa69, type: 3}
+  - {fileID: 8300000, guid: be3d7231006536c4c829533540e05c98, type: 3}
+  - {fileID: 8300000, guid: d7e9cc62cd2d1e7478a7feb366fbbb4a, type: 3}
+  forgotten:
+  - {fileID: 8300000, guid: 9153b1695b62362438b937c0c047c7eb, type: 3}
+  deliver:
+  - {fileID: 8300000, guid: 4f6930be0111abb4882b622f124bc93f, type: 3}
+  hauntStart:
+  - {fileID: 8300000, guid: 43bc11579229b12439ec93f505a78ec0, type: 3}
+  hauntLoop: {fileID: 8300000, guid: c97e0906d2274164c8ee7752c6ce9a13, type: 3}
+  stamp:
+  - {fileID: 8300000, guid: 08024c636d854a74c8f3fb9677528183, type: 3}
+  potLoop: {fileID: 8300000, guid: 8a967b01694c4ba468ea1624a100e732, type: 3}
+  hammerLoop: {fileID: 8300000, guid: a821097998c6b4244bc852c2905d8116, type: 3}
+  crack:
+  - {fileID: 8300000, guid: 56f81982d0361064c8cdd4c8afb0e479, type: 3}
+  phoneRing: {fileID: 8300000, guid: c417f62d217d8174cb459661b68edf0e, type: 3}
+  answer:
+  - {fileID: 8300000, guid: f6c5a4672ce30034d8a528768559be1b, type: 3}
+  phoneTalk: {fileID: 0}
+  levelStart:
+  - {fileID: 8300000, guid: 8eb092aab791417419bdd487818c1557, type: 3}
+  newDay:
+  - {fileID: 8300000, guid: 0a0047c9617a6364bbe5f0b67e2be043, type: 3}
+  spotHunt:
+  - {fileID: 8300000, guid: 028c8826edc77d240b2a69d418b5cec3, type: 3}
+  spotSweep: {fileID: 8300000, guid: 923fcbff916164f4391505e417fd3b72, type: 3}
+  spotAim:
+  - {fileID: 8300000, guid: 70acb58412c85cf4ebcf727e08a453dc, type: 3}
+  spotStrike:
+  - {fileID: 8300000, guid: 910bad56c2932aa40989ad2661258847, type: 3}
+  lit:
+  - {fileID: 8300000, guid: 4e76d9b8db60e544e81247a38421adbe, type: 3}
+  clawWarning:
+  - {fileID: 8300000, guid: c94c6a59b9fde4c45b529e21c0a8b8a1, type: 3}
+  clawGrab:
+  - {fileID: 8300000, guid: ec1ce1f7180d2014da71a9df709def6a, type: 3}
+  penScribble:
+  - {fileID: 8300000, guid: 9c0a11cc05e316d489d2f236e282b7a4, type: 3}
+  penMash:
+  - {fileID: 8300000, guid: f5f3d96d753eeac4da844edc42d1997d, type: 3}
+  penEscape:
+  - {fileID: 8300000, guid: f1850ae164147a0498e4a9859aabc43e, type: 3}
+  pillReach:
+  - {fileID: 8300000, guid: 60de82f14cc2cd74190740bbf340b560, type: 3}
+  pillTaken:
+  - {fileID: 8300000, guid: 248875815fe3f5d468dd8389acb54c7c, type: 3}
+  pillEnd:
+  - {fileID: 8300000, guid: 028156ddda846c549801c432df3df80c, type: 3}
+  review:
+  - {fileID: 8300000, guid: 6317703dfc3005e4ab9de076d5c6c693, type: 3}
+  star:
+  - {fileID: 8300000, guid: dcd886341d7a47d4ca94249e744a97a5, type: 3}
+  - {fileID: 8300000, guid: b941ce3ff445633469bd34c9cd85acf0, type: 3}
+  - {fileID: 8300000, guid: 1b3055483decfa94dab6d64eb0e8a395, type: 3}
+  signed:
+  - {fileID: 8300000, guid: 37a0bcd2be0c5c14b9effc4d2ddd9050, type: 3}
   menuOpen: []
   menuClose: []
-  menuMove: []
-  menuChange: []
-  menuSelect: []
-  button: []
+  menuMove:
+  - {fileID: 8300000, guid: a5613b3bb4517404685e783911f7b7ba, type: 3}
+  menuChange:
+  - {fileID: 8300000, guid: a5613b3bb4517404685e783911f7b7ba, type: 3}
+  menuSelect:
+  - {fileID: 8300000, guid: a5613b3bb4517404685e783911f7b7ba, type: 3}
+  button:
+  - {fileID: 8300000, guid: a5613b3bb4517404685e783911f7b7ba, type: 3}
