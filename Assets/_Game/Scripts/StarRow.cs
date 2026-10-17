@@ -32,6 +32,14 @@ namespace Demons
             Light(due);
         }
 
+        // A still copy showing the same lit stars, for CardSplit.
+        public StarRow Copy()
+        {
+            var copy = new StarRow { earned = lit };
+            copy.Light(lit);
+            return copy;
+        }
+
         void Light(int count)
         {
             lit = count;
