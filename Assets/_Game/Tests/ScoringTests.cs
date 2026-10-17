@@ -29,5 +29,33 @@ namespace Demons.Tests
             Assert.AreEqual(4.5f, Scoring.Deliver(0b0011, deliverer: 0, prestige, weight: 3));
             CollectionAssert.AreEqual(new[] { 33.75f, 11.25f, 0, 0 }, prestige);
         }
+
+        [Test]
+        public void RehauntingSmallThoughtStealsCredit()
+        {
+            byte haunters = Scoring.Haunters(0b0001, hands: 0b0010, big: false);
+            Assert.AreEqual(0b0010, haunters);
+            byte stamps = Scoring.Haunted(0b0001, haunters, big: false);
+            Assert.AreEqual(0b0010, stamps);
+
+            var prestige = new float[Scoring.MaxDemons];
+            Scoring.Deliver(stamps, deliverer: 2, prestige);
+            CollectionAssert.AreEqual(new[] { 0, 5f, 5f, 0 }, prestige);
+        }
+
+        [Test]
+        public void JointRehauntSharesWithWhoeverIsAtTheDesk()
+        {
+            Assert.AreEqual(0b0110, Scoring.Haunted(0b0001, Scoring.Haunters(0b0001, hands: 0b0110, big: false), big: false));
+            Assert.AreEqual(0b0011, Scoring.Haunted(0b0001, Scoring.Haunters(0b0001, hands: 0b0011, big: false), big: false));
+            Assert.AreEqual(0, Scoring.Haunters(0b0001, hands: 0b0001, big: false));
+        }
+
+        [Test]
+        public void BigThoughtsCollectStamps()
+        {
+            Assert.AreEqual(0b0010, Scoring.Haunters(0b0001, hands: 0b0011, big: true));
+            Assert.AreEqual(0b0011, Scoring.Haunted(0b0001, 0b0010, big: true));
+        }
     }
 }

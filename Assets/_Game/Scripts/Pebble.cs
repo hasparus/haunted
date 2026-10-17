@@ -199,7 +199,7 @@ namespace Demons
 
             var color = Mix(Stamps.Value);
             if (State.Value == PebbleState.OnStation && Net.Find<Station>(Anchor.Value) is { } station && station.Workers.Value != 0 && station.Kind != StationKind.Hammer)
-                color = Color.Lerp(color, Mix((byte)(Stamps.Value | station.Workers.Value)), station.Progress.Value);
+                color = Color.Lerp(color, Mix(Scoring.Haunted(Stamps.Value, station.Workers.Value, Kind.Value == PebbleKind.Big)), station.Progress.Value);
             for (int slot = 0; slot < stampDots.Length; slot++)
                 if (stampDots[slot].gameObject.activeSelf) stampDots[slot].material.color = Demon.ColorOf(slot);
 
