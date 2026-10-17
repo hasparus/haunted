@@ -52,6 +52,15 @@ namespace Demons
 
         void Awake() => passes = System.Array.FindAll(Resources.FindObjectsOfTypeAll<FullScreenPassRendererFeature>(), f => f.name == "MindDistort");
 
+        // Shader globals outlive play mode; leave the editor's view clean.
+        void OnDestroy()
+        {
+            Shader.SetGlobalFloat(CardFire, 0);
+            Shader.SetGlobalFloat(CardBurnId, 0);
+            Shader.SetGlobalVectorArray(RipplesId, new Vector4[ripples.Length]);
+            Shader.SetGlobalVectorArray(GlowsId, new Vector4[glows.Length]);
+        }
+
         void Update()
         {
             var progress = Progression.Instance && Progression.Instance.IsSpawned ? Progression.Instance : null;

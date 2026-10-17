@@ -114,38 +114,6 @@ Shader "Haunted/MindDistort"
                     float front = _CardBurn * 1.4 - Fbm(p * 14 + t) * 0.6 + d * 6;
                     flame = max(flame, step(d, 0) * saturate(front * 5) * saturate((0.3 - front) * 5) * _CardFire * saturate((1.3 - _CardBurn) * 3));
 
-                    // Then the paper shards: a loose 7×3 grid of jagged, turned, differently sized pieces breaks off where
-                // the fire reaches (edges first), drifting up, shrinking and charring with a thin burning blue rim.
-                half shard = 0, shardFire = 0, char = 0;
-                if (_CardBurn > 0)
-                {
-                    float2 size = hi - lo, mid = (lo + hi) * 0.5, cell = size / float2(7, 3);
-                    float ix = floor((p.x - lo.x) / cell.x);
-                    for (int sy = 0; sy < 3; sy++)
-                        for (int sx = -1; sx <= 1; sx++)
-                        {
-                            float2 id = float2(ix + sx, sy);
-                            if (id.x < 0 || id.x > 6) continue;
-                            float h = Hash(id), h2 = Hash(id + 17.1), h3 = Hash(id + 41.7);
-                            float2 home = lo + (id + 0.5 + (float2(h2, h3) - 0.5) * 0.6) * cell;
-                            float centre = 1 - 2 * max(abs(home.x - mid.x) / size.x, abs(home.y - mid.y) / size.y);
-                            float age = _CardBurn - (0.1 + 0.6 * centre + 0.25 * h);
-                            float life = saturate(age / 2);
-                            if (age <= 0 || life >= 1) continue;
-                            float2 at = home + float2((h2 - 0.5) * 0.06 * age, (0.025 + 0.04 * h) * age + 0.012 * age * age);
-                            float turn = (h3 - 0.5) * 2.5 + (h - 0.5) * age * 1.5;
-                            float2 q = p - at;
-                            q = float2(q.x * cos(turn) - q.y * sin(turn), q.x * sin(turn) + q.y * cos(turn));
-                            float2 local = q / (cell * (0.45 + 0.4 * h2) * (1 - life * life));
-                            float r = max(abs(local.x), abs(local.y)) + (Noise(local * 3 + id * 7.3) - 0.5) * 0.7;
-                            if (r >= 1) continue;
-                            shard = 1;
-                            shardFire = max(shardFire, smoothstep(0.72, 1, r) * (0.75 + 0.25 * life));
-                            char = max(char, saturate(life * 1.6 + 0.3));
-                        }
-                }
-                col = lerp(col, lerp(half3(0.043, 0.118, 0.31), half3(0.04, 0.04, 0.06), char), shard);
-                    flame = max(flame, shardFire);
                     // Wobbly band edges so the layers lick at each other instead of following the outline.
                     float edge = (Noise(p * 40 + float2(0, -t * 5)) - 0.5) * 0.18;
                     col += half3(0.1, 0.3, 0.9) * saturate(1 - d / 0.12) * step(0, d) * 0.3 * _CardFire * dying;
