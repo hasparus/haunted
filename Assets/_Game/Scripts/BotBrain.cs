@@ -24,9 +24,9 @@ namespace Demons
 
         Object claimed;
         string doing = "";
-        Task task;
+        Task chosen;
         bool carrying;
-        public string Doing => doing ?? $"{(task.Claim ? task.Claim.name : "-")} {task.Act} {task.Button} score {task.Score:0.0} at {task.Goal:F1} carrying {carrying}";
+        public string Doing => doing ?? $"{(chosen.Claim ? chosen.Claim.name : "-")} {chosen.Act} {chosen.Button} score {chosen.Score:0.0} at {chosen.Goal:F1} carrying {carrying}";
         List<Vector3> path;
         Vector3 pathGoal;
         float repathAt, stuckFor, sidestepUntil, nextDash, nextTap;
@@ -82,7 +82,7 @@ namespace Demons
                 claimed = best.Claim;
             }
             doing = null;
-            task = best;
+            chosen = best;
             carrying = d.Carrying.Value != Net.None;
             if (Steer(bot, d, best.Goal))
             {
