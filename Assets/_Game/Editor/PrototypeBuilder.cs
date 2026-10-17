@@ -67,15 +67,15 @@ namespace Demons.Editor
             {
                 float a = i * Mathf.PI / 2 + Mathf.PI / 4;
                 var dot = Prim(PrimitiveType.Sphere, $"Stamp{i}", body,
-                    new Vector3(Mathf.Cos(a) * 0.17f, 0.17f, Mathf.Sin(a) * 0.17f), Vector3.one * 0.15f, Mat("Stamp", Color.white));
+                    new Vector3(Mathf.Cos(a) * 0.17f, 0.17f, Mathf.Sin(a) * 0.17f), Vector3.one * 0.15f, Ink("Stamp", Color.white));
                 dot.SetActive(false);
                 dots[i] = dot.GetComponent<Renderer>();
             }
 
             var wings = new GameObject("Wings");
             wings.transform.SetParent(root.transform, false);
-            Prim(PrimitiveType.Cube, "WingL", wings.transform, new Vector3(-0.35f, 0.1f, 0), new Vector3(0.45f, 0.03f, 0.25f), Mat("Wing", Color.white));
-            Prim(PrimitiveType.Cube, "WingR", wings.transform, new Vector3(0.35f, 0.1f, 0), new Vector3(0.45f, 0.03f, 0.25f), Mat("Wing", Color.white));
+            Prim(PrimitiveType.Cube, "WingL", wings.transform, new Vector3(-0.35f, 0.1f, 0), new Vector3(0.45f, 0.03f, 0.25f), Ink("Wing", Color.white));
+            Prim(PrimitiveType.Cube, "WingR", wings.transform, new Vector3(0.35f, 0.1f, 0), new Vector3(0.45f, 0.03f, 0.25f), Ink("Wing", Color.white));
             wings.SetActive(false);
 
             var shell = Prim(PrimitiveType.Sphere, "Shell", body, Vector3.zero, Vector3.one * 0.62f, Ink("Shell", Gray(0.28f)));
@@ -143,6 +143,7 @@ namespace Demons.Editor
             BuildPen(new Vector3(0, 2.2f, -4.5f), demo: false);
             BuildMeds(new Vector3(0, 2.1f, 5.9f), demo: false, size: 2.2f);
             BuildEyeView(cam);
+            BuildExhibits(cam);
             new GameObject("Progression").AddComponent<NetworkObject>().gameObject.AddComponent<Progression>();
             SaveScene(OfficePath);
         }
@@ -195,7 +196,7 @@ namespace Demons.Editor
             Seed(bays, new Vector3(-13f, 0, a - 1f));
 
             var solo = BuildStation(new Vector3(-8f, 0, a), cam);
-            FloorLabel("Hold\n{haunt}\nto haunt", bays, new Vector3(-8f, 0, a - 2f));
+            FloorLabel(Lessons[Feature.None], bays, new Vector3(-8f, 0, a - 2f));
             Seed(bays, solo.Slot.position, desk: solo);
 
             var together = BuildStation(new Vector3(-3f, 0, a), cam);
@@ -203,20 +204,20 @@ namespace Demons.Editor
             Seed(bays, together.Slot.position, stamps: 0b0001, desk: together);
 
             var big = BuildStation(new Vector3(2f, 0, a), cam);
-            FloorLabel("Big thought\nhaunt it together\n5x points", bays, new Vector3(2f, 0, a - 1.8f));
+            FloorLabel(Lessons[Feature.Big], bays, new Vector3(2f, 0, a - 1.8f));
             Seed(bays, big.Slot.position, desk: big, kind: PebbleKind.Big);
 
             FloorLabel("Left alone\nwings, -revenue", bays, new Vector3(7f, 0, a - 1.6f));
             Seed(bays, new Vector3(7f, 0, a - 0.2f), pinned: false);
 
-            FloorLabel("Meds\nwhen he takes one,\ncontrols flip", bays, new Vector3(12f, 0, a - 1.8f));
+            FloorLabel(Lessons[Feature.Pill], bays, new Vector3(12f, 0, a - 1.8f));
             BuildMeds(new Vector3(12f, 0.9f, a), demo: true);
 
             BuildStation(new Vector3(-12f, 0, b), cam, StationKind.Pot, Feature.Pot);
-            FloorLabel("Pot\nhaunts by itself", bays, new Vector3(-12f, 0, b - 1.8f));
+            FloorLabel(Lessons[Feature.Pot], bays, new Vector3(-12f, 0, b - 1.8f));
 
             BuildStation(new Vector3(-7f, 0, b), cam, StationKind.Hammer, Feature.Shell);
-            FloorLabel("Hammer: hold\n{haunt}\nto crack shells", bays, new Vector3(-7f, 0, b - 2f));
+            FloorLabel(Lessons[Feature.Shell], bays, new Vector3(-7f, 0, b - 2f));
             Seed(bays, new Vector3(-5.4f, 0, b + 0.2f), shelled: true);
 
             FloorLabel("Throw →\n{haunt}\nwhile holding", bays, new Vector3(1.6f, 0, b - 2.4f));
@@ -226,7 +227,7 @@ namespace Demons.Editor
             FloorLabel("Catch\nempty hands, in the arc", bays, new Vector3(4.4f, 0, b + 1.6f));
 
             var phone = BuildStation(new Vector3(13f, 0, b), cam);
-            FloorLabel("Phone: hold\n{haunt}\nto answer", bays, new Vector3(13f, 0, b - 2f));
+            FloorLabel(Lessons[Feature.Phone], bays, new Vector3(13f, 0, b - 2f));
             Set(headquarters, "phoneDesk", phone);
 
             FloorLabel("Haunted by many", bays, new Vector3(-12f, 0, c + 1.2f));
@@ -237,19 +238,103 @@ namespace Demons.Editor
             var clawDesk = BuildStation(new Vector3(-5.5f, 0, c), cam);
             Seed(bays, clawDesk.Slot.position, desk: clawDesk, stamps: 0b0010);
             BuildClaw(new Vector3(-5.5f, 7f, c), demo: true);
-            FloorLabel("The Hand\nsave thoughts before it lands", bays, new Vector3(-5.5f, 0, c - 1.9f));
+            FloorLabel(Lessons[Feature.Claw], bays, new Vector3(-5.5f, 0, c - 1.9f));
 
             BuildPen(new Vector3(2f, 2.2f, c), demo: true);
-            FloorLabel("The Pen: mash\n{haunt}\nor wiggle ←→", bays, new Vector3(2f, 0, c - 1.6f));
+            FloorLabel(Lessons[Feature.Pen], bays, new Vector3(2f, 0, c - 1.6f));
             FloorLabel("{dash}\nto dash", bays, new Vector3(6.5f, 0, c + 0.4f));
 
             BuildSpotlight(new Vector3(12.5f, 0.02f, c), demo: true);
-            FloorLabel("Therapist's light\nlit demons drop things", bays, new Vector3(12.5f, 0, c - 2.2f));
+            FloorLabel(Lessons[Feature.Therapist], bays, new Vector3(12.5f, 0, c - 2.2f));
 
             SaveScene(HeadquartersPath);
         }
 
-        static void BuildClaw(Vector3 pos, bool demo)
+        // What each mechanic's workstation says, in the headquarters and on its exhibit in the Office.
+        static readonly Dictionary<Feature, string> Lessons = new()
+        {
+            [Feature.None] = "Hold\n{haunt}\nto haunt",
+            [Feature.Big] = "Big thought\nhaunt it together\n5x points",
+            [Feature.Pill] = "Meds\nwhen he takes one,\ncontrols flip",
+            [Feature.Pot] = "Pot\nhaunts by itself",
+            [Feature.Shell] = "Hammer: hold\n{haunt}\nto crack shells",
+            [Feature.Phone] = "Phone: hold\n{haunt}\nto answer",
+            [Feature.Claw] = "The Hand\nsave thoughts before it lands",
+            [Feature.Pen] = "The Pen: mash\n{haunt}\nor wiggle ←→",
+            [Feature.Therapist] = "Therapist's light\nlit demons drop things",
+        };
+
+        // The headquarters' workstations again, in the mist past the Office's left wall, each out of reach and shown on
+        // the day the First Week at Work brings in its mechanic. Two on a day stand one above the other on screen.
+        static void BuildExhibits(Camera cam)
+        {
+            Vector3 Floor(float y)
+            {
+                var ray = cam.ViewportPointToRay(new Vector3(0.1f, y, 0));
+                return ray.GetPoint(-ray.origin.y / ray.direction.y);
+            }
+            for (int day = 0; day < 7; day++)
+            {
+                var mechanics = new List<Feature>();
+                for (var f = Feature.None; f <= Feature.Claw; f++)
+                    if (Progression.Introduces(day, f)) mechanics.Add(f);
+                for (int i = 0; i < mechanics.Count; i++)
+                    BuildExhibit(mechanics[i], Floor(mechanics.Count == 1 ? 0.5f : i == 0 ? 0.66f : 0.3f), cam);
+            }
+        }
+
+        static void BuildExhibit(Feature mechanic, Vector3 at, Camera cam)
+        {
+            var root = new GameObject($"Exhibit{mechanic}").transform;
+            root.position = at;
+            var exhibit = root.gameObject.AddComponent<Exhibit>();
+            exhibit.Mechanic = mechanic;
+            var prop = at + Vector3.forward * 0.9f;
+            var label = at + Vector3.back * 1.1f;
+
+            Transform Inert(StationKind kind = StationKind.Desk)
+            {
+                var st = BuildStation(prop, cam, kind);
+                var t = st.transform;
+                Object.DestroyImmediate(st);
+                Object.DestroyImmediate(t.GetComponent<NetworkObject>());
+                foreach (var c in t.GetComponentsInChildren<Collider>()) Object.DestroyImmediate(c);
+                t.SetParent(root, true);
+                return t;
+            }
+            void Thought(Transform desk, float size = 0.5f, bool shelled = false)
+            {
+                var slot = desk.Find("Slot").position;
+                Prim(PrimitiveType.Sphere, "Thought", root, slot, Vector3.one * size, Ink("Pebble", Gray(0.85f)));
+                if (shelled) Prim(PrimitiveType.Sphere, "Shell", root, slot, Vector3.one * 0.62f, Ink("Shell", Gray(0.5f)));
+            }
+            void Demo(GameObject go) => go.transform.SetParent(root, true);
+
+            switch (mechanic)
+            {
+                case Feature.None: Thought(Inert()); break;
+                case Feature.Big: Thought(Inert(), 0.8f); break;
+                case Feature.Pot: Inert(StationKind.Pot); break;
+                case Feature.Shell: Thought(Inert(StationKind.Hammer), shelled: true); break;
+                case Feature.Phone: Inert().Find("Visual/Phone").gameObject.SetActive(true); break;
+                case Feature.Claw:
+                    Thought(Inert());
+                    Demo(BuildClaw(prop + Vector3.up * 7, demo: true));
+                    break;
+                case Feature.Pen: Demo(BuildPen(prop + Vector3.up * 2.2f, demo: true)); break;
+                case Feature.Pill: Demo(BuildMeds(prop + Vector3.up * 0.9f, demo: true)); break;
+                case Feature.Therapist: Demo(BuildSpotlight(prop + Vector3.up * 0.02f, demo: true)); break;
+            }
+            FloorLabel(Lessons[mechanic], root, label);
+
+            var center = at + Vector3.up * 0.6f;
+            var mist = Prim(PrimitiveType.Quad, "Mist", root, Vector3.zero, Vector3.one * 7.5f, Mat("Mist", new Color(0.02f, 0.02f, 0.03f), "Haunted/Mist"));
+            mist.transform.SetPositionAndRotation(center + (cam.transform.position - center).normalized * 4, cam.transform.rotation);
+            mist.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            Set(exhibit, "mist", mist.GetComponent<Renderer>());
+        }
+
+        static GameObject BuildClaw(Vector3 pos, bool demo)
         {
             var go = new GameObject(demo ? "HandDemo" : "Hand");
             go.transform.position = pos;
@@ -276,9 +361,10 @@ namespace Demons.Editor
             shadow.SetActive(false);
             Set(claw, "look", look);
             Set(claw, "shadow", shadow.transform);
+            return go;
         }
 
-        static void BuildPen(Vector3 pos, bool demo)
+        static GameObject BuildPen(Vector3 pos, bool demo)
         {
             var go = new GameObject(demo ? "PenDemo" : "Pen");
             go.transform.position = pos;
@@ -291,13 +377,14 @@ namespace Demons.Editor
 
             var look = new GameObject("Look");
             look.transform.SetParent(go.transform, false);
-            // Held from its capped top, nib down, the way a hand writes.
-            look.transform.localRotation = Quaternion.Euler(0, 0, -25);
-            Prim(PrimitiveType.Cylinder, "Cap", look.transform, Vector3.zero, new Vector3(0.13f, 0.08f, 0.13f), Mat("Phone", new Color(0.98f, 0.8f, 0.08f)));
-            Prim(PrimitiveType.Cylinder, "Body", look.transform, new Vector3(0, -0.5f, 0), new Vector3(0.12f, 0.45f, 0.12f), Mat("Ink", Gray(0.05f)));
-            Prim(PrimitiveType.Capsule, "Nib", look.transform, new Vector3(0, -0.95f, 0), new Vector3(0.06f, 0.1f, 0.06f), Mat("Ink", Gray(0.05f)));
+            // A drawn pencil hanging from its eraser, tip down (the sprite stands on its tip).
+            var pencil = Point("Pencil", look.transform, new Vector3(0, -1.1f, 0)).gameObject.AddComponent<SpriteRenderer>();
+            pencil.sprite = Art("Pencil");
+            pencil.transform.localScale = Vector3.one * 0.65f;
+            pencil.sharedMaterial = Resources.Load<Material>("Fx/Card");
             look.SetActive(false);
             Set(pen, "look", look);
+            return go;
         }
 
         // Tilt the camera up and back so the board sits low, under what the host sees across the top of the screen.
@@ -311,7 +398,7 @@ namespace Demons.Editor
             view.AddComponent<EyeView>();
         }
 
-        static void BuildMeds(Vector3 pos, bool demo, float size = 1)
+        static GameObject BuildMeds(Vector3 pos, bool demo, float size = 1)
         {
             var go = new GameObject(demo ? "MedsDemo" : "Meds");
             go.transform.position = pos;
@@ -325,9 +412,10 @@ namespace Demons.Editor
             Prim(PrimitiveType.Sphere, "Cap", look.transform, new Vector3(0.3f, 0, 0), Vector3.one * 0.62f, Fade(Mat("PillCap", Gray(0.95f))));
             look.SetActive(false);
             Set(meds, "look", look.transform);
+            return go;
         }
 
-        static void BuildSpotlight(Vector3 pos, bool demo)
+        static GameObject BuildSpotlight(Vector3 pos, bool demo)
         {
             var go = new GameObject(demo ? "TherapistDemo" : "Therapist");
             go.transform.position = pos;
@@ -375,6 +463,7 @@ namespace Demons.Editor
             Set(spot, "lamp", lamp);
             Set(spot, "glow", glow);
             Set(spot, "ringMaterial", Unlit("SpotRing", warm));
+            return go;
         }
 
         // Soft alpha falloff: radial for the pool of light, lengthwise for the beam (faint at the lamp, fading out at the floor).
@@ -538,7 +627,6 @@ namespace Demons.Editor
             Set(belt, "start", Point("Start", beltGo.transform, new Vector3(beltStart, 0.75f, 0)));
             Set(belt, "end", Point("End", beltGo.transform, new Vector3(beltEnd, 0.75f, 0)));
             Set(belt, "pebblePrefab", pebble);
-            Label("<b>Thoughts →</b>", beltGo.transform, new Vector3(Mathf.Max(beltStart, -half.x) + 2, 1.2f, 0), cam);
 
             var netGo = new GameObject("Network");
             var nm = netGo.AddComponent<NetworkManager>();
@@ -593,11 +681,11 @@ namespace Demons.Editor
                     art.color = new Color(0.86f, 0.81f, 0.72f);
                     art.sharedMaterial = Resources.Load<Material>("Fx/Card");
                     // The thought sits on the middle of the drawn desk top (measured off the art: 71% up the plain desk, 73%
-                    // up the legged one), raised a tenth of its height so it rests on the top, and pulled towards the camera
-                    // along the line of sight so it stays there on screen.
+                    // up the legged one), raised a tenth of its height so it rests on the top. It stays in the drawing's
+                    // plane so a moving camera can't slide it off; the card draws at its feet's depth, behind the thought.
                     var bounds = art.sprite.bounds;
                     var on = art.transform.TransformPoint(new Vector3(0, bounds.min.y + bounds.size.y * (art.sprite.name == "Station_Desk2" ? 0.727f : 0.709f), 0));
-                    st.Slot = Point("Slot", go.transform, go.transform.InverseTransformPoint(on + art.transform.up * 0.05f + (cam.transform.position - on).normalized * 0.3f));
+                    st.Slot = Point("Slot", go.transform, go.transform.InverseTransformPoint(on + art.transform.up * 0.05f));
                     var phone = Prim(PrimitiveType.Cube, "Phone", visual, new Vector3(0.45f, 0.95f, -0.15f), new Vector3(0.35f, 0.18f, 0.22f), Mat("Phone", new Color(0.98f, 0.8f, 0.08f)));
                     phone.SetActive(false);
                     Set(st, "phone", phone);

@@ -134,6 +134,46 @@ namespace Demons
             Place();
             Animate();
             Listen();
+            Sort();
+        }
+
+        static readonly int AnchorId = Shader.PropertyToID("_Anchor");
+        MaterialPropertyBlock sortBlock;
+        Renderer[] parts;
+
+        // Drawn at the depth of a point on the floor (Haunted/Paper's _Anchor), as the cards are drawn at their feet's:
+        // on a desk just in front of the desk's drawing, on the belt at its front edge, in hand just in front of the
+        // carrier when it faces down the screen and just behind when it faces up, anywhere else right under itself.
+        void Sort()
+        {
+            var cam = Camera.main;
+            if (!cam) return;
+            var p = transform.position;
+            Vector3 at = new(p.x, 0, p.z), eye = cam.transform.position;
+            switch (State.Value)
+            {
+                case PebbleState.OnStation when Net.Find<Station>(Anchor.Value) is { } station:
+                    var feet = station.GetComponentInChildren<SpriteRenderer>() is { } art ? art.transform.position : station.transform.position;
+                    at = feet + (eye - feet).normalized * 0.1f;
+                    break;
+                case PebbleState.OnBelt:
+                    at.z -= 0.5f;
+                    break;
+                case PebbleState.Held when Net.Find<Demon>(Anchor.Value) is { } demon:
+                    var stand = demon.transform.position;
+                    var up = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up).normalized;
+                    at = stand + (eye - stand).normalized * (Vector3.Dot(demon.transform.forward, up) > 0.3f ? -0.2f : 0.2f);
+                    break;
+            }
+            sortBlock ??= new MaterialPropertyBlock();
+            parts ??= GetComponentsInChildren<Renderer>(true);
+            foreach (var r in parts)
+            {
+                if (r is TrailRenderer) continue;
+                r.GetPropertyBlock(sortBlock);
+                sortBlock.SetVector(AnchorId, new Vector4(at.x, at.y, at.z, 1));
+                r.SetPropertyBlock(sortBlock);
+            }
         }
 
         bool heard, heardShell, heardWarning;
