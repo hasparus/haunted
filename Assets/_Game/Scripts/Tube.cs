@@ -5,20 +5,24 @@ namespace Demons
 {
     public class Tube : MonoBehaviour
     {
-        const float SlideTime = 0.12f, GulpTime = 0.22f;
+        const float SlideTime = 0.18f, GulpTime = 0.22f;
 
         Springy spring;
         Vector3 mouth;
         readonly List<(Transform thought, Vector3 from, Vector3 scale, float born)> swallowing = new();
 
-        public static Tube Build(Transform end, Material paper)
+        // Stands just past the belt's far edge, so the belt ends square in front of it.
+        public static Tube Build(Transform end, Bounds belt, Material paper)
         {
             var root = new GameObject("Tube").transform;
-            root.position = new Vector3(end.position.x, 0, end.position.z);
+            root.position = new Vector3(belt.max.x + 0.58f, 0, end.position.z);
             var visual = new GameObject("Visual").transform;
             visual.SetParent(root, false);
 
-            var pipe = Part(PrimitiveType.Cylinder, visual, new Vector3(0, 0.36f, 0), new Vector3(1.05f, 0.36f, 1.05f), paper);
+            // The belt's paper, without its rolling slats.
+            var pipePaper = new Material(paper);
+            pipePaper.SetFloat("_Slats", 0);
+            var pipe = Part(PrimitiveType.Cylinder, visual, new Vector3(0, 0.36f, 0), new Vector3(1.05f, 0.36f, 1.05f), pipePaper);
             var hole = Part(PrimitiveType.Cylinder, visual, new Vector3(0, 0.725f, 0), new Vector3(0.82f, 0.01f, 0.82f), null);
             hole.GetComponent<Renderer>().sharedMaterial = Hole();
             pipe.name = "Pipe";
@@ -73,7 +77,8 @@ namespace Demons
                 if (age < SlideTime)
                 {
                     float k = Mathf.SmoothStep(0, 1, age / SlideTime);
-                    thought.position = Vector3.Lerp(from, mouth + Vector3.up * 0.18f, k);
+                    // A little hop across the gap between the belt and the rim.
+                    thought.position = Vector3.Lerp(from, mouth + Vector3.up * 0.18f, k) + Vector3.up * 0.2f * Mathf.Sin(Mathf.PI * k);
                     thought.localScale = Vector3.Scale(scale, new Vector3(1 + 0.15f * k, 1 - 0.15f * k, 1 + 0.15f * k));
                 }
                 else

@@ -584,8 +584,9 @@ namespace Demons.Editor
                     st.Slot = Point("Slot", go.transform, new Vector3(0, 1.05f, 0));
                     break;
                 default:
-                    // The drawing's footprint: blocks demons and casts the desk's shadow.
-                    var top = Prim(PrimitiveType.Cube, "Top", visual, new Vector3(0, 0.385f, -0.14f), new Vector3(1.7f, 0.77f, 0.72f), Mat("Desk", Gray(0.72f)), collider: true);
+                    // The drawing's footprint: blocks demons and casts the desk's shadow. Shallow, so a demon can step a
+                    // little behind the desk and be partly hidden by it.
+                    var top = Prim(PrimitiveType.Cube, "Top", visual, new Vector3(0, 0.385f, -0.3f), new Vector3(1.7f, 0.77f, 0.4f), Mat("Desk", Gray(0.72f)), collider: true);
                     top.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
                     // Billboard drawing standing on the footprint's front edge.
                     var art = Point("Art", visual, new Vector3(0, 0, -0.5f)).gameObject.AddComponent<SpriteRenderer>();
@@ -594,11 +595,11 @@ namespace Demons.Editor
                     art.transform.localScale = Vector3.one * 1.8f / art.sprite.bounds.size.x;
                     art.color = new Color(0.86f, 0.81f, 0.72f);
                     art.sharedMaterial = Resources.Load<Material>("Fx/Card");
-                    // The thought sits on the drawing (the plain desk's middle, the legged desk's top slab), a hair towards
-                    // the camera, so it looks centred from every desk's angle.
+                    // The thought sits on the middle of the drawn desk top (measured off the art: 71% up the plain desk, 73%
+                    // up the legged one), pulled towards the camera along the line of sight so it stays there on screen.
                     var bounds = art.sprite.bounds;
-                    var on = art.transform.TransformPoint(new Vector3(0, bounds.min.y + bounds.size.y * (art.sprite.name == "Station_Desk2" ? 0.735f : 0.5f), 0));
-                    st.Slot = Point("Slot", go.transform, go.transform.InverseTransformPoint(on - cam.transform.forward * 0.3f));
+                    var on = art.transform.TransformPoint(new Vector3(0, bounds.min.y + bounds.size.y * (art.sprite.name == "Station_Desk2" ? 0.727f : 0.709f), 0));
+                    st.Slot = Point("Slot", go.transform, go.transform.InverseTransformPoint(on + (cam.transform.position - on).normalized * 0.3f));
                     var phone = Prim(PrimitiveType.Cube, "Phone", visual, new Vector3(0.45f, 0.95f, -0.15f), new Vector3(0.35f, 0.18f, 0.22f), Mat("Phone", new Color(0.98f, 0.8f, 0.08f)));
                     phone.SetActive(false);
                     Set(st, "phone", phone);
@@ -727,7 +728,7 @@ namespace Demons.Editor
             var m = Paper(name, color);
             m.SetFloat("_Outline", 0);
             m.SetFloat("_Silhouette", 1);
-            m.SetFloat("_DepthPull", 0.45f);
+            m.SetFloat("_DepthPull", 0.12f);
             return m;
         }
 
