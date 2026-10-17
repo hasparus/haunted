@@ -46,7 +46,7 @@ namespace Demons.PlayTests
         IEnumerator Stand(Vector3 at, Vector3 facing)
         {
             foreach (var waypoint in Navigator.Path(bot.Demon.transform.position, at)) bot.WalkTo(waypoint, 0.3f);
-            bot.WalkTo(at, 0.1f, 2).Face(facing);
+            bot.WalkTo(at, 0.1f, 6).Face(facing);
             while (!bot.Idle) yield return null;
         }
 
@@ -59,12 +59,13 @@ namespace Demons.PlayTests
             found(pebble);
         }
 
-        // Whether `top` is drawn over `under` anywhere: inside where `under` shows with `top` gone (shrunk by a pixel so
-        // the drawings' soft outlines don't count), `top` changes the frame.
-        static bool Covers(Renderer[] top, Renderer[] under)
+        // Whether `top` is drawn over `under` anywhere: inside where `under` shows with `top` gone (shrunk by `trim` pixels
+        // so the drawings' soft outlines don't count), `top` changes the frame.
+        static bool Covers(Renderer[] top, Renderer[] under, int trim = 2, int least = 20)
         {
+            // Twice the game view's size: an editor's game view can be small enough to lose a toe.
             var cam = Camera.main;
-            var rt = RenderTexture.GetTemporary(cam.pixelWidth, cam.pixelHeight, 24);
+            var rt = RenderTexture.GetTemporary(cam.pixelWidth * 2, cam.pixelHeight * 2, 24);
             void Hide(Renderer[] rs, bool off) { foreach (var r in rs) r.forceRenderingOff = off; }
             var all = Shot(cam, rt);
             Hide(top, true);
@@ -80,17 +81,17 @@ namespace Demons.PlayTests
             Color32[] withAll = all.GetPixels32(), withoutTop = noTop.GetPixels32(), withNeither = neither.GetPixels32();
             var shows = new bool[w * h];
             for (int i = 0; i < shows.Length; i++) shows[i] = Differ(withoutTop[i], withNeither[i]);
-            int covered = 0;
-            for (int y = 2; y < h - 2; y++)
-            for (int x = 2; x < w - 2; x++)
+            int covered = 0, t = trim * 2;
+            for (int y = t; y < h - t; y++)
+            for (int x = t; x < w - t; x++)
             {
                 int i = y * w + x;
-                if (shows[i] && shows[i - 2] && shows[i + 2] && shows[i - 2 * w] && shows[i + 2 * w] && Differ(withAll[i], withoutTop[i])) covered++;
+                if (shows[i] && shows[i - t] && shows[i + t] && shows[i - t * w] && shows[i + t * w] && Differ(withAll[i], withoutTop[i])) covered++;
             }
             Object.Destroy(all);
             Object.Destroy(noTop);
             Object.Destroy(neither);
-            return covered > 20;
+            return covered > least;
         }
 
         static Renderer[] Drawing(Demon demon) => System.Array.FindAll(demon.GetComponentsInChildren<Renderer>(),

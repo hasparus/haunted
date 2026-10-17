@@ -391,11 +391,12 @@ namespace Demons.Editor
 
             var look = new GameObject("Look");
             look.transform.SetParent(go.transform, false);
-            // A drawn pencil hanging from its eraser, tip down (the sprite stands on its tip).
-            var pencil = Point("Pencil", look.transform, new Vector3(0, -1.1f, 0)).gameObject.AddComponent<SpriteRenderer>();
-            pencil.sprite = Art("Pencil");
-            pencil.transform.localScale = Vector3.one * 0.65f;
-            pencil.sharedMaterial = Resources.Load<Material>("Fx/Card");
+            // A drawn pen hanging from its end, nib down (the sprite stands on its nib).
+            var nib = Point("Pen", look.transform, new Vector3(0, -1.1f, 0)).gameObject.AddComponent<SpriteRenderer>();
+            nib.sprite = Art("Pen");
+            nib.transform.localScale = Vector3.one * 0.65f;
+            // It flies in to interrupt: always drawn over the demons.
+            nib.sharedMaterial = Resources.Load<Material>("Fx/CardAloft");
             look.SetActive(false);
             Set(pen, "look", look);
             return go;
@@ -421,9 +422,12 @@ namespace Demons.Editor
             var look = new GameObject("Look");
             look.transform.SetParent(go.transform, false);
             look.transform.localScale = Vector3.one * size;
-            var pill = Prim(PrimitiveType.Capsule, "Pill", look.transform, Vector3.zero, new Vector3(0.6f, 0.55f, 0.6f), Fade(Mat("Pill", new Color(0.55f, 0.75f, 1f))));
-            pill.transform.localRotation = Quaternion.Euler(0, 0, 90);
-            Prim(PrimitiveType.Sphere, "Cap", look.transform, new Vector3(0.3f, 0, 0), Vector3.one * 0.62f, Fade(Mat("PillCap", Gray(0.95f))));
+            // The drawn capsule, centred on the look (the sprite stands on its bottom edge).
+            var pill = Point("Pill", look.transform, Vector3.zero).gameObject.AddComponent<SpriteRenderer>();
+            pill.sprite = Art("Pill");
+            pill.transform.localScale = Vector3.one * 0.9f;
+            pill.transform.localPosition = Vector3.down * pill.sprite.bounds.size.y * 0.9f / 2;
+            pill.sharedMaterial = Resources.Load<Material>("Fx/Card");
             look.SetActive(false);
             Set(meds, "look", look.transform);
             return go;
@@ -624,8 +628,9 @@ namespace Demons.Editor
             if (walls)
             {
                 Prim(PrimitiveType.Cube, "WallBack", null, new Vector3(0, 0.75f, wz), new Vector3(half.x * 2, 1.5f, 0.5f), Paper("Wall", new Color(0.66f, 0.61f, 0.53f), scenery: true), collider: true);
-                var front = Prim(PrimitiveType.Cube, "WallFront", null, new Vector3(0, 0.2f, -wz), new Vector3(half.x * 2, 0.4f, 0.5f), Paper("Wall", new Color(0.66f, 0.61f, 0.53f), scenery: true), collider: true);
-                // Low enough to step up to: its collider sits behind it, so a demon can stand right at it (drawn over it).
+                // Not scenery: everything in the room stands behind it, so it covers their feet. Low enough to step up
+                // to, its collider sits behind it so a demon can stand right at it.
+                var front = Prim(PrimitiveType.Cube, "WallFront", null, new Vector3(0, 0.2f, -wz), new Vector3(half.x * 2, 0.4f, 0.5f), Paper("WallFront", new Color(0.66f, 0.61f, 0.53f)), collider: true);
                 front.GetComponent<BoxCollider>().center = new Vector3(0, 0, -0.8f);
                 float gapLow = beltZ - 0.8f, gapHigh = beltZ + 0.8f, top = half.y + 0.5f, bottom = -half.y - 0.5f;
                 foreach (var x in new[] { -wx, wx })

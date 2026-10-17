@@ -7,6 +7,7 @@ Shader "Haunted/Card"
         [PerRendererData] _MainTex("Sprite", 2D) = "white" {}
         _Flash("Flash", Range(0, 1)) = 0
         _Boil("Line boil", Range(0, 1)) = 1
+        _Aloft("Drawn this far nearer than where it stands (m): flying things that must stay in front", Float) = 0
     }
 
     SubShader
@@ -33,6 +34,7 @@ Shader "Haunted/Card"
 
             CBUFFER_START(UnityPerMaterial)
                 half _Flash, _Boil;
+                float _Aloft;
             CBUFFER_END
             float _MindTime;
             float4 _PoolCenter;
@@ -61,7 +63,7 @@ Shader "Haunted/Card"
                 // The whole card sits at the depth of the floor under its origin, Don't Starve-style (Sorting.hlsl).
                 // Sprites draw one per call here, so the origin is the feet (or, for a floating prop, above them).
                 float3 feet = Underneath(TransformObjectToWorld(float3(0, 0, 0)));
-                o.positionCS.z = SortedZ(o.positionCS, feet);
+                o.positionCS.z = SortedZ(o.positionCS, PushedBack(feet, -_Aloft));
                 o.feet = feet.xz;
                 return o;
             }

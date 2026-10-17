@@ -66,7 +66,7 @@ Shader "Haunted/MindDistort"
                 if (_CardFire > 0.001)
                 {
                     float haze = _CardFire * saturate(1 - abs(d) / 0.14);
-                    uv += haze * 0.005 * float2(Noise(p * 30 + float2(0, -t * 4)) - 0.5, Noise(p * 30 + float2(7, -t * 4)) - 0.5);
+                    uv += haze * 0.005 * float2(Noise(p * 30 + float2(0, -t * 3.6)) - 0.5, Noise(p * 30 + float2(7, -t * 3.6)) - 0.5);
                 }
 
                 // Ink ripples: a ring that pushes the picture outward and darkens it a touch, like a wet stroke.
@@ -107,14 +107,14 @@ Shader "Haunted/MindDistort"
                     // Flames: tongues of noise rising off the card, reaching furthest above it, cut into three hard bands
                     // (navy rim, electric blue, a near-white core) like a cartoon fire, over a soft blue glow.
                     float above = saturate((p.y - hi.y) / 0.15 + 0.5);
-                    float tongues = Fbm(float2(p.x * 16, p.y * 3 - t * 2.4));
+                    float tongues = Fbm(float2(p.x * 16, p.y * 3 - t * 2.16));
                     // Leaving (_CardBurn 0 to 1): the flames shrink down and fade out as the card cracks apart.
                     float reach = (0.01 + 0.13 * tongues * tongues * tongues * 2) * (0.35 + 2.2 * above) * (1 - 0.85 * _CardBurn);
                     float dying = 1 - _CardBurn;
                     float flame = saturate(1 - d / reach) * step(-0.004, d) * _CardFire * dying;
 
                     // Wobbly band edges so the layers lick at each other instead of following the outline.
-                    float edge = (Noise(p * 40 + float2(0, -t * 5)) - 0.5) * 0.18;
+                    float edge = (Noise(p * 40 + float2(0, -t * 4.5)) - 0.5) * 0.18;
                     col += half3(0.1, 0.3, 0.9) * saturate(1 - d / 0.12) * step(0, d) * 0.3 * _CardFire * dying;
                     col = lerp(col, half3(0.03, 0.08, 0.35), smoothstep(0.02, 0.05, flame));
                     col = lerp(col, half3(0.15, 0.45, 1.0), smoothstep(0.45, 0.48, flame + edge));

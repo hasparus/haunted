@@ -32,7 +32,7 @@
     max-height: 96%;
     padding: 24px 34px 22px 34px;
     background-color: var(--navy);
-    border-radius: 14px;
+    border-radius: 0;
     border-width: 1px;
     border-color: var(--hairline);
     /* Swings in on a gentle arc: a small turn about a pivot far below. */
@@ -449,7 +449,7 @@
     max-width: 620px;
     padding: 18px 30px 22px 30px;
     background-color: var(--navy);
-    border-radius: 14px;
+    border-radius: 0;
     border-width: 1px;
     border-color: var(--hairline);
     align-items: center;
@@ -544,7 +544,7 @@
     max-width: 94%;
     padding: 18px 32px 22px 32px;
     background-color: var(--navy);
-    border-radius: 14px;
+    border-radius: 0;
     border-width: 1px;
     border-color: var(--hairline);
 }
@@ -693,7 +693,7 @@
     background-color: rgba(11, 30, 79, 0.96);
     border-width: 1px;
     border-color: rgba(255, 212, 71, 0.45);
-    border-radius: 12px;
+    border-radius: 0;
     align-items: flex-start;
 }
 

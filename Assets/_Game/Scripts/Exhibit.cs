@@ -7,7 +7,7 @@ namespace Demons
     public class Exhibit : MonoBehaviour
     {
         const int Size = 768;
-        const float Delay = 0.6f, Rise = 1.6f;
+        const float Delay = 0.25f, Rise = 0.81f;
 
         static readonly int PoolCenter = Shader.PropertyToID("_PoolCenter"), MindOffId = Shader.PropertyToID("_MindOff"), RevealId = Shader.PropertyToID("_Reveal"),
             ViewId = Shader.PropertyToID("_MainTex"), SeedId = Shader.PropertyToID("_Seed");
@@ -19,7 +19,7 @@ namespace Demons
         RenderTexture view;
         MaterialPropertyBlock block;
         Vector4 roomPool;
-        float shown, todaySince = -1;
+        float shown, clearSince = -1;
 
         static bool Today(Feature mechanic)
         {
@@ -55,9 +55,11 @@ namespace Demons
         void Update()
         {
             bool today = Today(Mechanic);
-            if (!today) todaySince = -1;
-            else if (todaySince < 0) todaySince = Time.unscaledTime;
-            bool opening = today && Time.unscaledTime - todaySince > Delay;
+            // Only once the day's card is gone (and a beat after), so the window isn't one more thing at once.
+            bool clear = today && !Hud.CardShown;
+            if (!clear) clearSince = -1;
+            else if (clearSince < 0) clearSince = Time.unscaledTime;
+            bool opening = today && (shown > 0 || clear && Time.unscaledTime - clearSince > Delay);
             shown = Mathf.MoveTowards(shown, opening ? 1 : 0, Time.unscaledDeltaTime / Rise);
             bool visible = shown > 0;
             if (visible && !view)

@@ -139,7 +139,8 @@ Shader "Haunted/Paper"
                 float4 shadowCoord = TransformWorldToShadowCoord(i.positionWS);
                 Light sun = GetMainLight(shadowCoord);
                 half ndl = saturate(dot(n, sun.direction) * 0.5 + 0.5);
-                half lit = ndl * sun.shadowAttenuation;
+                // Round things (thoughts) ignore cast shadows: a desk's invisible footprint would shade half of one.
+                half lit = ndl * lerp(sun.shadowAttenuation, 1, _Silhouette);
                 // Three soft-edged bands instead of a smooth ramp.
                 half band = 0.42 + 0.33 * smoothstep(0.3, 0.36, lit) + 0.25 * smoothstep(0.62, 0.68, lit);
                 half3 light = sun.color * band;
@@ -161,6 +162,8 @@ Shader "Haunted/Paper"
                 light *= 0.45 + 0.55 * pool;
                 light += CrackLight(i.positionWS.xz) * 1.7;
                 half3 col = albedo * light;
+                // Their own soft shade instead: the lower half a step darker.
+                col *= 1 - 0.16 * _Silhouette * smoothstep(0.05, -0.15, n.y);
 
                 // Ink crosshatching in the shade: one direction where it dims, a second across it where it's dark.
                 float2 screen = i.positionCS.xy / 7.0;
