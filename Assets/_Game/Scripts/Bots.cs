@@ -19,7 +19,15 @@ namespace Demons
 
         internal Bot(Gamepad pad) => Pad = pad;
 
-        public Demon Demon => Demon.All.Find(d => d.IsOwner && LocalPlayers.Find(d.LocalIndex.Value)?.Device == Pad);
+        public Demon Demon
+        {
+            get
+            {
+                foreach (var d in Demon.All)
+                    if (d.IsOwner && LocalPlayers.Find(d.LocalIndex.Value)?.Device == Pad) return d;
+                return null;
+            }
+        }
 
         public Bot Clear()
         {
@@ -137,9 +145,19 @@ namespace Demons
             if (All.Count > 0) Remove(All[^1]);
         }
 
-        public static bool IsBot(InputDevice device) => All.Exists(b => b.Pad == device);
+        public static bool IsBot(InputDevice device)
+        {
+            foreach (var b in All)
+                if (b.Pad == device) return true;
+            return false;
+        }
 
-        public static bool IsBot(Demon demon) => All.Exists(b => b.Demon == demon);
+        public static bool IsBot(Demon demon)
+        {
+            foreach (var b in All)
+                if (b.Demon == demon) return true;
+            return false;
+        }
 
         public static void Remove(Bot bot)
         {
