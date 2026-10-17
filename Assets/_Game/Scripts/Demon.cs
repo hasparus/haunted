@@ -104,19 +104,26 @@ namespace Demons
         SpriteRenderer sprite;
         MeshRenderer shadow;
         static Sprite front, side, back;
+        static Camera tilted;
+        static Quaternion tilt;
 
-        // Billboard toward the camera; pick the drawing from where the demon faces on screen.
+        // Hold the camera's starting tilt against the root's yaw (the live rotation would roll with a shake);
+        // pick the drawing from where the demon faces on screen.
         void LateUpdate()
         {
             var cam = Camera.main;
             if (!cam) return;
+            if (cam != tilted)
+            {
+                tilted = cam;
+                tilt = cam.transform.rotation;
+            }
             front = front ? front : Resources.Load<Sprite>("Art/Devil_Front");
             side = side ? side : Resources.Load<Sprite>("Art/Devil_Side");
             back = back ? back : Resources.Load<Sprite>("Art/Devil_Back");
-            var view = cam.transform;
-            sprite.transform.rotation = view.rotation;
-            float x = Vector3.Dot(transform.forward, view.right);
-            float z = Vector3.Dot(transform.forward, Flat(view.forward).normalized);
+            sprite.transform.rotation = tilt;
+            float x = Vector3.Dot(transform.forward, tilt * Vector3.right);
+            float z = Vector3.Dot(transform.forward, Flat(tilt * Vector3.forward).normalized);
             bool sideways = Mathf.Abs(x) > Mathf.Abs(z);
             sprite.sprite = sideways ? side : z > 0 ? back : front;
             sprite.flipX = sideways && x < 0;
