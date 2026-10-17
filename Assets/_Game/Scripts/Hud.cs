@@ -30,7 +30,7 @@ namespace Demons
         // 0 while a card is up, 0 to 1 as it burns away.
         public static float CardBurn { get; private set; }
 
-        const float BurnTime = 0.16f;
+        const float BurnTime = 0.176f;
         CardSplit split;
         bool cardUp;
         float burnAt = -10;

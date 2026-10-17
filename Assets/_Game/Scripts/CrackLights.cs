@@ -79,8 +79,6 @@ namespace Demons
         {
             var r = contentRect;
             var p = ctx.painter2D;
-            p.lineJoin = LineJoin.Round;
-            p.lineCap = LineCap.Round;
             float now = Time.unscaledTime;
             for (int i = 0; i < cracks.Count; i++)
             {
@@ -107,6 +105,8 @@ namespace Demons
             p.Fill();
         }
 
+        // A filled ribbon along the grown part of the path, tapering to a sharp point at its tip: cracks are spiky,
+        // never round-ended.
         static void Stroke(Painter2D p, Vector2[] path, Rect r, float fraction, float width, Color color)
         {
             Vector2 At(int k) => r.min + Vector2.Scale(path[k], r.size);
@@ -114,17 +114,36 @@ namespace Demons
             for (int k = 1; k < path.Length; k++) total += Vector2.Distance(At(k - 1), At(k));
             float left = total * fraction;
             if (left <= 0) return;
-            p.strokeColor = color;
-            p.lineWidth = width;
-            p.BeginPath();
-            p.MoveTo(At(0));
+            points.Clear();
+            points.Add(At(0));
             for (int k = 1; k < path.Length && left > 0; k++)
             {
                 float step = Vector2.Distance(At(k - 1), At(k));
-                p.LineTo(step <= left ? At(k) : Vector2.Lerp(At(k - 1), At(k), left / step));
+                points.Add(step <= left ? At(k) : Vector2.Lerp(At(k - 1), At(k), left / step));
                 left -= step;
             }
-            p.Stroke();
+            int n = points.Count;
+            if (n < 2) return;
+            float length = total * fraction, along = 0;
+            sides.Clear();
+            for (int k = 0; k < n; k++)
+            {
+                if (k > 0) along += Vector2.Distance(points[k - 1], points[k]);
+                var a = points[Mathf.Max(k - 1, 0)];
+                var b = points[Mathf.Min(k + 1, n - 1)];
+                var d = (b - a).normalized;
+                float half = width / 2 * Mathf.Pow(1 - along / length, 0.7f);
+                sides.Add(new Vector2(-d.y, d.x) * half);
+            }
+            p.fillColor = color;
+            p.BeginPath();
+            p.MoveTo(points[0] + sides[0]);
+            for (int k = 1; k < n; k++) p.LineTo(points[k] + sides[k]);
+            for (int k = n - 1; k >= 0; k--) p.LineTo(points[k] - sides[k]);
+            p.ClosePath();
+            p.Fill();
         }
+
+        static readonly List<Vector2> points = new(), sides = new();
     }
 }

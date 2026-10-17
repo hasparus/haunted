@@ -4,14 +4,13 @@ namespace Demons
 {
     public class Meds : MonoBehaviour
     {
-        const float DemoCycle = 6f;
+        const float DemoCycle = 6f, TasteTime = 2.5f, TasteReach = 0.8f;
 
         public bool Demo;
         [SerializeField] Transform look;
 
         Springy spring;
-        Renderer[] parts;
-        Color[] colors;
+        SpriteRenderer drawing;
         Vector3 size;
         bool shown, wasReaching;
 
@@ -19,9 +18,7 @@ namespace Demons
         {
             size = look.localScale;
             spring = look.gameObject.AddComponent<Springy>();
-            parts = look.GetComponentsInChildren<Renderer>(true);
-            colors = new Color[parts.Length];
-            for (int i = 0; i < parts.Length; i++) colors[i] = parts[i].material.color;
+            drawing = look.GetComponentInChildren<SpriteRenderer>(true);
         }
 
         void Update()
@@ -50,15 +47,21 @@ namespace Demons
             if (reaching && !wasReaching && !Demo) Audio.Play(Sounds.I.pillReach, look.position);
             wasReaching = reaching;
             if (!show) return;
+            // In the headquarters, walking through the pill gives a taste: your own controls flip for a moment.
+            if (Demo)
+                foreach (var d in Demon.All)
+                {
+                    var off = d.transform.position - look.position;
+                    if (d.IsOwner && new Vector2(off.x, off.z).magnitude < TasteReach) d.Flip(TasteTime);
+                }
 
             // Dissolves while the controls stay flipped: shrinks and fades out as the effect wears off.
             float left01 = reaching ? 1 : Mathf.Clamp01(flipped / b.pillTime);
             spring.Rest(size * Mathf.Lerp(0.3f, 1, left01));
-            for (int i = 0; i < parts.Length; i++)
-                parts[i].material.color = new Color(colors[i].r, colors[i].g, colors[i].b, colors[i].a * Mathf.Lerp(0.15f, 1, left01));
-            look.localRotation = reaching
-                ? Quaternion.Euler(0, 0, Mathf.Sin(Time.time * 30) * 20 * (1 - left / b.pillWarning))
-                : Quaternion.Euler(0, 0, Mathf.Sin(Time.time * 2) * 4);
+            // Haunted/Card cuts below half alpha, so the fade stops short of that and the look hides when it's over.
+            drawing.color = new Color(1, 1, 1, Mathf.Lerp(0.55f, 1, left01));
+            float tilt = reaching ? Mathf.Sin(Time.time * 30) * 20 * (1 - left / b.pillWarning) : Mathf.Sin(Time.time * 2) * 4;
+            look.rotation = (Camera.main ? Camera.main.transform.rotation : Quaternion.identity) * Quaternion.Euler(0, 0, tilt);
         }
     }
 }

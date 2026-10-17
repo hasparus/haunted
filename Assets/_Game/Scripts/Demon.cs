@@ -16,6 +16,13 @@ namespace Demons
         // No reds or greens: the jam rules ban them.
         public static readonly string[] Names = { "Anxiety", "Anger", "Self-doubt", "Perfectionism" };
 
+        float flippedUntil;
+
+        // Just this demon's controls flipped for a while (the headquarters' pill); the Office's meds flip everyone's.
+        public void Flip(float seconds) => flippedUntil = Time.time + seconds;
+
+        public static bool AnyLocalFlipped => All.Exists(d => d.IsOwner && Time.time < d.flippedUntil);
+
         public static readonly Color[] Palette =
         {
             new(0.23f, 0.51f, 0.96f),
@@ -427,7 +434,7 @@ namespace Demons
             }
             if (input == null) return;
             var m = input.Move.ReadValue<Vector2>();
-            if (Progression.Instance && Progression.Instance.Inverted) m = -m;
+            if (Progression.Instance && Progression.Instance.Inverted || Time.time < flippedUntil) m = -m;
             int side = Mathf.Abs(m.x) > 0.6f ? (int)Mathf.Sign(m.x) : 0;
             if (Scribble.Value > 0 && side != 0 && side != wiggle) ShakeOffRpc();
             if (side != 0) wiggle = side;

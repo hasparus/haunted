@@ -19,45 +19,75 @@ namespace Demons
             var visual = new GameObject("Visual").transform;
             visual.SetParent(root, false);
 
-            // The belt's paper, without its rolling slats.
-            var pipePaper = new Material(paper);
-            pipePaper.SetFloat("_Slats", 0);
-            var pipe = Part(PrimitiveType.Cylinder, visual, new Vector3(0, 0.36f, 0), new Vector3(1.05f, 0.36f, 1.05f), pipePaper);
-            var hole = Part(PrimitiveType.Cylinder, visual, new Vector3(0, 0.725f, 0), new Vector3(0.82f, 0.01f, 0.82f), null);
-            hole.GetComponent<Renderer>().sharedMaterial = Hole();
-            pipe.name = "Pipe";
-            hole.name = "Opening";
+            // An open pipe in the belt's colours: its dark paper outside (without the rolling slats, inked along its
+            // sides), a lighter rim like the belt's lit top, and darker still inside, with a floor thoughts drop through.
+            var outside = new Material(paper);
+            outside.SetFloat("_Slats", 0);
+            outside.SetFloat("_Silhouette", 1);
+            var rim = new Material(outside) { color = new Color(0.26f, 0.26f, 0.3f) };
+            rim.SetFloat("_Silhouette", 0);
+            var inside = new Material(rim) { color = new Color(0.05f, 0.05f, 0.07f) };
+            var pipe = new GameObject("Pipe");
+            pipe.transform.SetParent(visual, false);
+            pipe.AddComponent<MeshFilter>().sharedMesh = Pipe(Radius, Radius - Wall, Height);
+            pipe.AddComponent<MeshRenderer>().sharedMaterials = new[] { outside, rim, inside };
 
             var tube = root.gameObject.AddComponent<Tube>();
             tube.spring = visual.gameObject.AddComponent<Springy>();
-            tube.mouth = root.position + Vector3.up * 0.73f;
+            tube.mouth = root.position + Vector3.up * Height;
             return tube;
         }
 
-        static Transform Part(PrimitiveType type, Transform parent, Vector3 at, Vector3 scale, Material material)
+        const float Radius = 0.525f, Wall = 0.11f, Height = 0.73f;
+
+        // Submeshes: outer wall, rim, inner wall and floor. Haunted/Paper inks where a face's UVs reach 0 or 1, so they
+        // run only up the walls and across the rim (constant around), inking the top and bottom edges and both edges
+        // of the rim but no slice or seam.
+        static Mesh Pipe(float outer, float inner, float height)
         {
-            var go = GameObject.CreatePrimitive(type);
-            Destroy(go.GetComponent<Collider>());
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = at;
-            go.transform.localScale = scale;
-            if (material) go.GetComponent<Renderer>().sharedMaterial = material;
-            return go.transform;
+            const int sides = 32;
+            float floor = height * 0.2f;
+            var vertices = new List<Vector3>();
+            var normals = new List<Vector3>();
+            var uvs = new List<Vector2>();
+            var faces = new[] { new List<int>(), new List<int>(), new List<int>() };
+            void Quad(int face, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 na, Vector3 nb, float u0, float u1, float v0, float v1)
+            {
+                int i = vertices.Count;
+                vertices.AddRange(new[] { a, b, c, d });
+                normals.AddRange(new[] { na, nb, nb, na });
+                uvs.AddRange(new[] { new Vector2(u0, v0), new Vector2(u1, v0), new Vector2(u1, v1), new Vector2(u0, v1) });
+                faces[face].AddRange(new[] { i, i + 2, i + 1, i, i + 3, i + 2 });
+            }
+            Vector3 up = Vector3.up * height, low = Vector3.up * floor;
+            for (int k = 0; k < sides; k++)
+            {
+                float a0 = k * Mathf.PI * 2 / sides, a1 = (k + 1) * Mathf.PI * 2 / sides;
+                Vector3 d0 = new(Mathf.Cos(a0), 0, Mathf.Sin(a0)), d1 = new(Mathf.Cos(a1), 0, Mathf.Sin(a1));
+                Quad(0, d0 * outer, d1 * outer, d1 * outer + up, d0 * outer + up, d0, d1, 0.5f, 0.5f, 0, 1);
+                Quad(1, d0 * inner + up, d0 * outer + up, d1 * outer + up, d1 * inner + up, Vector3.up, Vector3.up, 0, 1, 0.5f, 0.5f);
+                Quad(2, d0 * inner + up, d1 * inner + up, d1 * inner + low, d0 * inner + low, -d0, -d1, 0.5f, 0.5f, 1, 0);
+                Quad(2, d0 * inner + low, d1 * inner + low, low, low, Vector3.up, Vector3.up, 0.5f, 0.5f, 0.5f, 0.5f);
+            }
+            var mesh = new Mesh { name = "Pipe" };
+            mesh.SetVertices(vertices);
+            mesh.SetNormals(normals);
+            mesh.SetUVs(0, uvs);
+            mesh.subMeshCount = 3;
+            for (int f = 0; f < 3; f++) mesh.SetTriangles(faces[f], f);
+            mesh.RecalculateBounds();
+            return mesh;
         }
-
-        static Material hole;
-
-        static Material Hole() => hole ? hole : hole = new Material(Shader.Find("Universal Render Pipeline/Unlit")) { color = new Color(0.02f, 0.02f, 0.04f) };
 
         public void Swallow(Transform body)
         {
             var copy = Instantiate(body.gameObject, body.position, body.rotation).transform;
             foreach (var c in copy.GetComponentsInChildren<Collider>()) Destroy(c);
             foreach (var t in copy.GetComponentsInChildren<TrailRenderer>()) Destroy(t);
-            // Real depth, so the pipe's rim hides it as it sinks.
-            var noPull = new MaterialPropertyBlock();
-            noPull.SetFloat("_DepthPull", 0);
-            foreach (var r in copy.GetComponentsInChildren<Renderer>()) r.SetPropertyBlock(noPull);
+            // Sorted as scenery like the pipe, at its real depth, so the rim hides it as it sinks.
+            var scenery = new MaterialPropertyBlock();
+            scenery.SetFloat("_Scenery", 1);
+            foreach (var r in copy.GetComponentsInChildren<Renderer>()) r.SetPropertyBlock(scenery);
             swallowing.Add((copy, copy.position, copy.lossyScale, Time.time));
             spring.Punch(new Vector3(0.12f, -0.1f, 0.12f));
         }

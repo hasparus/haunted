@@ -137,44 +137,111 @@ namespace Demons
             Sort();
         }
 
-        static readonly int AnchorId = Shader.PropertyToID("_Anchor");
+        const float FallTime = 1.1f, FallFrom = 3f, BounceTime = 0.6f, BounceHeight = 0.22f, BigLift = 0.08f;
+
+        // Seconds since it appeared at the start of the belt, or infinity for any other thought.
+        float Fresh => State.Value == PebbleState.OnBelt && BeltFrom.Value == 0 ? (float)(Now - BeltSince.Value) : float.PositiveInfinity;
+
+        // 0 to 1 while drifting down onto the belt; 1 otherwise.
+        float Fallen => Mathf.Clamp01(Fresh / FallTime);
+
+        // Drifts down at an even pace, slowing as it reaches the belt, then bounces twice, each lower.
+        float Hover
+        {
+            get
+            {
+                float t = Fresh;
+                // A quarter sine cut short: slowing all the way down but still moving when it lands, so the bounce reads.
+                const float ease = 0.85f * Mathf.PI / 2;
+                if (t < FallTime) return FallFrom * (1 - Mathf.Sin(t / FallTime * ease) / Mathf.Sin(ease));
+                float u = (t - FallTime) / BounceTime;
+                return u >= 1 ? 0 : BounceHeight * Mathf.Abs(Mathf.Sin(u * Mathf.PI * 2)) * (1 - u) * (1 - u);
+            }
+        }
+
+        static readonly int AnchorId = Shader.PropertyToID("_Anchor"), AnchorFromId = Shader.PropertyToID("_AnchorFrom"), FadeId = Shader.PropertyToID("_Fade");
+        const float SortStep = 0.05f, HeldAhead = 1.2f;
         MaterialPropertyBlock sortBlock;
         Renderer[] parts;
+        Vector3 sortedAt = Vector3.positiveInfinity, sortedFrom;
+        float sortedFade;
 
-        // Drawn at the depth of a point on the floor (Haunted/Paper's _Anchor), as the cards are drawn at their feet's:
-        // on a desk just in front of the desk's drawing, on the belt at its front edge, in hand just behind the carrier
-        // when it faces up the screen and otherwise well in front of it, over any desk it stands at, anywhere else
-        // right under itself.
+        // Where the thought stands for sorting (plans/sorting.md), handed to Haunted/Paper: a step in front of the desk
+        // drawing it sits on, at the belt's front edge, in hand a step behind the carrier facing up the screen and
+        // otherwise well in front, over any desk the carrier is at; anywhere else right under itself.
         void Sort()
         {
             var cam = Camera.main;
             if (!cam) return;
             var p = transform.position;
-            Vector3 at = new(p.x, 0, p.z), eye = cam.transform.position;
+            var towards = -cam.transform.forward;
+            Vector3 at = new(p.x, 0, p.z);
             switch (State.Value)
             {
                 case PebbleState.OnStation when Net.Find<Station>(Anchor.Value) is { } station:
-                    var feet = station.GetComponentInChildren<SpriteRenderer>() is { } art ? art.transform.position : station.transform.position;
-                    at = feet + (eye - feet).normalized * 0.1f;
+                    at = station.Feet + towards * SortStep;
                     break;
                 case PebbleState.OnBelt:
                     at.z -= 0.5f;
                     break;
                 case PebbleState.Held when Net.Find<Demon>(Anchor.Value) is { } demon:
-                    var stand = demon.transform.position;
                     var up = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up).normalized;
-                    at = stand + (eye - stand).normalized * (Vector3.Dot(demon.transform.forward, up) > 0.3f ? -0.2f : 1.2f);
+                    at = demon.transform.position + towards * (Vector3.Dot(demon.transform.forward, up) > 0.3f ? -SortStep : HeldAhead);
                     break;
             }
+            float fade = Fallen;
+            DeskShadow(cam, towards);
+            if (at == sortedAt && p == sortedFrom && fade == sortedFade) return;
+            sortedAt = at;
+            sortedFrom = p;
+            sortedFade = fade;
             sortBlock ??= new MaterialPropertyBlock();
             parts ??= GetComponentsInChildren<Renderer>(true);
+            sortBlock.SetVector(AnchorId, new Vector4(at.x, at.y, at.z, 1));
+            sortBlock.SetVector(AnchorFromId, p);
+            sortBlock.SetFloat(FadeId, fade);
             foreach (var r in parts)
+                if (r is not TrailRenderer) r.SetPropertyBlock(sortBlock);
+        }
+
+        Renderer deskShadow;
+        MaterialPropertyBlock shadowBlock;
+
+        // On a desk, a soft shadow on the drawn desk top under the thought (the desk's real footprint is invisible), kept
+        // inside the top's band and drawn between the desk and the thought.
+        void DeskShadow(Camera cam, Vector3 towards)
+        {
+            var art = State.Value == PebbleState.OnStation && Net.Find<Station>(Anchor.Value) is { Kind: StationKind.Desk } desk ? desk.Art : null;
+            if (!art)
             {
-                if (r is TrailRenderer) continue;
-                r.GetPropertyBlock(sortBlock);
-                sortBlock.SetVector(AnchorId, new Vector4(at.x, at.y, at.z, 1));
-                r.SetPropertyBlock(sortBlock);
+                if (deskShadow) deskShadow.enabled = false;
+                return;
             }
+            if (!deskShadow)
+            {
+                var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                Destroy(quad.GetComponent<Collider>());
+                deskShadow = quad.GetComponent<Renderer>();
+                deskShadow.sharedMaterial = Resources.Load<Material>("Fx/Blob");
+                deskShadow.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                shadowBlock = new MaterialPropertyBlock();
+            }
+            deskShadow.enabled = true;
+            // Where the thought meets the top, a touch to the left, but never below the drawn top's front edge
+            // (measured off the art: the top spans 0.24 either side of the point 5 cm under the slot).
+            float size = body.localScale.x, height = 0.13f;
+            var slot = Net.Find<Station>(Anchor.Value).Slot.position;
+            float below = Mathf.Min(Vector3.Dot(slot - transform.position, art.up) + 0.23f * size, 0.29f - height / 2);
+            deskShadow.transform.SetPositionAndRotation(slot - art.up * below - art.right * 0.04f, art.rotation);
+            deskShadow.transform.localScale = new Vector3(0.85f * size, height, 1);
+            shadowBlock.SetVector(AnchorId, art.position + towards * SortStep * 0.5f);
+            deskShadow.SetPropertyBlock(shadowBlock);
+        }
+
+        public override void OnDestroy()
+        {
+            if (deskShadow) Destroy(deskShadow.gameObject);
+            base.OnDestroy();
         }
 
         bool heard, heardShell, heardWarning;
@@ -240,6 +307,8 @@ namespace Demons
                     break;
                 case PebbleState.OnStation when Net.Find<Station>(Anchor.Value) is { } station:
                     transform.position = station.Slot.position;
+                    // A big thought would sink into the desk top from the same slot; it sits a tenth of its height higher.
+                    if (Kind.Value == PebbleKind.Big && Camera.main) transform.position += Camera.main.transform.up * BigLift;
                     // Being haunted: a faint tremble so the work reads.
                     if (station.Workers.Value != 0)
                     {
@@ -273,9 +342,7 @@ namespace Demons
 
             if (Idle && ForgetIn < 2 && Mathf.Repeat(Time.time * 6, 1) < 0.5f) color = Color.Lerp(color, Warning, 0.8f);
             stone.material.color = color;
-            body.localPosition = Shaking
-                ? new Vector3(Mathf.Sin(Time.time * 40) * 0.04f, 0, 0)
-                : Vector3.zero;
+            body.localPosition = (Shaking ? new Vector3(Mathf.Sin(Time.time * 40) * 0.04f, 0, 0) : Vector3.zero) + Vector3.up * Hover;
         }
 
         static readonly Color Warning = new(1f, 0.83f, 0.28f);

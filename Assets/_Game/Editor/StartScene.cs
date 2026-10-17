@@ -5,7 +5,8 @@ using UnityEngine.SceneManagement;
 
 namespace Demons.Editor
 {
-    // A fresh editor (no scene open yet) opens Headquarters, the game's first scene.
+    // Play mode starts in whatever scene is open: an override left behind (an interrupted play-mode test run sets one)
+    // is cleared. A fresh editor (no scene open yet) opens Headquarters, the game's first scene.
     [InitializeOnLoad]
     static class StartScene
     {
@@ -13,6 +14,7 @@ namespace Demons.Editor
 
         static StartScene()
         {
+            EditorApplication.delayCall += () => EditorSceneManager.playModeStartScene = null;
             if (SessionState.GetBool(nameof(StartScene), false)) return;
             SessionState.SetBool(nameof(StartScene), true);
             EditorApplication.delayCall += () =>
