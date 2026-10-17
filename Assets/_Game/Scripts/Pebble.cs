@@ -120,7 +120,12 @@ namespace Demons
             Paint();
         }
 
-        public override void OnNetworkDespawn() => All.Remove(this);
+        public override void OnNetworkDespawn()
+        {
+            All.Remove(this);
+            // Leaving off the end of the belt: down the tube with it.
+            if (State.Value == PebbleState.OnBelt && Belt.Instance && Belt.Instance.Tube && BeltLeft < 1) Belt.Instance.Tube.Swallow(body);
+        }
 
         void Update()
         {

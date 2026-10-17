@@ -120,7 +120,7 @@ Shader "Haunted/Paper"
 
                 // The belt's slats, drawn as pale ridges on its top that roll along with the thoughts.
                 if (_Slats > 0 && n.y > 0.5)
-                    albedo += _Slats * 0.16 * (1 - smoothstep(0.02, 0.07, abs(frac((i.positionWS.x - _BeltTravel) / 0.45) - 0.5) - 0.38));
+                    albedo = albedo * (1 - 0.3 * _Slats) + _Slats * 0.12 * (1 - smoothstep(0.02, 0.07, abs(frac((i.positionWS.x - _BeltTravel) / 0.45) - 0.5) - 0.38));
 
                 float4 shadowCoord = TransformWorldToShadowCoord(i.positionWS);
                 Light sun = GetMainLight(shadowCoord);

@@ -36,7 +36,13 @@ namespace Demons
             return null;
         }
 
-        void Awake() => Instance = this;
+        public Tube Tube { get; private set; }
+
+        void Awake()
+        {
+            Instance = this;
+            Tube = Tube.Build(end, GetComponentInChildren<MeshRenderer>().sharedMaterial);
+        }
 
         static readonly int TravelId = Shader.PropertyToID("_BeltTravel");
 
