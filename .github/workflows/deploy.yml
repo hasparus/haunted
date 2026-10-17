@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   build:
+    name: ${{ matrix.name }}
     if: vars.ITCH_GAME != ''
     runs-on: ubuntu-latest
     strategy:
@@ -23,16 +24,20 @@ jobs:
       max-parallel: 2
       matrix:
         include:
-          - target: WebGL
+          - name: WebGL
+            target: WebGL
             channel: html5
             path: build/WebGL/haunted
-          - target: StandaloneWindows64
+          - name: Windows
+            target: StandaloneWindows64
             channel: windows
             path: build/StandaloneWindows64
-          - target: StandaloneOSX
+          - name: macOS
+            target: StandaloneOSX
             channel: mac
             path: build/StandaloneOSX
-          - target: StandaloneLinux64
+          - name: Linux
+            target: StandaloneLinux64
             channel: linux
             path: build/StandaloneLinux64
     steps:
@@ -69,6 +74,18 @@ jobs:
           versioning: Semantic
           dockerShmSize: 4g
 
+      # Zipped here because upload-artifact drops executable bits.
+      - name: Zip build
+        if: startsWith(github.ref, 'refs/tags/')
+        run: cd "${{ matrix.path }}" && zip -qry "$GITHUB_WORKSPACE/haunted-${{ matrix.channel }}.zip" .
+
+      - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: ${{ matrix.channel }}
+          path: haunted-${{ matrix.channel }}.zip
+          retention-days: 3
+
       - name: Push to itch.io
         if: ${{ !inputs.targets || contains(inputs.targets, matrix.target) }}
         env:
@@ -79,3 +96,31 @@ jobs:
           unzip -q butler.zip -d butler
           chmod +x butler/butler
           butler/butler push "${{ matrix.path }}" "$ITCH_GAME:${{ matrix.channel }}" --userversion "${GITHUB_REF_NAME}-${GITHUB_SHA::7}"
+
+  release:
+    needs: build
+    if: ${{ !cancelled() && vars.ITCH_GAME != '' && startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ITCH_GAME: ${{ vars.ITCH_GAME }}
+        run: |
+          shopt -s nullglob
+          files=(dist/*.zip)
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            if (( ${#files[@]} )); then gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber; fi
+          else
+            gh release create "$GITHUB_REF_NAME" "${files[@]}" --verify-tag --generate-notes \
+              --notes "Play in the browser or download on itch.io: https://${ITCH_GAME%%/*}.itch.io/${ITCH_GAME#*/}"
+          fi
