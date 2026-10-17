@@ -183,10 +183,11 @@ namespace Demons
             }
         }
 
+        // The pot cooks for whoever dropped the thought in, wherever they are: that isn't haunting.
         static bool Haunting(int slot)
         {
             foreach (var s in Station.All)
-                if ((s.Workers.Value & (1 << slot)) != 0) return true;
+                if (s.Kind != StationKind.Pot && (s.Workers.Value & (1 << slot)) != 0) return true;
             return false;
         }
 

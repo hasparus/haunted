@@ -166,6 +166,8 @@ namespace Demons
         MaterialPropertyBlock sortBlock;
         Renderer[] parts;
         Vector3 sortedAt = Vector3.positiveInfinity, sortedFrom;
+        // The floor point the thought is drawn at the depth of (Sort).
+        public Vector3 SortedAt => sortedAt;
         float sortedFade;
 
         // Where the thought stands for sorting (plans/sorting.md), handed to Haunted/Paper: a step in front of the desk
