@@ -63,9 +63,18 @@ namespace Demons.PlayTests
         // so the drawings' soft outlines don't count), `top` changes the frame.
         static bool Covers(Renderer[] top, Renderer[] under, int trim = 2, int least = 20)
         {
-            // Twice the game view's size: an editor's game view can be small enough to lose a toe.
+            // One size whatever the game view's, so the trim means the same everywhere. Without shadows and ambient
+            // occlusion: they'd count `under`'s shadow as `under`, and shade one drawing by the depth of another.
             var cam = Camera.main;
-            var rt = RenderTexture.GetTemporary(cam.pixelWidth * 2, cam.pixelHeight * 2, 24);
+            var rt = RenderTexture.GetTemporary(Mathf.RoundToInt(1440 * cam.aspect), 1440, 24);
+            var both = new Renderer[top.Length + under.Length];
+            top.CopyTo(both, 0);
+            under.CopyTo(both, top.Length);
+            var casts = System.Array.ConvertAll(both, r => r.shadowCastingMode);
+            foreach (var r in both) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var occlusion = System.Array.FindAll(Resources.FindObjectsOfTypeAll<UnityEngine.Rendering.Universal.ScriptableRendererFeature>(),
+                f => f.isActive && f.GetType().Name == "ScreenSpaceAmbientOcclusion");
+            foreach (var f in occlusion) f.SetActive(false);
             void Hide(Renderer[] rs, bool off) { foreach (var r in rs) r.forceRenderingOff = off; }
             var all = Shot(cam, rt);
             Hide(top, true);
@@ -74,25 +83,67 @@ namespace Demons.PlayTests
             var neither = Shot(cam, rt);
             Hide(top, false);
             Hide(under, false);
+            foreach (var f in occlusion) f.SetActive(true);
+            for (int i = 0; i < both.Length; i++) both[i].shadowCastingMode = casts[i];
             RenderTexture.ReleaseTemporary(rt);
 
-            static bool Differ(Color32 a, Color32 b) => Mathf.Abs(a.r - b.r) + Mathf.Abs(a.g - b.g) + Mathf.Abs(a.b - b.b) > 15;
             int w = rt.width, h = rt.height;
             Color32[] withAll = all.GetPixels32(), withoutTop = noTop.GetPixels32(), withNeither = neither.GetPixels32();
             var shows = new bool[w * h];
             for (int i = 0; i < shows.Length; i++) shows[i] = Differ(withoutTop[i], withNeither[i]);
+            var hit = new bool[w * h];
             int covered = 0, t = trim * 2;
             for (int y = t; y < h - t; y++)
             for (int x = t; x < w - t; x++)
             {
                 int i = y * w + x;
-                if (shows[i] && shows[i - t] && shows[i + t] && shows[i - t * w] && shows[i + t * w] && Differ(withAll[i], withoutTop[i])) covered++;
+                if (shows[i] && shows[i - t] && shows[i + t] && shows[i - t * w] && shows[i + t * w] && Differ(withAll[i], withoutTop[i], Coverage))
+                {
+                    hit[i] = true;
+                    covered++;
+                }
             }
+            if (covered > least) Evidence(withAll, withoutTop, shows, hit, w, h);
             Object.Destroy(all);
             Object.Destroy(noTop);
             Object.Destroy(neither);
             return covered > least;
         }
+
+        // A failing frame, saved at half size to Logs/Sorting: the frame, the frame without `top`, and where `under`
+        // shows (grey) with the pixels `top` covered there (magenta).
+        static void Evidence(Color32[] withAll, Color32[] withoutTop, bool[] shows, bool[] hit, int w, int h)
+        {
+            int sw = w / 2, sh = h / 2;
+            var pixels = new Color32[sw * 3 * sh];
+            for (int y = 0; y < sh; y++)
+            for (int x = 0; x < sw; x++)
+            {
+                int i = y * 2 * w + x * 2, row = y * sw * 3;
+                pixels[row + x] = withAll[i];
+                pixels[row + sw + x] = withoutTop[i];
+                pixels[row + 2 * sw + x] = hit[i] || hit[i + 1] || hit[i + w] || hit[i + w + 1] ? new Color32(255, 0, 255, 255)
+                    : shows[i] ? new Color32(90, 90, 90, 255) : new Color32(0, 0, 0, 255);
+            }
+            var sheet = new Texture2D(sw * 3, sh, TextureFormat.RGBA32, false);
+            sheet.SetPixels32(pixels);
+            System.IO.Directory.CreateDirectory("Logs/Sorting");
+            var path = $"Logs/Sorting/{TestContext.CurrentContext.Test.Name}-{System.DateTime.Now:HHmmss}.png";
+            System.IO.File.WriteAllBytes(path, sheet.EncodeToPNG());
+            Object.Destroy(sheet);
+            var by = new System.Collections.Generic.List<int>();
+            for (int i = 0; i < hit.Length; i++)
+                if (hit[i]) by.Add(Mathf.Abs(withAll[i].r - withoutTop[i].r) + Mathf.Abs(withAll[i].g - withoutTop[i].g) + Mathf.Abs(withAll[i].b - withoutTop[i].b));
+            by.Sort();
+            Debug.Log($"Sorting evidence: {System.IO.Path.GetFullPath(path)} covered {by.Count}, change median {by[by.Count / 2]}, 90% {by[by.Count * 9 / 10]}, max {by[^1]}");
+        }
+
+        // A drawing shows where it changes the frame at all. Covering takes a strong change: the art has a few
+        // half-transparent pixels (alpha 0.5 to 1 blends with what's behind) that a thought behind tints by up to ~270;
+        // a drawing really in front changes its pixels by ~500.
+        const int Faint = 15, Coverage = 300;
+
+        static bool Differ(Color32 a, Color32 b, int by = Faint) => Mathf.Abs(a.r - b.r) + Mathf.Abs(a.g - b.g) + Mathf.Abs(a.b - b.b) > by;
 
         static Renderer[] Drawing(Demon demon) => System.Array.FindAll(demon.GetComponentsInChildren<Renderer>(),
             r => r.enabled && r.shadowCastingMode != UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly);

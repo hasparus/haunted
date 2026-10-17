@@ -71,6 +71,9 @@ namespace Demons
         [SerializeField] Transform marker;
         Vector3 markerAt;
         float markerSize, markerRadius = MarkerRadius;
+        Vector3 markerFeet;
+        MaterialPropertyBlock markerBlock;
+        static readonly int FeetId = Shader.PropertyToID("_Feet"), BaseColorId = Shader.PropertyToID("_BaseColor");
         [SerializeField] GameObject scribble;
 
         [NonSerialized] public Station Using;
@@ -285,7 +288,10 @@ namespace Demons
             DontDestroyOnLoad(marker.gameObject);
             marker.GetComponent<MeshFilter>().sharedMesh = RingMesh();
             marker.localScale = Vector3.zero;
-            marker.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var ring = marker.GetComponent<Renderer>();
+            ring.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            // Flat ink sorted like a drawing (_Feet), so a desk drawn over the floor doesn't hide a ring on its top.
+            ring.material = Resources.Load<Material>("Fx/Limb");
             Paint();
         }
 
@@ -296,7 +302,7 @@ namespace Demons
             rig.Tint(tint);
             head.material.color = Color.Lerp(tint, Color.white, 0.35f);
             scribble.SetActive(Scribble.Value > 0);
-            if (IsOwner && marker) marker.GetComponent<Renderer>().material.color = Tint;
+            if (IsOwner && marker) marker.GetComponent<Renderer>().material.SetColor(BaseColorId, Tint);
         }
 
         public override void OnNetworkDespawn()
@@ -356,6 +362,9 @@ namespace Demons
             Component target = Carrying.Value == Net.None ? HeadPedestal.Near(transform.position, this) : null;
             if (!target) target = GrabTarget();
             if (!target && Carrying.Value == Net.None) target = UseTarget();
+            // A thought cooking in the pot can still be taken out, but isn't pointed at.
+            if (target is Pebble cooking && cooking.State.Value == PebbleState.OnStation
+                && Net.Find<Station>(cooking.Anchor.Value) is { Kind: StationKind.Pot } pot && pot.Workers.Value != 0) target = null;
             if (target)
             {
                 var p = target is Belt belt ? belt.PointAt(belt.FreeSpot(transform.position) ?? belt.DistanceAt(transform.position)) : target.transform.position;
@@ -365,6 +374,8 @@ namespace Demons
                 float y = target is Belt || ball && ball.State.Value == PebbleState.OnBelt ? Belt.Instance.PointAt(0).y - Pebble.SmallRadius
                     : ball ? p.y - ball.Radius : 0;
                 markerAt = new Vector3(p.x, y + 0.03f, p.z);
+                // Just behind its thought, or where it lies on the floor.
+                markerFeet = target == ball && ball.State.Value != PebbleState.Floor ? ball.SortedAt + Camera.main.transform.forward * 0.01f : markerAt;
                 if (markerSize < 0.05f) marker.position = markerAt;
             }
             float k = 1 - Mathf.Exp(-22 * Time.deltaTime);
@@ -372,6 +383,9 @@ namespace Demons
             marker.position = Vector3.Lerp(marker.position, markerAt, k);
             marker.localScale = new Vector3(markerRadius, 1, markerRadius) * markerSize;
             marker.gameObject.SetActive(markerSize > 0.01f);
+            markerBlock ??= new MaterialPropertyBlock();
+            markerBlock.SetVector(FeetId, markerFeet);
+            marker.GetComponent<Renderer>().SetPropertyBlock(markerBlock);
         }
 
         // From the transform rather than input, so every client hears every demon walk. Teleports don't count.
