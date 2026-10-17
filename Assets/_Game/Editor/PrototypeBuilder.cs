@@ -593,10 +593,11 @@ namespace Demons.Editor
                     art.color = new Color(0.86f, 0.81f, 0.72f);
                     art.sharedMaterial = Resources.Load<Material>("Fx/Card");
                     // The thought sits on the middle of the drawn desk top (measured off the art: 71% up the plain desk, 73%
-                    // up the legged one), pulled towards the camera along the line of sight so it stays there on screen.
+                    // up the legged one), raised a tenth of its height so it rests on the top, and pulled towards the camera
+                    // along the line of sight so it stays there on screen.
                     var bounds = art.sprite.bounds;
                     var on = art.transform.TransformPoint(new Vector3(0, bounds.min.y + bounds.size.y * (art.sprite.name == "Station_Desk2" ? 0.727f : 0.709f), 0));
-                    st.Slot = Point("Slot", go.transform, go.transform.InverseTransformPoint(on + (cam.transform.position - on).normalized * 0.3f));
+                    st.Slot = Point("Slot", go.transform, go.transform.InverseTransformPoint(on + art.transform.up * 0.05f + (cam.transform.position - on).normalized * 0.3f));
                     var phone = Prim(PrimitiveType.Cube, "Phone", visual, new Vector3(0.45f, 0.95f, -0.15f), new Vector3(0.35f, 0.18f, 0.22f), Mat("Phone", new Color(0.98f, 0.8f, 0.08f)));
                     phone.SetActive(false);
                     Set(st, "phone", phone);

@@ -14,6 +14,8 @@ namespace Demons
         static void ResetStatics() => All.Clear();
 
         // No reds or greens: the jam rules ban them.
+        public static readonly string[] Names = { "Anxiety", "Anger", "Self-doubt", "Perfectionism" };
+
         public static readonly Color[] Palette =
         {
             new(0.23f, 0.51f, 0.96f),
