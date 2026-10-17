@@ -36,21 +36,28 @@ The camera is already close to DST's numbers (DST uses FOV 35 and 30–60° pitc
 - The pivot is the sprite's foot on the ground. The quad tilts back with the camera, so its top leans *away* from the viewer and never dips below y = 0.
 - Other engines that went this way confirm the recipe. Game Dev Beginner separates the **LookAt method** (turn toward the camera's *position*: sprites near the screen edge visibly turn and "reveal them as flat 3D surfaces") from the **Rotation method** (`transform.rotation = mainCamera.transform.rotation`, so all sprites face the same way, "a more convincing 2D effect") ([Game Dev Beginner](https://gamedevbeginner.com/billboards-in-unity-and-how-to-make-your-own/)). DS-style games want the Rotation method, which is what `Demon.cs` does. The Defold *Smash Bash* thread uses the same thing ("All sprites (characters, trees, houses, etc) are rotated onto the same angle as camera"), pivots at the feet, a low FOV, and explicit draw order "tilemap → ground objects → all other objects", because otherwise trees near the ground plane vanish into the tilemap ([Defold forum](https://forum.defold.com/t/view-like-in-smash-bash-solved/12917)).
 
-### CPU rotation (ours) vs vertex-shader billboarding (*Songs of Conquest*)
-- **Ours:** `Demon.LateUpdate` copies `camera.rotation` onto each sprite's transform. With four demons that costs nothing and keeps the `SpriteRenderer` workflow (flipX, sprite swaps, sorting) intact.
+### We don't billboard: one fixed tilt
+Our camera never rotates: `CameraRig` only moves along a fixed direction to zoom and follow, and its shake is translation only. A sprite tilted once to the camera's rotation therefore stays view-aligned forever, so there is nothing to billboard. Every flat card in the game can share **one constant tilt**, the camera's base rotation.
+- The builder already does this for static art. Desk drawings, floor labels and the eye view get `cam.transform.rotation` once at build time (`PrototypeBuilder.cs` around lines 315, 592 and 681).
+- `Demon.LateUpdate` sets `sprite.transform.rotation = view.rotation` every frame only because the sprite is a **child of a root that yaws** to face its movement. The parent's turn would otherwise twist the card. That line is a counter-rotation, not billboarding.
+- **Better:** store the tilt once as a static `Quaternion` (the camera's rotation at scene start), and use it both for the counter-rotation and for the front/side/back pick, which reads `view.right` and `view.forward`. Don't read the live camera transform. That matters as soon as shake gains a roll component (§8): sprites copying the live rotation would roll *with* the camera and look like they hang still while the room tilts, whereas baked desks would roll with the room. One constant tilt keeps everything consistent.
+- Alternative: stop yawing the demon root and keep facing as data (it's only used to pick the drawing). Then the sprite child needs no per-frame rotation at all.
+- **Consequence:** the vertex-shader billboarding below solves a problem we don't have. A sprite shader is still useful for pivot depth, wind and tremble, lighting and fog, but it never has to rotate anything.
+
+### For reference: CPU rotation vs vertex-shader billboarding (*Songs of Conquest*)
+- **Ours:** see above. A constant tilt; the per-frame line only cancels the parent's yaw.
 - **Songs of Conquest** ([80.lv / Lavapotion](https://80.lv/articles/the-shader-approach-to-billboarding/)) needed "thousands of animated billboards". Per-object MonoBehaviour rotation "worked pretty well as long as our camera angle did not change" but fell apart once the camera zoomed and rotated. They moved it into a Shader Graph sub-graph. The camera rotation is passed in from the CPU, and vertices are displaced so the quad *appears* turned. Their constraints are worth knowing:
   - It rotates on one axis only. That's a deliberately limited billboard, not DS's full view alignment.
   - A **displacement weight is baked into UV2.y**: black at the base (stays planted), brighter with height.
   - Normals are reconstructed statically for lighting.
   - It "batches well", but characters and buildings stayed out of it, because "any performance gains are quickly outweighed by the complexity of the system."
 - Game Dev Beginner measured the two approaches as roughly equal up to ~20,000 billboards. The shader version won only because its renderers were culled when off-screen. One gotcha: when a shader moves vertices, the renderer's CPU bounds no longer match what's drawn, so pad the bounds or the sprite pops at screen edges.
-- **Verdict for `haunted`:** keep CPU rotation for demons and other hero sprites. Use a vertex-shader billboard (§7.3) for many-instance props (thoughts on the belt, clutter, plants) and wherever the pivot-depth trick is needed. Take SoC's idea of storing a per-vertex height weight, which plain quads can get from `uv.y` (as in our sway term).
+- **Verdict for `haunted`:** not needed while the camera is fixed. Bulk props (thoughts on the belt, clutter, plants) get the same constant tilt at spawn or build time and are never touched again. Still take SoC's idea of a per-vertex height weight, which plain quads can get from `uv.y`, for wind and tremble (§7.3).
 
 ### For `haunted`
-1. Keep the view-aligned billboard (`Demon.cs` already does `rotation = view.rotation`). Move it into the vertex shader (§7.3) for bulk sprites and anything that needs the pivot-depth trick from §3.
-2. Add a `heading` to `CameraRig` with optional 45° steps and DST's ease (`heading += (target - heading) * (1 - exp(-20·dt))`). Keep DST's distance→pitch coupling: `pitch = lerp(40°, 60°, inverseLerp(MinDistance, MaxDistance, distance))` works with the current 28–100 range. When the rig pulls out to fit four demons it also tilts toward top-down, which helps readability.
-3. If you rotate, the three-facing logic in `Demon.cs` already works per frame because it reads `view.right` and `view.forward`.
-4. When the heading changes, the sort axis has to follow (§3).
+1. One constant tilt for every card (see above). Bake it into static art at build time, set it once at spawn for dynamic sprites, and cache it for the demons' counter-rotation and facing pick.
+2. The sort axis is constant too: the camera's flattened forward never changes, so set `TransparencySortMode.CustomAxis` once (§3) and forget it.
+3. Only if the camera ever starts rotating or changing pitch, as DST's does (45° heading steps, pitch coupled to zoom), do the per-frame or shader billboard and the moving sort axis come back. That's a design decision, not a rendering requirement. A fixed office camera is simpler and reads better for a single-room party game.
 
 ---
 
@@ -242,7 +249,7 @@ Recovery happens at **≥ 17.5 %** (`35/200`). The hysteresis stops the state fl
 | **Normal- or height-mapped sprites** | Firelight wraps around ink shapes, rim light from the spotlight | Cheap. One extra texture per atlas | Generate with **Laigter** (free, GPL, batch CLI; makes normal, specular, parallax and AO maps) or SpriteIlluminator, or paint 4-direction light rigs. With a view-aligned billboard, `TBN = (cam.right, cam.up, −cam.forward)`. Quantise N·L through a 2–3-step ramp to keep the flat Klei look |
 | **Lightmap + SDF soft shadows** | Lights blocked by desks and people, soft penumbrae on the floor | Medium. Runs on a 256–512² world-XZ texture, not the screen | Rasterise occluder footprints (desk rectangles, demon ellipses) into the lightmap's space → **jump-flood** to an SDF → per light, march the SDF for soft shadows (Quílez-style `k·h/t` penumbra) |
 | **2D GI / Radiance Cascades** in the lightmap domain | Coloured bounce: red pads tint the floor, firelight fills corners | Higher. PC tier only, or ~256² on WebGL | Sannikov 2023, used in *Path of Exile 2*. Interactive walkthroughs: jason.today "Building Real-Time Global Illumination" (JFA + distance fields → radiance cascades, bilinear-fix for ringing); *Holographic Radiance Cascades* (arXiv 2505.02041). Because DS lighting already lives in a top-down 2D texture, 2D RC applies **directly**. That's a natural next step for this style |
-| **Vertex wind or tremble** | Plants sway; haunted thoughts and papers shiver | Free | In the billboard vertex shader: `offset = cam.right * (sin(t·f + hash(pivot)) + gust(worldXZ,t)) * amp * uv.y²`. The `uv.y²` keeps the feet planted. Port `Pebble`'s CPU tremble here for many objects |
+| **Vertex wind or tremble** | Plants sway; haunted thoughts and papers shiver | Free | In the card vertex shader: `offset = cam.right * (sin(t·f + hash(pivot)) + gust(worldXZ,t)) * amp * uv.y²`. The `uv.y²` keeps the feet planted. Port `Pebble`'s CPU tremble here for many objects |
 | **Depth-aware fog / darkness gradient** | Distance haze, low-lying fog, darkness that gets *thicker* away from light | Free if computed per object | WebGL has no depth texture, so compute fog **in the sprite and ground shaders from world position** (and the pivot depth for billboards) instead of reconstructing from the depth buffer |
 | **Erosion dissolve** (Klei's `FADE_OUT`) | Demons materialise or dissolve, thoughts burn away | Free | Noise texture in camera-projected space plus a threshold ramp, with an ink-coloured edge band |
 | **Bloom on lights only** | Fires and the spotlight glow, like DS's ¼-res bloom | URP Bloom is fine on PC; use low-quality bloom on WebGL | Keep its threshold high so white paper doesn't bloom |
@@ -286,7 +293,7 @@ Notes:
 - Add the features to **both** `PC_Renderer` and `Mobile_Renderer`, because WebGL uses Mobile.
 
 ### 7.3 Shader list
-1. **`Haunted/BillboardSprite`** (HLSL, SRP-Batcher compatible, works with `SpriteRenderer` and with plain quads): view-aligned expansion around the pivot, pivot depth, wind and tremble, lightmap + ambient, `_TintMult`/`_TintAdd` (hit flash), optional normal-map ramp, optional dissolve, per-object fog.
+1. **`Haunted/CardSprite`** (HLSL, SRP-Batcher compatible, works with `SpriteRenderer` and with plain quads; the card's tilt comes from its transform, the shader doesn't rotate anything): pivot depth, wind and tremble, lightmap + ambient, `_TintMult`/`_TintAdd` (hit flash), optional normal-map ramp, optional dissolve, per-object fog.
 2. **`Haunted/ShadowCreature`**: variant of (1) with point filtering (set on the texture or via `SamplerState sampler_PointClamp`), alpha `mind`-driven, slight UV jitter.
 3. **`Haunted/GroundSplat`**: splat + height-blend + world noise + 3 overlay tints + lightmap.
 4. **`Haunted/BlobShadow`**: multiply ellipse, height-scaled.
@@ -351,7 +358,7 @@ Compute "is this demon or thought lit?" on the CPU **with the same falloff funct
 - LUT bake: 32k pixels per frame, effectively free. Skip it when weights haven't changed.
 
 ### 7.7 Implementation order
-1. Blob shadows + custom-axis sorting + pivot-depth billboard shader (the biggest visual win, low risk).
+1. Blob shadows + custom-axis sorting + pivot-depth card shader (the biggest visual win, low risk).
 2. `MindFx` scalar, `MindDistort` fullscreen, LUT blend into Color Lookup, Distortion slider.
 3. Lightmap pass + `LightQuad` + lit sprites and floor. Then darken the office ambient with gloom (DST night = black ambient).
 4. Floor splat with world noise and rot overlay.
@@ -361,7 +368,7 @@ Compute "is this demon or thought lit?" on the CPU **with the same falloff funct
 ---
 
 ## 8. Camera feel (brief; game feel itself lives in the design docs)
-- **Eiserloh, "Juicing Your Cameras With Math" (GDC 2016)** [talk]: drive shake from a **trauma** value. Shake = trauma² (or ³), sampled from **Perlin noise** rather than random so it stays smooth and can be slowed down. Trauma decays linearly, and translational shake is mixed with *rotational* shake. Camera follow should be smoothed (asymptotic or critically damped). `CameraRig` already does trauma² × Perlin with linear decay and exponential follow (`1 − exp(−3·dt)`). The one missing piece is a small **roll** component, ±1–2° × trauma². That only works if the billboards follow the camera's full rotation. Ours do, because they copy `camera.rotation`, so roll keeps sprites upright *relative to the screen*.
+- **Eiserloh, "Juicing Your Cameras With Math" (GDC 2016)** [talk]: drive shake from a **trauma** value. Shake = trauma² (or ³), sampled from **Perlin noise** rather than random so it stays smooth and can be slowed down. Trauma decays linearly, and translational shake is mixed with *rotational* shake. Camera follow should be smoothed (asymptotic or critically damped). `CameraRig` already does trauma² × Perlin with linear decay and exponential follow (`1 − exp(−3·dt)`). The one missing piece is a small **roll** component, ±1–2° × trauma². With fixed-tilt cards, roll simply tilts the whole picture, sprites included, which is what you want. The one catch: `Demon.cs` currently copies the *live* camera rotation, so demons would counter-roll and appear to hang still. Cache the tilt first (§1).
 - **Nijman, "The Art of Screenshake" (INDIGO 2013)** [talk], **Jonasson & Purho, "Juice it or lose it" (GDC Europe 2012)** [talk], **GMTK, "Secrets of Game Feel and Juice"** [talk]: hit-stop, kickback, permanence, tweened squash and stretch, and layering many small reactions on every event. For the renderer, that means the post stack's "mind" response should **pulse on events** (a short spike of wobble or chromatic split when a thought is lost or a crack opens) on top of the slow `mind` ramp. Keep every channel behind the existing effects/shake toggles and the new Distortion slider.
 
 ---
