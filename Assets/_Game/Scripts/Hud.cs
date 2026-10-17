@@ -238,7 +238,7 @@ namespace Demons
 
             bool showCard = progress && Net.Now < progress.CardUntil.Value;
             bool showReview = showCard && progress.Review.Value;
-            // A card that goes flares out over BurnTime: it lifts and fades while the flames around it surge and die.
+            // A card that goes lifts and fades over BurnTime, its flames fading with it.
             if (cardUp && !showCard)
             {
                 burnAt = Time.unscaledTime;
@@ -261,7 +261,7 @@ namespace Demons
             if (cardBurning)
             {
                 burning.style.transitionDuration = new StyleList<TimeValue>(new List<TimeValue> { new(0) });
-                burning.style.opacity = 1 - burn * burn;
+                burning.style.opacity = 1 - burn;
                 burning.style.translate = new Translate(0, -12 * burn);
                 burning.style.scale = new Scale(Vector3.one * (1 - 0.03f * burn));
             }
