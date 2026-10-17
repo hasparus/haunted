@@ -450,7 +450,7 @@ namespace Demons
             if (down && Net.Find<Pebble>(Carrying.Value) is { } held)
             {
                 var b = Balance.I;
-                held.Toss(this, from, facing, Flat(facing).normalized * b.throwSpeed + Vector3.up * b.throwLift + Flat(momentum) * b.throwInherit);
+                held.Toss(this, from, facing, Flat(facing).normalized * b.throwSpeed + Vector3.up * b.throwLift + Vector3.ClampMagnitude(Flat(momentum), b.throwInheritMax) * b.throwInherit);
                 Throws.Value++;
             }
             else Using = down ? UseTarget(from, facing, Slack) : null;
