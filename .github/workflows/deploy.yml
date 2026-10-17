@@ -69,7 +69,9 @@ jobs:
         run: echo "value=$(git describe --tags --always | sed 's/^v//')" >> "$GITHUB_OUTPUT"
 
       - uses: game-ci/unity-builder@v4
+        id: build
         if: ${{ !inputs.targets || contains(inputs.targets, matrix.target) }}
+        continue-on-error: true
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
@@ -81,6 +83,21 @@ jobs:
           version: ${{ steps.version.outputs.value }}
           dockerShmSize: 4g
           # The default cap is 95% of RAM, which leaves the swap above unused; WebGL linking needs it.
+          dockerMemoryLimit: 22g
+
+      # WebGL is sometimes killed for memory (exit 137); a second attempt usually gets through.
+      - uses: game-ci/unity-builder@v4
+        if: ${{ steps.build.outcome == 'failure' }}
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: ${{ matrix.target }}
+          buildName: haunted
+          versioning: Custom
+          version: ${{ steps.version.outputs.value }}
+          dockerShmSize: 4g
           dockerMemoryLimit: 22g
 
       # Zipped here because upload-artifact drops executable bits.
