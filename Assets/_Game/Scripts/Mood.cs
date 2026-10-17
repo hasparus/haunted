@@ -12,7 +12,16 @@ namespace Demons
         Vignette vignette;
         ColorAdjustments grade;
         Camera graded;
+        UniversalAdditionalCameraData gradedData;
         float gloom;
+
+        const string EffectsKey = "effects";
+
+        public static bool Effects
+        {
+            get => PlayerPrefs.GetInt(EffectsKey, 1) == 1;
+            set => PlayerPrefs.SetInt(EffectsKey, value ? 1 : 0);
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Create()
@@ -45,8 +54,9 @@ namespace Demons
             if (cam && cam != graded)
             {
                 graded = cam;
-                cam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
+                gradedData = cam.GetUniversalAdditionalCameraData();
             }
+            if (gradedData && gradedData.renderPostProcessing != Effects) gradedData.renderPostProcessing = Effects;
 
             var progress = Progression.Instance;
             float target = !progress || !progress.IsSpawned ? 0

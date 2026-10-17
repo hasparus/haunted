@@ -9,8 +9,8 @@ namespace Demons
     {
         static readonly string[] Columns = { "Prestige", "Haunts", "Deliveries", "Assists", "Throws", "Dashes" };
 
-        VisualElement top, chips, net, offline, joining, cpu, cardWrap, card, reviewWrap, table, sign;
-        Label status, netStatus, cardTitle, cardBody, paused, reviewTitle, reviewBody, signHint, signWait;
+        VisualElement top, chips, net, offline, joining, online, notice, cpu, cardWrap, card, reviewWrap, table, sign;
+        Label status, netStatus, noticeBody, cardTitle, cardBody, paused, reviewTitle, reviewBody, signHint, signWait;
         TextField code, signature;
         Button removeCpu;
         VisualElement footer;
@@ -84,8 +84,16 @@ namespace Demons
             cpu = UI.Box("hud-net-row", net);
             UI.Button("+ CPU demon", Bots.AddCpu, cpu);
             removeCpu = UI.Button("\u2212 CPU demon", Bots.RemoveCpu, cpu);
+            online = UI.Box("hud-net-row", net);
+            UI.Button("Leave room", () => NetBootstrap.Instance.Leave(), online);
             netStatus = UI.Text("", "hud-net-status");
             net.Add(netStatus);
+
+            notice = UI.Box("notice", hud);
+            notice.Add(UI.Text("Couldn't connect", "notice-title", UI.PlexBold));
+            noticeBody = UI.Text("", "notice-body");
+            notice.Add(noticeBody);
+            UI.Button("OK", () => NetBootstrap.Instance.DismissError(), notice).AddToClassList("button--primary");
 
             cardWrap = UI.Box("center", hud);
             card = UI.Box("card", cardWrap);
@@ -196,6 +204,9 @@ namespace Demons
             UI.Show(joining, show && NetBootstrap.TypingCode);
             UI.Show(cpu, show && lobby && boot.IsServer);
             UI.Show(removeCpu, Bots.All.Count > 0);
+            UI.Show(online, show && boot.Online);
+            UI.Show(notice, !string.IsNullOrEmpty(boot.Error) && !Menu.Open);
+            UI.Set(noticeBody, boot.Error);
             UI.Show(netStatus, !string.IsNullOrEmpty(boot.Status));
             UI.Set(netStatus, boot.Status);
             if (NetBootstrap.TypingCode && !codeFocused)

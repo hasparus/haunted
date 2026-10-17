@@ -115,3 +115,6 @@ InitTestScene*.unity*
 
 # Local planning docs
 /plans/
+
+Assets/_Game/Resources/commit.txt
+Assets/_Game/Resources/commit.txt.meta

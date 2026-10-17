@@ -4,6 +4,8 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.UIElements;
 
 namespace Demons
@@ -21,6 +23,9 @@ namespace Demons
 
         static Menu instance;
 
+        const string ScaleKey = "render_scale";
+        static readonly float[] Scales = { 1, 0.75f, 0.5f };
+
         readonly List<Row> rows = new();
         int cursor;
         string shape;
@@ -30,6 +35,7 @@ namespace Demons
         static void Create()
         {
             Open = false;
+            ApplyScale();
             instance = UI.Create<Menu>("Menu", 100);
         }
 
@@ -122,7 +128,8 @@ namespace Demons
         {
             var players = LocalPlayers.All.FindAll(p => !Bots.IsBot(p.Device));
             var joins = LocalPlayers.JoinOptions().ConvertAll(o => o.key == "A" ? "A on a gamepad" : o.key);
-            var key = new StringBuilder().Append(string.Join(",", joins)).Append(CameraRig.ShakeEnabled);
+            var key = new StringBuilder().Append(string.Join(",", joins)).Append(CameraRig.ShakeEnabled)
+                .Append(ScaleIndex).Append(NetBootstrap.Instance && NetBootstrap.Instance.Online).Append(Screen.fullScreen).Append(Mood.Effects);
             foreach (var p in players) key.Append('|').Append(p.Index).Append(p.Scheme).Append(LocalPlayers.DemonOf(p) is { } d ? d.ColorIndex.Value : -1);
             foreach (var d in Demon.All) key.Append(',').Append(d.ColorIndex.Value);
             if (key.ToString() == shape) return;
@@ -130,9 +137,9 @@ namespace Demons
 
             panel.Clear();
             rows.Clear();
-            var title = Text("Paused", "title");
-            title.style.unityFontDefinition = FontDefinition.FromFont(UI.Jolly);
-            panel.Add(title);
+            var head = UI.Box("menu-head", panel);
+            head.Add(UI.Text("Paused", "title", UI.Jolly));
+            head.Add(Text(Version, "version"));
 
             if (players.Count == 0) panel.Add(Text("Nobody has joined yet.", "empty"));
             var list = new VisualElement();
@@ -141,17 +148,55 @@ namespace Demons
             panel.Add(list);
             for (int i = 0; i < players.Count; i++) AddPlayer(list, players[i], i + 1);
 
-            var actions = new VisualElement();
-            actions.AddToClassList("actions");
-            panel.Add(actions);
+            var display = UI.Box("group", panel);
+            Action<int> scale = StepScale;
+            AddRow(display, "Resolution", scale, null).Add(Value($"{Scales[ScaleIndex] * 100:0}%", scale));
+            Action<int> fullscreen = _ => Screen.fullScreen = !Screen.fullScreen;
+            AddRow(display, "Fullscreen", fullscreen, null).Add(Value(Screen.fullScreen ? "On" : "Off", fullscreen));
+            Action<int> effects = _ => Mood.Effects = !Mood.Effects;
+            AddRow(display, "Effects", effects, null).Add(Value(Mood.Effects ? "On" : "Off", effects));
             Action<int> toggleShake = _ => CameraRig.ShakeEnabled = !CameraRig.ShakeEnabled;
-            AddRow(actions, "Screen shake", toggleShake, null).Add(Value(CameraRig.ShakeEnabled ? "On" : "Off", toggleShake));
-            AddRow(actions, "Resume", null, () => Show(false));
+            AddRow(display, "Screen shake", toggleShake, null).Add(Value(CameraRig.ShakeEnabled ? "On" : "Off", toggleShake));
+            var actions = UI.Box("group", panel);
+            AddRow(actions, "Resume", null, () => Show(false)).AddToClassList("row--primary");
+            if (NetBootstrap.Instance is { Online: true } boot)
+                AddRow(actions, boot.IsServer ? "Close online room" : "Leave online room", null, () =>
+                {
+                    Show(false);
+                    boot.Leave();
+                });
             if (!LocalPlayers.InBrowser && !Application.isEditor) AddRow(actions, "Quit", null, Application.Quit);
 
             if (joins.Count > 0) panel.Add(Line("Add a player:", joins.ToArray()));
             panel.Add(Line("Move", "Arrows / D-pad", "Change", "Left / Right", "Select", "Enter / A", "Close", "Esc / B"));
             Focus(Mathf.Clamp(cursor, 0, rows.Count - 1));
+        }
+
+        static string version;
+
+        // Release builds show the tag; development builds add the commit.
+        static string Version
+        {
+            get
+            {
+                if (version != null) return version;
+                version = "v" + Application.version;
+                if (Debug.isDebugBuild && Resources.Load<TextAsset>("commit") is { } commit) version += " \u00b7 " + commit.text.Trim();
+                return version;
+            }
+        }
+
+        static int ScaleIndex => Mathf.Clamp(PlayerPrefs.GetInt(ScaleKey, 0), 0, Scales.Length - 1);
+
+        static void StepScale(int step)
+        {
+            PlayerPrefs.SetInt(ScaleKey, (ScaleIndex + step + Scales.Length) % Scales.Length);
+            ApplyScale();
+        }
+
+        static void ApplyScale()
+        {
+            if (GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset urp) urp.renderScale = Scales[ScaleIndex];
         }
 
         void AddPlayer(VisualElement list, LocalPlayer player, int number)

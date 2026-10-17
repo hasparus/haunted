@@ -47,6 +47,8 @@ jobs:
 
       - uses: actions/checkout@v4
         if: ${{ !inputs.targets || contains(inputs.targets, matrix.target) }}
+        with:
+          fetch-depth: 0
 
       - uses: actions/cache@v4
         if: ${{ !inputs.targets || contains(inputs.targets, matrix.target) }}
@@ -64,7 +66,7 @@ jobs:
         with:
           targetPlatform: ${{ matrix.target }}
           buildName: haunted
-          versioning: None
+          versioning: Semantic
           dockerShmSize: 4g
 
       - name: Push to itch.io

@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Threading.Tasks;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
@@ -31,7 +32,15 @@ namespace Demons
                 return;
             }
             Instance = this;
-            net.OnClientStopped += wasHost => { if (session != null && !busy) _ = BackToCouch("Disconnected"); };
+            net.NetworkConfig.ConnectionApproval = true;
+            net.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(Application.version);
+            net.ConnectionApprovalCallback = Approve;
+            net.OnClientStopped += wasHost =>
+            {
+                if (session == null || busy) return;
+                string reason = net.DisconnectReason;
+                _ = BackToCouch("", string.IsNullOrEmpty(reason) ? "Lost connection to the room." : reason);
+            };
 
             var args = Environment.GetCommandLineArgs();
             int i = Array.IndexOf(args, "-join");
@@ -49,9 +58,18 @@ namespace Demons
             net.StartHost();
         }
 
-        async Task BackToCouch(string why)
+        static void Approve(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
+        {
+            string theirs = Encoding.UTF8.GetString(request.Payload);
+            response.Approved = theirs == Application.version;
+            if (!response.Approved)
+                response.Reason = $"Different builds: the host runs v{Application.version}, you run {(theirs.Length > 0 ? "v" + theirs : "an older one")}. Everyone needs the latest version from itch.io.";
+        }
+
+        async Task BackToCouch(string why, string error = "")
         {
             status = why;
+            Error = error;
             var leaving = session;
             session = null;
             if (leaving != null)
@@ -97,7 +115,9 @@ namespace Demons
             catch (Exception e)
             {
                 Debug.LogException(e);
-                await BackToCouch($"Online failed: {e.Message}");
+                await BackToCouch("", host
+                    ? "Couldn't book a room. Check your connection and try again."
+                    : $"Room {joinCode.Trim().ToUpperInvariant()} isn't on the calendar. Double-check the code with your host.");
             }
             busy = false;
         }
@@ -106,11 +126,36 @@ namespace Demons
 
         public string Status => status;
 
+        // Shown until dismissed: failed joins, version mismatches, dropped rooms.
+        public string Error { get; private set; } = "";
+
+        public void DismissError() => Error = "";
+
+        public bool Online => session != null;
+
+        public async void Leave()
+        {
+            if (session == null || busy) return;
+            busy = true;
+            if (net.IsServer)
+            {
+                foreach (var id in net.ConnectedClientsIds)
+                    if (id != NetworkManager.ServerClientId) net.DisconnectClient(id, "The host closed the room.");
+                for (int i = 0; i < 10; i++) await Awaitable.NextFrameAsync();
+            }
+            busy = false;
+            await BackToCouch("");
+        }
+
         public bool CanGoOnline => session == null && !busy;
 
         public bool IsServer => net && net.IsServer;
 
-        public void Host() => _ = GoOnline(host: true);
+        public void Host()
+        {
+            Error = "";
+            _ = GoOnline(host: true);
+        }
 
         public void BeginJoin()
         {
@@ -122,6 +167,7 @@ namespace Demons
         {
             joinCode = code;
             TypingCode = false;
+            Error = "";
             _ = GoOnline(host: false);
         }
 
