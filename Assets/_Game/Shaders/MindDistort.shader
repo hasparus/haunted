@@ -22,6 +22,7 @@ Shader "Haunted/MindDistort"
 
             // Set by MindFx. _CardRect is the card in uv (xMin, yMin, xMax, yMax).
             float _MindFxTime, _MindTime, _MindWobble, _MindInverted, _CardFire, _CardBurn;
+            float _MindOff; // set while an exhibit's camera draws: its view gets none of the player's screen effects
             float4 _CardRect;
             // Up to four ink ripples: centre in uv (xy), age 0 to 1 (z), strength (w).
             float4 _Ripples[4];
@@ -52,6 +53,7 @@ Shader "Haunted/MindDistort"
             half4 Frag(Varyings input) : SV_Target
             {
                 float2 uv = input.texcoord;
+                if (_MindOff > 0) return half4(Sample(uv), 1);
                 float t = _MindTime;
 
                 // Signed distance to the card, in screen heights.

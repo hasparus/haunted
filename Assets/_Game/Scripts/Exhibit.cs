@@ -9,7 +9,7 @@ namespace Demons
         const int Size = 768;
         const float Delay = 0.6f, Rise = 1.6f;
 
-        static readonly int PoolCenter = Shader.PropertyToID("_PoolCenter"), RevealId = Shader.PropertyToID("_Reveal"),
+        static readonly int PoolCenter = Shader.PropertyToID("_PoolCenter"), MindOffId = Shader.PropertyToID("_MindOff"), RevealId = Shader.PropertyToID("_Reveal"),
             ViewId = Shader.PropertyToID("_MainTex"), SeedId = Shader.PropertyToID("_Seed");
 
         public Feature Mechanic;
@@ -81,11 +81,14 @@ namespace Demons
             roomPool = Shader.GetGlobalVector(PoolCenter);
             var at = transform.position;
             Shader.SetGlobalVector(PoolCenter, new Vector4(at.x, at.z));
+            Shader.SetGlobalFloat(MindOffId, 1);
         }
 
         void Unlit(ScriptableRenderContext _, Camera cam)
         {
-            if (cam == eye) Shader.SetGlobalVector(PoolCenter, roomPool);
+            if (cam != eye) return;
+            Shader.SetGlobalVector(PoolCenter, roomPool);
+            Shader.SetGlobalFloat(MindOffId, 0);
         }
     }
 }
