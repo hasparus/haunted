@@ -16,15 +16,19 @@ namespace Demons
 
         // Where the therapist's lamp hangs, relative to the light's home: above and behind, off screen.
         static readonly Vector3 LampOffset = new(0, 9, 7);
+        static readonly int StyleId = Shader.PropertyToID("_Style"), PhaseId = Shader.PropertyToID("_Phase"), AimId = Shader.PropertyToID("_Aim");
 
         readonly NetworkVariable<Phase> phase = new();
 
         Vector3 home;
         Phase heard;
         LineRenderer ring;
+        GameObject glowDisc;
+        Renderer ink;
+        MaterialPropertyBlock block;
         AudioSource sweep;
         Demon target;
-        float retargetAt, phaseEnd;
+        float retargetAt, phaseEnd, phaseAt;
         int strikesLeft;
         bool strikeNext = true;
 
@@ -44,6 +48,25 @@ namespace Demons
             if (!Demo || !Instance) Instance = this;
             home = transform.position;
             ring = BuildRing();
+            glowDisc = look.transform.Find("Glow").gameObject;
+            ink = BuildInk();
+            block = new MaterialPropertyBlock();
+        }
+
+        // The light drawn in ink on the floor (Balance.spotStyle 1-4), four of its radii across each way.
+        Renderer BuildInk()
+        {
+            var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            Destroy(quad.GetComponent<Collider>());
+            quad.name = "Ink";
+            quad.transform.SetParent(look.transform, false);
+            quad.transform.SetLocalPositionAndRotation(new Vector3(0, 0.02f, 0), Quaternion.Euler(90, 0, 0));
+            quad.transform.localScale = Vector3.one * Balance.I.spotRadius * 2 * 4;
+            var r = quad.GetComponent<Renderer>();
+            r.sharedMaterial = Resources.Load<Material>("Fx/SpotInk");
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            return r;
         }
 
         // Strike telegraph: a hollow ring the size of the strike, filled in when it lands.
@@ -71,12 +94,24 @@ namespace Demons
         {
             bool active = Active;
             bool aiming = active && phase.Value == Phase.Aim;
-            ring.enabled = aiming;
+            int style = Balance.I.spotStyle;
+            ring.enabled = aiming && style == 0;
             if (aiming) ring.transform.localScale = new Vector3(1, 0, 1) * (1 + 0.06f * Mathf.Sin(Time.time * 20)) + Vector3.up;
-            look.SetActive(active && !aiming);
+            // The ink styles draw their own aim on the floor; the lamp stays dark until it strikes.
+            look.SetActive(active && (!aiming || style > 0));
+            glowDisc.SetActive(style == 0);
+            ink.gameObject.SetActive(style > 0);
+            if (phase.Value != heard) phaseAt = Time.time;
             if (phase.Value == Phase.Strike && heard != Phase.Strike) look.transform.localScale = Vector3.one * Scale * 0.55f;
             look.transform.localScale = Vector3.Lerp(look.transform.localScale, Vector3.one * Scale, Time.deltaTime * (phase.Value == Phase.Strike ? 20 : 8));
-            Shine(look.activeSelf);
+            if (style > 0)
+            {
+                block.SetFloat(StyleId, style);
+                block.SetFloat(PhaseId, (float)phase.Value);
+                block.SetFloat(AimId, Mathf.Clamp01((Time.time - phaseAt) / (Balance.I.strikeAim * (Demo ? 0.5f : 1))));
+                ink.SetPropertyBlock(block);
+            }
+            Shine(look.activeSelf && !aiming);
             if (phase.Value != heard && active && !Demo) Audio.Play(Sounds.I.For(phase.Value), transform.position);
             heard = phase.Value;
             sweep = Audio.Loop(sweep, this, active && !Demo && phase.Value == Phase.Hunt ? Sounds.I.spotSweep : null, transform.position);

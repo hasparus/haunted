@@ -74,6 +74,8 @@ namespace Demons
         public float strikeAim = 0.9f;
         public float strikeTime = 0.7f;
         public float strikeScale = 2f;
+        [Tooltip("How the light looks: 0 soft glow, 1 ink-cut pool, 2 focus lines, 3 hatched dark, 4 reticle.")]
+        [Range(0, 4)] public int spotStyle;
         public float penSpeed = 0.6f;
         public float penRest = 6f;
         public int scribbleTaps = 6;
