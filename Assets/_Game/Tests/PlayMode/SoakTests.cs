@@ -95,9 +95,11 @@ namespace Demons.PlayTests
         }
 
         // Not an assertion: measures how long two autopilots take per day, for tuning the goals.
-        [UnityTest, Explicit, Timeout(900000)]
+        [UnityTest, Explicit, Timeout(1500000)]
         public IEnumerator WeekPacing()
         {
+            // Spawns and timers run on network time, which ignores timeScale, so measure at real speed.
+            Time.timeScale = 1;
             yield return StartOffice(GameMode.Week, 2);
             float start = Time.time;
             int day = 0;
