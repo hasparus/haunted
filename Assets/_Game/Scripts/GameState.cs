@@ -156,7 +156,10 @@ namespace Demons
         }
 
         [Rpc(SendTo.Everyone)]
-        void PopupRpc(Vector3 at, FixedString32Bytes text, int slot) =>
+        void PopupRpc(Vector3 at, FixedString32Bytes text, int slot)
+        {
             Hud.Popup(at, text.ToString(), slot >= 0 ? Demon.ColorOf(slot) : Color.white);
+            if (slot >= 0) Audio.Play(Sounds.I.deliver, at);
+        }
     }
 }

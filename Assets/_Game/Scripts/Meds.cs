@@ -22,6 +22,7 @@ namespace Demons
                 shown = show;
                 look.gameObject.SetActive(show);
                 if (show) (spring ??= look.gameObject.AddComponent<Springy>()).Punch(Vector3.one * 0.8f);
+                if (show && !Demo) Audio.Play(Sounds.I.pillReach, look.position);
             }
             if (show) look.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(Time.time * 30) * 20 * (1 - left / warning));
         }

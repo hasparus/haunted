@@ -30,6 +30,14 @@ namespace Demons
         public override void OnNetworkSpawn()
         {
             All.Add(this);
+            Ringing.OnValueChanged += (was, now) =>
+            {
+                if (was && !now) Audio.Play(Sounds.I.answer, Slot.position);
+            };
+            Workers.OnValueChanged += (was, now) =>
+            {
+                if (was == 0 && now != 0 && Kind == StationKind.Desk && !Ringing.Value) Audio.Play(Sounds.I.hauntStart, Slot.position);
+            };
             if (!IsServer) return;
             Clear();
             Ringing.Value = false;
@@ -70,6 +78,18 @@ namespace Demons
                 if (Ringing.Value) phone.transform.localRotation = Quaternion.Euler(0, Mathf.Sin(Time.time * 50) * 12, 0);
             }
             if (IsServer && IsSpawned && !Locked) Work();
+            hum = Audio.Loop(hum, this, Hum());
+        }
+
+        AudioSource hum;
+
+        AudioClip Hum()
+        {
+            var s = Sounds.I;
+            if (!IsSpawned || Locked) return null;
+            if (Ringing.Value) return s.phoneRing;
+            if (Workers.Value == 0) return null;
+            return Kind switch { StationKind.Pot => s.potLoop, StationKind.Hammer => s.hammerLoop, _ => s.hauntLoop };
         }
 
         byte Hands()
