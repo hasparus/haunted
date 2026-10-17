@@ -23,6 +23,8 @@ Shader "Haunted/MindDistort"
             // Set by MindFx. _CardRect is the card in uv (xMin, yMin, xMax, yMax).
             float _MindFxTime, _MindTime, _MindWobble, _MindInverted, _CardFire;
             float4 _CardRect;
+            // Up to four ink ripples: centre in uv (xy), age 0 to 1 (z), strength (w).
+            float4 _Ripples[4];
 
             half3 Sample(float2 uv) { return SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv).rgb; }
 
@@ -62,7 +64,21 @@ Shader "Haunted/MindDistort"
                 float haze = _CardFire * saturate(1 - abs(d) / 0.14);
                 uv += haze * 0.005 * float2(Noise(p * 30 + float2(0, -t * 4)) - 0.5, Noise(p * 30 + float2(7, -t * 4)) - 0.5);
 
+                // Ink ripples: a ring that pushes the picture outward and darkens it a touch, like a wet stroke.
+                half rippleInk = 0;
+                for (int r = 0; r < 4; r++)
+                {
+                    float4 rp = _Ripples[r];
+                    if (rp.w <= 0) continue;
+                    float2 dc = (uv - rp.xy) * float2(aspect, 1);
+                    float dist = length(dc);
+                    half band = saturate(1 - abs(dist - rp.z * 0.28) / 0.035) * (1 - rp.z) * rp.w;
+                    uv -= dc / max(dist, 1e-4) * band * 0.018 * float2(1 / aspect, 1);
+                    rippleInk = max(rippleInk, band);
+                }
+
                 half3 col = Sample(uv);
+                col *= 1 - rippleInk * 0.26;
 
                 // Don't Starve's insanity wobble: a ghost copy circling the frame, strongest at the edges.
                 if (_MindWobble > 0.001)

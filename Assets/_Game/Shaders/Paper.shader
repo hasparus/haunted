@@ -40,8 +40,9 @@ Shader "Haunted/Paper"
                 half _Hatch, _Tiles;
                 float _TileSize, _Outline, _PoolRadius, _Slats;
             CBUFFER_END
-            float4 _PoolCenter;
-            float _BeltTravel; // how far the belt has moved, set by Belt // xz of the floor point under the middle of the board, set by MindFx
+            float4 _PoolCenter; // xz of the floor point under the middle of the board, set by MindFx
+            float _BeltTravel; // how far the belt has moved, set by Belt
+            float _MindTime; // unscaled seconds, set by MindFx
 
             struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 uv : TEXCOORD0; };
             struct Varyings
@@ -76,7 +77,7 @@ Shader "Haunted/Paper"
             // Wobbly pencil lines: a stripe pattern whose phase drifts with noise so no line is perfectly straight.
             half Lines(float coord, float2 wobble, float width)
             {
-                float u = coord + (Noise(wobble) - 0.5) * 0.6;
+                float u = coord + (Noise(wobble) - 0.5) * 0.35;
                 return 1 - smoothstep(0, width, abs(frac(u) - 0.5) * 2 - (1 - width * 2));
             }
 
@@ -130,13 +131,15 @@ Shader "Haunted/Paper"
                 // Ink crosshatching in the shade: one direction where it dims, a second across it where it's dark.
                 float2 screen = i.positionCS.xy / 7.0;
                 half shade = 1 - saturate(Luminance(light) / 1.1);
-                half hatchA = Lines(screen.x + screen.y, plane * 3.1, 0.12) * smoothstep(0.35, 0.5, shade);
-                half hatchB = Lines(screen.x - screen.y, plane * 2.7 + 5, 0.12) * smoothstep(0.55, 0.7, shade);
+                // Line boil: the ink is redrawn ten times a second, like hand-drawn animation on twos.
+                float boil = floor(_MindTime * 10) * 7.13;
+                half hatchA = Lines(screen.x + screen.y, plane * 3.1 + boil, 0.12) * smoothstep(0.35, 0.5, shade);
+                half hatchB = Lines(screen.x - screen.y, plane * 2.7 + 5 + boil, 0.12) * smoothstep(0.55, 0.7, shade);
                 col *= 1 - _Hatch * 0.35 * max(hatchA, hatchB);
 
                 // Ink along the face's edges, the same width in pixels however far away it is.
                 float2 edge = min(i.uv, 1 - i.uv) / max(fwidth(i.uv), 1e-5);
-                half wobble = 0.7 + 0.6 * Noise(plane * 6);
+                half wobble = 0.7 + 0.6 * Noise(plane * 6 + boil);
                 half ink = 1 - smoothstep(_Outline * wobble - 0.75, _Outline * wobble + 0.75, min(edge.x, edge.y));
                 col = lerp(col, half3(0.06, 0.05, 0.08), ink * 0.85);
 

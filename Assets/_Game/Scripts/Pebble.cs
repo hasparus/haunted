@@ -98,6 +98,7 @@ namespace Demons
                     spring.Punch(Vector3.one * 0.5f);
                     byte fresh = (byte)(now & ~was);
                     Fx.Splat(transform.position, Mix(fresh != 0 ? fresh : now));
+                    MindFx.Ripple(transform.position, 0.6f);
                 }
             };
             State.OnValueChanged += (_, now) =>

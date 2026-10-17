@@ -21,7 +21,21 @@ namespace Demons
 
         static readonly int FxTime = Shader.PropertyToID("_MindFxTime"), Wobble = Shader.PropertyToID("_MindWobble"),
             Inverted = Shader.PropertyToID("_MindInverted"), Clock = Shader.PropertyToID("_MindTime"), CardRect = Shader.PropertyToID("_CardRect"), CardFire = Shader.PropertyToID("_CardFire"),
-            PoolCenter = Shader.PropertyToID("_PoolCenter");
+            PoolCenter = Shader.PropertyToID("_PoolCenter"), RipplesId = Shader.PropertyToID("_Ripples");
+
+        const float RippleTime = 0.6f;
+        static readonly Vector4[] ripples = new Vector4[4];
+        static int nextRipple;
+
+        // A ring of ink spreading from a world point across the screen; the oldest of four gives way.
+        public static void Ripple(Vector3 at, float strength = 1)
+        {
+            var cam = Camera.main;
+            if (!cam || !Mood.Effects) return;
+            var v = cam.WorldToViewportPoint(at);
+            ripples[nextRipple] = new Vector4(v.x, v.y, 0, strength);
+            nextRipple = (nextRipple + 1) % ripples.Length;
+        }
 
         FullScreenPassRendererFeature[] passes;
         float fxTime, inverted, fire;
@@ -59,6 +73,12 @@ namespace Demons
                     Shader.SetGlobalVector(PoolCenter, new Vector4(pool.x, pool.z));
                 }
             }
+            for (int i = 0; i < ripples.Length; i++)
+            {
+                ripples[i].z += dt / RippleTime;
+                if (ripples[i].z >= 1) ripples[i].w = 0;
+            }
+            Shader.SetGlobalVectorArray(RipplesId, ripples);
             Shader.SetGlobalFloat(FxTime, fxTime);
             Shader.SetGlobalFloat(Clock, Time.unscaledTime % 1000);
             Shader.SetGlobalFloat(Wobble, wobble);

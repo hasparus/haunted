@@ -203,6 +203,7 @@ namespace Demons
             Hud.Popup(at, text.ToString(), slot >= 0 ? Demon.ColorOf(slot) : Color.white);
             if (slot >= 0) Fx.Splat(at, Demon.ColorOf(slot), 24, 4.5f);
             else Fx.Splat(at, new Color(1, 0.91f, 0.69f), 10, 2.5f);
+            MindFx.Ripple(at, slot >= 0 ? 1 : 0.5f);
             if (slot >= 0) Audio.Play(Sounds.I.deliver, at);
         }
     }
