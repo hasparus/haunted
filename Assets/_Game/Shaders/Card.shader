@@ -14,7 +14,7 @@ Shader "Haunted/Card"
         Tags { "Queue" = "Transparent" "RenderType" = "Transparent" "RenderPipeline" = "UniversalPipeline" "IgnoreProjector" = "True" }
         Blend SrcAlpha OneMinusSrcAlpha
         Cull Off
-        // Writes its feet's depth (see Vert) and cuts its see-through edge, so cards hide each other by where they stand.
+        // Writes the depth of where it stands (see Vert) and cuts its see-through edge, so cards hide each other by that.
         ZWrite On
 
         Pass
@@ -26,6 +26,7 @@ Shader "Haunted/Card"
             #pragma fragment Frag
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Sorting.hlsl"
 
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
@@ -57,11 +58,10 @@ Shader "Haunted/Card"
                 o.positionCS = TransformObjectToHClip(pos);
                 o.color = v.color * unity_SpriteColor;
                 o.uv = v.uv;
-                // The whole card sits at the depth of its feet (a hair towards the camera), Don't Starve-style, so a
-                // card beside a wall is never cut by it. Sprites draw one per call here, so the origin is the feet.
-                float3 feet = TransformObjectToWorld(float3(0, 0, 0));
-                float4 feetCS = TransformWorldToHClip(feet + normalize(GetCameraPositionWS() - feet) * 0.15);
-                o.positionCS.z = feetCS.z / feetCS.w * o.positionCS.w;
+                // The whole card sits at the depth of the floor under its origin, Don't Starve-style (Sorting.hlsl).
+                // Sprites draw one per call here, so the origin is the feet (or, for a floating prop, above them).
+                float3 feet = Underneath(TransformObjectToWorld(float3(0, 0, 0)));
+                o.positionCS.z = SortedZ(o.positionCS, feet);
                 o.feet = feet.xz;
                 return o;
             }

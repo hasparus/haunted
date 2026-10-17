@@ -92,6 +92,7 @@ Material:
     - _ClearCoatSmoothness: 0
     - _Cull: 2
     - _Cutoff: 0.5
+    - _DepthPull: 0
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
@@ -108,8 +109,10 @@ Material:
     - _PoolRadius: 9
     - _QueueOffset: 0
     - _ReceiveShadows: 1
+    - _Scenery: 1
     - _ScreenSpaceReflections: 1
     - _ScreenSpaceReflectionsContributeTransparent: 1
+    - _Silhouette: 0
     - _Slats: 1
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
@@ -123,6 +126,7 @@ Material:
     - _XRMotionVectorsPass: 1
     - _ZWrite: 1
     m_Colors:
+    - _Anchor: {r: 0, g: 0, b: 0, a: 0}
     - _BaseColor: {r: 0.14, g: 0.13, b: 0.16, a: 1}
     - _Color: {r: 0.14999998, g: 0.14999998, b: 0.14999998, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}

@@ -137,44 +137,44 @@ namespace Demons
             Sort();
         }
 
-        static readonly int AnchorId = Shader.PropertyToID("_Anchor");
+        static readonly int AnchorId = Shader.PropertyToID("_Anchor"), AnchorFromId = Shader.PropertyToID("_AnchorFrom");
+        const float SortStep = 0.05f, HeldAhead = 1.2f;
         MaterialPropertyBlock sortBlock;
         Renderer[] parts;
+        Vector3 sortedAt = Vector3.positiveInfinity, sortedFrom;
 
-        // Drawn at the depth of a point on the floor (Haunted/Paper's _Anchor), as the cards are drawn at their feet's:
-        // on a desk just in front of the desk's drawing, on the belt at its front edge, in hand just behind the carrier
-        // when it faces up the screen and otherwise well in front of it, over any desk it stands at, anywhere else
-        // right under itself.
+        // Where the thought stands for sorting (plans/sorting.md), handed to Haunted/Paper: a step in front of the desk
+        // drawing it sits on, at the belt's front edge, in hand a step behind the carrier facing up the screen and
+        // otherwise well in front, over any desk the carrier is at; anywhere else right under itself.
         void Sort()
         {
             var cam = Camera.main;
             if (!cam) return;
             var p = transform.position;
-            Vector3 at = new(p.x, 0, p.z), eye = cam.transform.position;
+            var towards = -cam.transform.forward;
+            Vector3 at = new(p.x, 0, p.z);
             switch (State.Value)
             {
                 case PebbleState.OnStation when Net.Find<Station>(Anchor.Value) is { } station:
-                    var feet = station.GetComponentInChildren<SpriteRenderer>() is { } art ? art.transform.position : station.transform.position;
-                    at = feet + (eye - feet).normalized * 0.1f;
+                    at = station.Feet + towards * SortStep;
                     break;
                 case PebbleState.OnBelt:
                     at.z -= 0.5f;
                     break;
                 case PebbleState.Held when Net.Find<Demon>(Anchor.Value) is { } demon:
-                    var stand = demon.transform.position;
                     var up = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up).normalized;
-                    at = stand + (eye - stand).normalized * (Vector3.Dot(demon.transform.forward, up) > 0.3f ? -0.2f : 1.2f);
+                    at = demon.transform.position + towards * (Vector3.Dot(demon.transform.forward, up) > 0.3f ? -SortStep : HeldAhead);
                     break;
             }
+            if (at == sortedAt && p == sortedFrom) return;
+            sortedAt = at;
+            sortedFrom = p;
             sortBlock ??= new MaterialPropertyBlock();
             parts ??= GetComponentsInChildren<Renderer>(true);
+            sortBlock.SetVector(AnchorId, new Vector4(at.x, at.y, at.z, 1));
+            sortBlock.SetVector(AnchorFromId, p);
             foreach (var r in parts)
-            {
-                if (r is TrailRenderer) continue;
-                r.GetPropertyBlock(sortBlock);
-                sortBlock.SetVector(AnchorId, new Vector4(at.x, at.y, at.z, 1));
-                r.SetPropertyBlock(sortBlock);
-            }
+                if (r is not TrailRenderer) r.SetPropertyBlock(sortBlock);
         }
 
         bool heard, heardShell, heardWarning;

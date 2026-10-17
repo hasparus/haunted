@@ -18,6 +18,18 @@ namespace Demons
         public Transform Slot;
         [SerializeField] GameObject visual, phone;
 
+        Transform feet;
+
+        // Where the station's drawing stands (the station itself if it has none), for sorting what sits on it.
+        public Vector3 Feet
+        {
+            get
+            {
+                if (!feet) feet = GetComponentInChildren<SpriteRenderer>() is { } art ? art.transform : transform;
+                return feet.position;
+            }
+        }
+
         public NetworkVariable<ulong> Item = new(Net.None);
         public NetworkVariable<float> Progress = new();
         public NetworkVariable<byte> Workers = new();

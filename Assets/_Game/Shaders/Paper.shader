@@ -12,8 +12,9 @@ Shader "Haunted/Paper"
         _PoolRadius("Light pool radius", Float) = 9
         _Slats("Belt slats", Range(0, 1)) = 0
         _Silhouette("Silhouette ink (for round things)", Range(0, 1)) = 0
-        _DepthPull("Depth pulled towards the camera (m)", Float) = 0
-        _Anchor("Depth taken from this world point (xyz) when w is 1", Vector) = (0, 0, 0, 0)
+        [ToggleUI] _Scenery("Scenery: covers only the floor (walls, belt, floor)", Float) = 0
+        _Anchor("Where it stands (xyz), when w is 1", Vector) = (0, 0, 0, 0)
+        _AnchorFrom("The point of it that stands there", Vector) = (0, 0, 0, 0)
     }
 
     SubShader
@@ -37,12 +38,13 @@ Shader "Haunted/Paper"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Sorting.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
                 half _Hatch, _Tiles;
-                float _TileSize, _Outline, _PoolRadius, _Slats, _Silhouette, _DepthPull;
-                float4 _Anchor;
+                float _TileSize, _Outline, _PoolRadius, _Slats, _Silhouette, _Scenery;
+                float4 _Anchor, _AnchorFrom;
             CBUFFER_END
             float4 _PoolCenter; // xz of the floor point under the middle of the board, set by MindFx
             float _BeltTravel; // how far the belt has moved, set by Belt
@@ -75,12 +77,14 @@ Shader "Haunted/Paper"
                 Varyings o;
                 o.positionWS = TransformObjectToWorld(v.positionOS.xyz);
                 o.positionCS = TransformWorldToHClip(o.positionWS);
-                // Thoughts are pulled forward in depth only, so one rolling against a wall isn't cut by it. A thought can
-                // also take its whole depth from a point on the floor, the way the cards stand at their feet, so it hides
-                // and is hidden by the drawings like the desk, belt or demon it is on.
-                float3 depthAt = _Anchor.w > 0 ? _Anchor.xyz : o.positionWS;
-                float4 pulled = TransformWorldToHClip(depthAt + normalize(GetCameraPositionWS() - depthAt) * _DepthPull);
-                o.positionCS.z = pulled.z / pulled.w * o.positionCS.w;
+                // Sorting.hlsl: scenery keeps its shape's depth but further back; anything else takes the depth of where
+                // it stands: the floor under its origin, or a point the game sets (a thought on a desk, in a hand). There
+                // its parts keep a tenth of their depth around it, so a thought's shell still covers its stone without
+                // the sphere's front reaching past the point.
+                float3 at = _Scenery > 0.5 ? PushedBack(o.positionWS, SORT_SCENERY_PUSH)
+                    : _Anchor.w > 0 ? _Anchor.xyz + (o.positionWS - _AnchorFrom.xyz) * 0.1
+                    : Underneath(TransformObjectToWorld(float3(0, 0, 0)));
+                o.positionCS.z = SortedZ(o.positionCS, at);
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
                 o.fog = ComputeFogFactor(o.positionCS.z);
                 o.uv = v.uv;
