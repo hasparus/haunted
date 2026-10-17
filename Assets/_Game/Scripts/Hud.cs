@@ -23,7 +23,13 @@ namespace Demons
         int starsLit;
 
         static Hud instance;
+
+        // The boss's card on screen, for MindFx to set alight.
+        public static bool CardShown { get; private set; }
+        public static Rect CardBounds { get; private set; }
+        public static Vector2 PanelSize { get; private set; }
         CrackLights lights;
+        VisualElement world;
         VisualElement hud;
         string lastCard;
         readonly List<(Label label, Vector3 at, float born)> popups = new();
@@ -37,7 +43,7 @@ namespace Demons
             if (!instance || instance.hud == null) return;
             var label = UI.Text(text, "popup", UI.Jolly);
             label.style.color = color;
-            instance.hud.Add(label);
+            instance.world.Add(label);
             instance.popups.Add((label, at, Time.time));
         }
 
@@ -48,7 +54,7 @@ namespace Demons
         public static void Bubble(Vector3 at, string line)
         {
             if (!instance || instance.hud == null) return;
-            var box = UI.Box("bubble", instance.hud);
+            var box = UI.Box("bubble", instance.world);
             box.Add(UI.Text("Ring ring", "bubble-title", UI.Jolly));
             box.Add(UI.Text(line, "bubble-body"));
             instance.bubbles.Add((box, at, Time.time));
@@ -105,6 +111,9 @@ namespace Demons
             hud = UI.Box("hud", root);
             lights = new CrackLights();
             hud.Add(lights);
+            // Popups and speech bubbles pinned to the world sit under the cards and the review.
+            world = UI.Box("hud-layer", hud);
+            world.pickingMode = PickingMode.Ignore;
 
             top = UI.Box("hud-top", hud);
             day = UI.Text("", "hud-day", UI.Jolly);
@@ -213,6 +222,12 @@ namespace Demons
             bool showCard = progress && Net.Now < progress.CardUntil.Value;
             bool showReview = showCard && progress.Review.Value;
             UI.Show(cardWrap, showCard && !showReview);
+            CardShown = showCard && !showReview && card.resolvedStyle.display == DisplayStyle.Flex;
+            if (CardShown)
+            {
+                CardBounds = card.worldBound;
+                PanelSize = hud.worldBound.size;
+            }
             if (!showCard) lastCard = null;
             if (showCard && !showReview) RefreshCard(progress.Card.Value.ToString());
             UI.Show(reviewWrap, showReview);
@@ -274,6 +289,7 @@ namespace Demons
             lights.Refresh(open, sealing, max);
             UI.Show(crackPips, progress);
             while (crackPips.childCount < max) UI.Box("hud-crack", crackPips);
+            while (crackPips.childCount > max) crackPips.RemoveAt(crackPips.childCount - 1);
             for (int i = 0; i < crackPips.childCount; i++)
             {
                 var pip = crackPips[i];

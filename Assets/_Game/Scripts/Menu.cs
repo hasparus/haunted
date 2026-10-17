@@ -139,7 +139,7 @@ namespace Demons
             var players = LocalPlayers.All.FindAll(p => !Bots.IsBot(p.Device));
             var joins = LocalPlayers.JoinOptions().ConvertAll(o => o.key == "A" ? "A on a gamepad" : o.key);
             var key = new StringBuilder().Append(string.Join(",", joins)).Append(CameraRig.ShakeEnabled)
-                .Append(ScaleIndex).Append(NetBootstrap.Instance && NetBootstrap.Instance.Online).Append(Screen.fullScreen).Append(Mood.Effects).Append(Audio.MusicLevel).Append(Audio.SoundLevel)
+                .Append(ScaleIndex).Append(NetBootstrap.Instance && NetBootstrap.Instance.Online).Append(Screen.fullScreen).Append(Mood.Effects).Append(MindFx.Distortion).Append(Audio.MusicLevel).Append(Audio.SoundLevel)
                 .Append(Progression.Instance && Progression.Instance.IsSpawned);
             foreach (var p in players) key.Append('|').Append(p.Index).Append(p.Scheme).Append(LocalPlayers.DemonOf(p) is { } d ? d.ColorIndex.Value : -1);
             foreach (var d in Demon.All) key.Append(',').Append(d.ColorIndex.Value);
@@ -166,6 +166,8 @@ namespace Demons
             AddRow(display, "Fullscreen", fullscreen, null).Add(Value(Screen.fullScreen ? "On" : "Off", fullscreen));
             Action<int> effects = _ => Mood.Effects = !Mood.Effects;
             AddRow(display, "Effects", effects, null).Add(Value(Mood.Effects ? "On" : "Off", effects));
+            Action<int> distortion = _ => MindFx.Distortion = !MindFx.Distortion;
+            AddRow(display, "Distortion", distortion, null).Add(Value(MindFx.Distortion ? "On" : "Off", distortion));
             Action<int> toggleShake = _ => CameraRig.ShakeEnabled = !CameraRig.ShakeEnabled;
             AddRow(display, "Screen shake", toggleShake, null).Add(Value(CameraRig.ShakeEnabled ? "On" : "Off", toggleShake));
             var audio = UI.Box("group", panel);

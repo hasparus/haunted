@@ -296,7 +296,7 @@
     padding: 0;
 }
 
-.hud-lights {
+.hud-layer {
     position: absolute;
     left: 0;
     right: 0;
