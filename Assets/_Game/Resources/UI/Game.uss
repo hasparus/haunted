@@ -262,31 +262,48 @@
 .hud-top {
     position: absolute;
     left: 16px;
-    top: 12px;
-    flex-direction: row;
-    align-items: center;
+    top: 4px;
 }
 
-.hud-status {
-    font-size: 20px;
+.hud-day {
+    font-size: 44px;
     color: var(--ink);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    margin: 0;
+    padding: 0;
+}
+
+.hud-day-info {
+    font-size: 22px;
+    color: var(--muted);
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+    margin: -6px 0 0 0;
+    padding: 0;
+}
+
+.hud-right {
+    position: absolute;
+    right: 16px;
+    top: 4px;
+    align-items: flex-end;
+}
+
+.hud-revenue {
+    font-size: 36px;
+    color: var(--ink);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
     margin: 0;
     padding: 0;
 }
 
 .hud-scores {
-    position: absolute;
-    right: 16px;
-    top: 4px;
-    flex-direction: row;
-    align-items: center;
+    align-items: flex-end;
 }
 
 .hud-score {
-    font-size: 40px;
+    font-size: 32px;
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
-    margin: 0 0 0 24px;
+    margin: -4px 0 0 0;
     padding: 0;
     transition-property: translate, rotate, scale;
     transition-duration: 0.16s, 0.16s, 0.16s;

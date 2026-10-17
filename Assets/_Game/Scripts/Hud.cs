@@ -10,7 +10,7 @@ namespace Demons
         static readonly string[] Columns = { "Revenue", "Haunts", "Deliveries", "Assists", "Throws", "Dashes" };
 
         VisualElement top, scores, net, offline, joining, online, notice, cpu, cardWrap, card, reviewWrap, table, sign;
-        Label status, netStatus, noticeTitle, noticeBody, cardTitle, cardBody, paused, reviewTitle, reviewBody, signHint, signWait;
+        Label day, dayInfo, revenue, netStatus, noticeTitle, noticeBody, cardTitle, cardBody, paused, reviewTitle, reviewBody, signHint, signWait;
         TextField code, signature;
         Button removeCpu;
         VisualElement footer;
@@ -104,9 +104,14 @@ namespace Demons
             hud = UI.Box("hud", root);
 
             top = UI.Box("hud-top", hud);
-            status = UI.Text("", "hud-status");
-            top.Add(status);
-            scores = UI.Box("hud-scores", hud);
+            day = UI.Text("", "hud-day", UI.Jolly);
+            top.Add(day);
+            dayInfo = UI.Text("", "hud-day-info", UI.Jolly);
+            top.Add(dayInfo);
+            var right = UI.Box("hud-right", hud);
+            revenue = UI.Text("", "hud-revenue", UI.Jolly);
+            right.Add(revenue);
+            scores = UI.Box("hud-scores", right);
 
             net = UI.Box("hud-net", hud);
             offline = UI.Box("hud-net-row", net);
@@ -196,7 +201,7 @@ namespace Demons
             var progress = Progression.Instance && Progression.Instance.IsSpawned ? Progression.Instance : null;
 
             UI.Show(top, live && !state.IsLobby);
-            UI.Show(scores, live && !state.IsLobby);
+            UI.Show(scores.parent, live && !state.IsLobby);
             if (live && !state.IsLobby) RefreshTop(state, progress);
 
             RefreshNet(state);
@@ -224,10 +229,10 @@ namespace Demons
 
         void RefreshTop(GameState state, Progression progress)
         {
-            float revenue = state.Influence.Value;
-            UI.Set(status, progress == null ? ""
-                : progress.Mode.Value == GameMode.Week ? $"{progress.DayName}  ·  {revenue:0.#} / {progress.Goal:0} zł"
-                : $"Survival  ·  {revenue:0.#} zł  ·  best {progress.Best.Value:0} zł  ·  fired below {progress.FireLine:0} zł");
+            bool week = progress && progress.Mode.Value == GameMode.Week;
+            UI.Set(day, !progress ? "" : week ? progress.DayName[..1] + progress.DayName[1..].ToLowerInvariant() : "Survival");
+            UI.Set(dayInfo, !progress ? "" : week ? $"goal {progress.Goal:0} zł" : $"best {progress.Best.Value:0} zł  ·  fired below {progress.FireLine:0} zł");
+            UI.Set(revenue, $"Revenue: {state.Influence.Value:0.#} zł");
 
             var demons = Demon.All.FindAll(d => d.Slot.Value >= 0);
             demons.Sort((a, b) => a.Slot.Value.CompareTo(b.Slot.Value));
@@ -248,7 +253,7 @@ namespace Demons
             for (int i = 0; i < demons.Count && i < scores.childCount; i++)
             {
                 int slot = demons[i].Slot.Value;
-                var value = state.Prestige.Count > slot ? state.Prestige[slot] : 0;
+                var value = (state.Prestige.Count > slot ? state.Prestige[slot] : 0) / Scoring.PrestigePerPower;
                 var score = (Label)scores[i];
                 UI.Set(score, $"{value:0.#} zł");
                 if (value > scoreSeen[slot]) Hop(score);
@@ -337,7 +342,8 @@ namespace Demons
                     UI.Box("hud-chip-dot", name).style.backgroundColor = d.Tint;
                     name.Add(UI.Text($"Demon {d.Slot.Value + 1}", "td", i == 0 ? UI.PlexBold : null));
                     if (i == 0 && Score(d) > 0) name.Add(UI.Text("Employee of the Week", "employee"));
-                    foreach (var value in new[] { Score(d), d.Haunts.Value, d.Deliveries.Value, d.Assists.Value, d.Throws.Value, d.Dashes.Value })
+                    row.Add(UI.Text($"{Score(d) / Scoring.PrestigePerPower:0.#} zł", "td-num"));
+                    foreach (var value in new[] { d.Haunts.Value, d.Deliveries.Value, d.Assists.Value, d.Throws.Value, d.Dashes.Value })
                         row.Add(UI.Text(value.ToString("0"), "td-num"));
                 }
             }

@@ -1087,7 +1087,7 @@ Transform:
   m_GameObject: {fileID: 175778496}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.9, z: -0.5}
+  m_LocalPosition: {x: 0, y: 0.65, z: -0.42}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3076,7 +3076,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6486179c54057423082e915598bc8a34, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Demons::Demons.EyeView
-  width: 0.8
+  width: 0.96
   top: 1.08
 --- !u!23 &780140223
 MeshRenderer:
@@ -3377,7 +3377,7 @@ Transform:
   m_GameObject: {fileID: 876849396}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.9, z: -0.5}
+  m_LocalPosition: {x: 0, y: 0.65, z: -0.42}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3498,7 +3498,7 @@ Transform:
   m_GameObject: {fileID: 962695571}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.9, z: -0.5}
+  m_LocalPosition: {x: 0, y: 0.65, z: -0.42}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4928,8 +4928,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1410951142}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.36877358, y: 0, z: 0, w: 0.9295193}
-  m_LocalPosition: {x: 0, y: 23.24, z: -20.17}
+  m_LocalRotation: {x: 0.37703267, y: 0, z: 0, w: 0.9262}
+  m_LocalPosition: {x: 0, y: 19.37, z: -16.89}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6196,7 +6196,7 @@ Transform:
   m_GameObject: {fileID: 1751505267}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.9, z: -0.5}
+  m_LocalPosition: {x: 0, y: 0.65, z: -0.42}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

@@ -3,7 +3,7 @@ namespace Demons
     public static class Scoring
     {
         public const int MaxDemons = 4;
-        const float PrestigePerPower = 10f;
+        public const float PrestigePerPower = 10f;
 
         public static int StampCount(byte stamps)
         {

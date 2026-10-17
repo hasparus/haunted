@@ -55,7 +55,10 @@ namespace Demons.PlayTests
 
                 var center = desk.Slot.position;
                 center.y = 0;
-                bot.Clear().WalkTo(center + dir * 2.2f, 0.3f).WalkTo(center, 0.1f, 1.5f).Face(-dir);
+                bot.Clear().WalkTo(new Vector3(0, 0, -3.6f), 0.4f, 3);
+                yield return Run(bot);
+                foreach (var waypoint in Navigator.Path(bot.Demon.transform.position, center + dir * 1.6f)) bot.WalkTo(waypoint, 0.3f);
+                bot.WalkTo(center, 0.1f, 1.5f).Face(-dir);
                 yield return Run(bot);
                 bool worked = false;
                 bot.Press(GamepadButton.West, 1);

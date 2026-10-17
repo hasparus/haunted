@@ -9,7 +9,7 @@ namespace Demons
         const float Depth = 2f;
 
         [Tooltip("Share of the screen width the eyes span.")]
-        public float width = 0.8f;
+        public float width = 0.96f;
         [Tooltip("Viewport height of the eyes' top edge.")]
         public float top = 1.08f;
 

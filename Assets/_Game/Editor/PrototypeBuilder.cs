@@ -303,7 +303,7 @@ namespace Demons.Editor
         // Tilt the camera up and back so the board sits low, under what the host sees across the top of the screen.
         static void BuildEyeView(Camera cam)
         {
-            cam.transform.SetPositionAndRotation(new Vector3(0, 23.24f, -20.17f), Quaternion.Euler(43.28f, 0, 0));
+            cam.transform.SetPositionAndRotation(new Vector3(0, 19.37f, -16.89f), Quaternion.Euler(44.3f, 0, 0));
             var material = Fade(Unlit("EyeView", Color.white));
             material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>($"{Root}/Resources/Eyes/day0.png"));
             var view = Prim(PrimitiveType.Quad, "EyeView", null, Vector3.zero, Vector3.one, material);
@@ -581,13 +581,13 @@ namespace Demons.Editor
                     // The drawing's footprint: blocks demons and casts the desk's shadow.
                     var top = Prim(PrimitiveType.Cube, "Top", visual, new Vector3(0, 0.385f, -0.14f), new Vector3(1.7f, 0.77f, 0.72f), Mat("Desk", Gray(0.72f)), collider: true);
                     top.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
-                    // Billboard drawing standing on the footprint's front edge; the thought sits in front of it, about two thirds up.
+                    // Billboard drawing standing on the footprint's front edge; the thought sits just in front of its middle.
                     var art = Point("Art", visual, new Vector3(0, 0, -0.5f)).gameObject.AddComponent<SpriteRenderer>();
                     art.sprite = Art("Station_Blank");
                     art.transform.rotation = cam.transform.rotation;
                     art.transform.localScale = Vector3.one * 1.8f / art.sprite.bounds.size.x;
                     art.color = Gray(0.82f);
-                    st.Slot = Point("Slot", go.transform, new Vector3(0, 0.9f, -0.5f));
+                    st.Slot = Point("Slot", go.transform, new Vector3(0, 0.65f, -0.42f));
                     var phone = Prim(PrimitiveType.Cube, "Phone", visual, new Vector3(0.45f, 0.95f, -0.15f), new Vector3(0.35f, 0.18f, 0.22f), Mat("Phone", new Color(0.98f, 0.8f, 0.08f)));
                     phone.SetActive(false);
                     Set(st, "phone", phone);
