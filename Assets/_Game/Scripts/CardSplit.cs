@@ -7,7 +7,9 @@ namespace Demons
     {
         const float CrackPart = 0.3f;
 
-        readonly VisualElement left, right;
+        // Each half is drawn three times: two faint copies lagging behind the real one smear it like motion blur.
+        static readonly (float lag, float alpha)[] Smear = { (0.14f, 0.18f), (0.07f, 0.32f), (0, 1) };
+        readonly System.Collections.Generic.List<(VisualElement half, float side, float lag, float alpha)> layers = new();
         readonly Vector2[] crack;
         float t;
 
@@ -16,20 +18,24 @@ namespace Demons
             pickingMode = PickingMode.Ignore;
             AddToClassList("hud-layer");
             crack = Zigzag(at.size);
-            left = Half(card, at, false);
-            right = Half(card, at, true);
+            foreach (var (lag, alpha) in Smear)
+            {
+                layers.Add((Half(card, at, false), -1, lag, alpha));
+                layers.Add((Half(card, at, true), 1, lag, alpha));
+            }
         }
 
         public void Tick(float progress)
         {
             t = progress;
-            float fall = Mathf.Clamp01((t - CrackPart * 0.8f) / (1 - CrackPart * 0.8f));
-            fall *= fall;
-            foreach (var (half, side) in new[] { (left, -1f), (right, 1f) })
+            foreach (var (half, side, lag, alpha) in layers)
             {
+                float fall = Mathf.Clamp01((t - lag - CrackPart * 0.8f) / (1 - CrackPart * 0.8f));
+                fall *= fall;
                 half.style.translate = new Translate(side * 36 * fall, 80 * fall);
                 half.style.rotate = new Rotate(side * 11 * fall);
-                half.style.opacity = 1 - fall;
+                // The smear only shows once the halves are moving; until then it would just darken the card.
+                half.style.opacity = lag > 0 ? alpha * (1 - fall) * Mathf.Clamp01(fall * 8) : 1 - fall;
                 half[1].MarkDirtyRepaint();
             }
         }
