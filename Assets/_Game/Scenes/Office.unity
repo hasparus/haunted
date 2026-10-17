@@ -1004,6 +1004,11 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  CardStars:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: -1
   Cracks:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -1402,7 +1407,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0.418856, y: -0, z: -0, w: 0.9080527}
   m_LocalPosition: {x: 0, y: 0, z: -0.5}
-  m_LocalScale: {x: 1.6071428, y: 1.6071428, z: 1.6071428}
+  m_LocalScale: {x: 1.7197453, y: 1.7197453, z: 1.7197453}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 677153847}
@@ -1456,7 +1461,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: ce6db5d24caae4f44855c0c45ee652c1, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 2b4f928bc729d4270b5792b621e832b9, type: 3}
   m_Color: {r: 0.86, g: 0.81, b: 0.72, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -7270,7 +7275,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0.418856, y: -0, z: -0, w: 0.9080527}
   m_LocalPosition: {x: 0, y: 0, z: -0.5}
-  m_LocalScale: {x: 1.6071428, y: 1.6071428, z: 1.6071428}
+  m_LocalScale: {x: 1.7197453, y: 1.7197453, z: 1.7197453}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1199231497}
@@ -7324,7 +7329,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: ce6db5d24caae4f44855c0c45ee652c1, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 2b4f928bc729d4270b5792b621e832b9, type: 3}
   m_Color: {r: 0.86, g: 0.81, b: 0.72, a: 1}
   m_FlipX: 0
   m_FlipY: 0

@@ -137,6 +137,7 @@ namespace Demons.Editor
         static void BuildOffice(Pebble pebble, Demon demon, NetworkPrefabsList prefabs)
         {
             var cam = NewRoom(pebble, demon, prefabs, new Vector2(8.5f, 5.5f), walls: true, beltZ: 5f, beltStart: -9.8f, beltEnd: 9.8f);
+            desksBuilt = 0;
             cam.gameObject.AddComponent<CameraRig>().Follow = false;
             foreach (var pos in new[] { new Vector3(-6.5f, 0, -1.5f), new Vector3(-2.2f, 0, 0.6f), new Vector3(2.2f, 0, 0.6f), new Vector3(6.5f, 0, -1.5f) })
                 BuildStation(pos, cam);
@@ -156,6 +157,7 @@ namespace Demons.Editor
             var half = new Vector2(18f, 20f);
             var spawn = new Vector3(0, 0, 7f);
             var cam = NewRoom(pebble, demon, prefabs, half, walls: false, beltZ: -1.5f, beltStart: -19.3f, beltEnd: 3f);
+            desksBuilt = 0;
             var rig = cam.gameObject.AddComponent<CameraRig>();
             rig.Focus = new Vector3(0, 0, 11.4f);
             rig.IdleExtents = new Vector3(14f, 0, 3.8f);
@@ -557,6 +559,9 @@ namespace Demons.Editor
             return cam;
         }
 
+        // Every other desk gets the second drawing; counted per room.
+        static int desksBuilt;
+
         static Station BuildStation(Vector3 pos, Camera cam, StationKind kind = StationKind.Desk, Feature requires = Feature.None)
         {
             var go = new GameObject(kind.ToString());
@@ -584,7 +589,7 @@ namespace Demons.Editor
                     top.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
                     // Billboard drawing standing on the footprint's front edge; the thought sits just in front of its middle.
                     var art = Point("Art", visual, new Vector3(0, 0, -0.5f)).gameObject.AddComponent<SpriteRenderer>();
-                    art.sprite = Art("Station_Blank");
+                    art.sprite = Art(desksBuilt++ % 2 == 0 ? "Station_Blank" : "Station_Desk2");
                     art.transform.rotation = cam.transform.rotation;
                     art.transform.localScale = Vector3.one * 1.8f / art.sprite.bounds.size.x;
                     art.color = new Color(0.86f, 0.81f, 0.72f);
