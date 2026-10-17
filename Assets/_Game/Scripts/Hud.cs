@@ -9,7 +9,7 @@ namespace Demons
     {
         static readonly string[] Columns = { "Revenue", "Haunts", "Deliveries", "Assists", "Throws", "Dashes" };
 
-        VisualElement top, scores, net, offline, joining, online, notice, cpu, cardWrap, card, reviewWrap, table, sign;
+        VisualElement top, scores, crackPips, net, offline, joining, online, notice, cpu, cardWrap, card, reviewWrap, table, sign;
         Label day, dayInfo, revenue, netStatus, noticeTitle, noticeBody, cardTitle, cardBody, paused, reviewTitle, reviewBody, signHint, signWait;
         TextField code, signature;
         Button removeCpu;
@@ -23,6 +23,7 @@ namespace Demons
         int starsLit;
 
         static Hud instance;
+        CrackLights lights;
         VisualElement hud;
         string lastCard;
         readonly List<(Label label, Vector3 at, float born)> popups = new();
@@ -102,6 +103,8 @@ namespace Demons
         {
             var root = UI.Root(this);
             hud = UI.Box("hud", root);
+            lights = new CrackLights();
+            hud.Add(lights);
 
             top = UI.Box("hud-top", hud);
             day = UI.Text("", "hud-day", UI.Jolly);
@@ -111,6 +114,7 @@ namespace Demons
             var right = UI.Box("hud-right", hud);
             revenue = UI.Text("", "hud-revenue", UI.Jolly);
             right.Add(revenue);
+            crackPips = UI.Box("hud-cracks", right);
             scores = UI.Box("hud-scores", right);
 
             net = UI.Box("hud-net", hud);
@@ -230,9 +234,10 @@ namespace Demons
         void RefreshTop(GameState state, Progression progress)
         {
             bool week = progress && progress.Mode.Value == GameMode.Week;
-            UI.Set(day, !progress ? "" : week ? progress.DayName[..1] + progress.DayName[1..].ToLowerInvariant() : "Survival");
-            UI.Set(dayInfo, !progress ? "" : week ? $"goal {progress.Goal:0} zł" : $"best {progress.Best.Value:0} zł  ·  fired below {progress.FireLine:0} zł");
+            UI.Set(day, !progress ? "" : week ? progress.DayTitle : "Survival");
+            UI.Set(dayInfo, !progress ? "" : week ? $"goal {progress.Goal:0} zł" : $"best {progress.Best.Value:0} zł");
             UI.Set(revenue, $"Revenue: {state.Influence.Value:0.#} zł");
+            RefreshCracks(progress);
 
             var demons = Demon.All.FindAll(d => d.Slot.Value >= 0);
             demons.Sort((a, b) => a.Slot.Value.CompareTo(b.Slot.Value));
@@ -258,6 +263,23 @@ namespace Demons
                 UI.Set(score, $"{value:0.#} zł");
                 if (value > scoreSeen[slot]) Hop(score);
                 scoreSeen[slot] = value;
+            }
+        }
+
+        // Pips under the revenue: lit for each open crack, the newest shrinking as demon ink seals it.
+        void RefreshCracks(Progression progress)
+        {
+            int max = Balance.I.maxCracks, open = progress ? progress.Cracks.Value : 0;
+            float sealing = progress ? progress.Sealing.Value : 0;
+            lights.Refresh(open, sealing, max);
+            UI.Show(crackPips, progress);
+            while (crackPips.childCount < max) UI.Box("hud-crack", crackPips);
+            for (int i = 0; i < crackPips.childCount; i++)
+            {
+                var pip = crackPips[i];
+                pip.EnableInClassList("hud-crack--open", i < open);
+                float size = i == open - 1 ? 1 - sealing * 0.6f : 1;
+                pip.style.scale = new Scale(new Vector3(size, size, 1));
             }
         }
 

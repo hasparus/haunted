@@ -91,7 +91,6 @@ namespace Demons
             {
                 if (now is PebbleState.Floor or PebbleState.OnStation) spring.Punch(new Vector3(0.3f, -0.3f, 0.3f));
                 else if (now == PebbleState.Held) spring.Punch(Vector3.one * 0.2f);
-                else if (now == PebbleState.Flying) CameraRig.Shake(0.25f);
             };
             Kind.OnValueChanged += (_, _) => Paint();
             Shelled.OnValueChanged += (_, _) => Paint();
@@ -341,7 +340,7 @@ namespace Demons
 
         void ReachHost()
         {
-            if (Stamps.Value == 0 && Progression.Instance is { Mode: { Value: GameMode.Survival } }) GameState.Instance.Missed(transform.position);
+            if (Stamps.Value == 0) GameState.Instance.Missed(transform.position);
             GameState.Instance.Deliver(this);
         }
 
