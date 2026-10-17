@@ -34,6 +34,16 @@ Shader "Haunted/Card"
             CBUFFER_END
             float _MindTime;
             float4 _PoolCenter;
+            // Light spilling from open cracks (xz, unused, strength), set by MindFx: warm daylight, Don't Starve's falloff.
+            float4 _CrackGlows[5];
+            half3 CrackLight(float2 xz)
+            {
+                half sum = 0;
+                for (int g = 0; g < 5; g++)
+                    sum += _CrackGlows[g].w * exp(-0.9 * pow(length(xz - _CrackGlows[g].xy) / 3.8, 2.2));
+                return half3(1, 0.91, 0.69) * sum;
+            }
+
 
             struct Attributes { float4 positionOS : POSITION; half4 color : COLOR; float2 uv : TEXCOORD0; };
             struct Varyings { float4 positionCS : SV_POSITION; half4 color : COLOR; float2 uv : TEXCOORD0; float2 feet : TEXCOORD1; };
@@ -46,8 +56,12 @@ Shader "Haunted/Card"
                 o.positionCS = TransformObjectToHClip(pos);
                 o.color = v.color * unity_SpriteColor;
                 o.uv = v.uv;
-                // Per vertex, so it survives sprite batching; an upright card barely moves in xz from feet to head.
-                o.feet = TransformObjectToWorld(pos).xz;
+                // The whole card sits at the depth of its feet (a hair towards the camera), Don't Starve-style, so a
+                // card beside a wall is never cut by it. Sprites draw one per call here, so the origin is the feet.
+                float3 feet = TransformObjectToWorld(float3(0, 0, 0));
+                float4 feetCS = TransformWorldToHClip(feet + normalize(GetCameraPositionWS() - feet) * 0.15);
+                o.positionCS.z = feetCS.z / feetCS.w * o.positionCS.w;
+                o.feet = feet.xz;
                 return o;
             }
 
@@ -62,7 +76,7 @@ Shader "Haunted/Card"
 
             half4 Frag(Varyings i) : SV_Target
             {
-                float boil = floor(_MindTime * 10) * 3.1;
+                float boil = floor(_MindTime * 2.5) * 3.1;
                 float2 uv = i.uv + (float2(Noise(i.uv * 14 + boil), Noise(i.uv * 14 + 7 + boil)) - 0.5) * 0.004 * _Boil;
                 half4 c = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv) * i.color;
 
@@ -70,7 +84,7 @@ Shader "Haunted/Card"
 
                 // Lit by where the card stands, like Don't Starve's billboards: one light value for the whole drawing.
                 half pool = exp(-0.9 * pow(length(i.feet - _PoolCenter.xy) / 9, 2.6));
-                c.rgb *= 0.72 + 0.28 * pool;
+                c.rgb *= 0.72 + 0.28 * pool + CrackLight(i.feet) * 0.9;
 
                 // Rim light from the lamp, upper right: where the drawing ends in that direction, a thin warm edge.
                 half beyond = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + float2(0.012, 0.01)).a;

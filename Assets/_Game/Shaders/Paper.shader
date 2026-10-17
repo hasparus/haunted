@@ -12,6 +12,7 @@ Shader "Haunted/Paper"
         _PoolRadius("Light pool radius", Float) = 9
         _Slats("Belt slats", Range(0, 1)) = 0
         _Silhouette("Silhouette ink (for round things)", Range(0, 1)) = 0
+        _DepthPull("Depth pulled towards the camera (m)", Float) = 0
     }
 
     SubShader
@@ -39,11 +40,21 @@ Shader "Haunted/Paper"
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
                 half _Hatch, _Tiles;
-                float _TileSize, _Outline, _PoolRadius, _Slats, _Silhouette;
+                float _TileSize, _Outline, _PoolRadius, _Slats, _Silhouette, _DepthPull;
             CBUFFER_END
             float4 _PoolCenter; // xz of the floor point under the middle of the board, set by MindFx
             float _BeltTravel; // how far the belt has moved, set by Belt
             float _MindTime; // unscaled seconds, set by MindFx
+            // Light spilling from open cracks (xz, unused, strength), set by MindFx: warm daylight, Don't Starve's falloff.
+            float4 _CrackGlows[5];
+            half3 CrackLight(float2 xz)
+            {
+                half sum = 0;
+                for (int g = 0; g < 5; g++)
+                    sum += _CrackGlows[g].w * exp(-0.9 * pow(length(xz - _CrackGlows[g].xy) / 3.8, 2.2));
+                return half3(1, 0.91, 0.69) * sum;
+            }
+
             TEXTURE2D(_Stains); SAMPLER(sampler_Stains); // coloured ink stains on the floor (rgb ink, a coverage), stamped by Fx
             float4 _StainRect; // xz min, 1 / size
 
@@ -62,6 +73,9 @@ Shader "Haunted/Paper"
                 Varyings o;
                 o.positionWS = TransformObjectToWorld(v.positionOS.xyz);
                 o.positionCS = TransformWorldToHClip(o.positionWS);
+                // Thoughts are pulled forward in depth only, so one rolling against a wall isn't cut by it.
+                float4 pulled = TransformWorldToHClip(o.positionWS + normalize(GetCameraPositionWS() - o.positionWS) * _DepthPull);
+                o.positionCS.z = pulled.z / pulled.w * o.positionCS.w;
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
                 o.fog = ComputeFogFactor(o.positionCS.z);
                 o.uv = v.uv;
@@ -131,13 +145,14 @@ Shader "Haunted/Paper"
                 // Don't Starve's light falloff (a stretched exponential: soft core, long tail, no edge) around the room.
                 half pool = exp(-0.9 * pow(length(i.positionWS.xz - _PoolCenter.xy) / _PoolRadius, 2.6));
                 light *= 0.45 + 0.55 * pool;
+                light += CrackLight(i.positionWS.xz) * 1.7;
                 half3 col = albedo * light;
 
                 // Ink crosshatching in the shade: one direction where it dims, a second across it where it's dark.
                 float2 screen = i.positionCS.xy / 7.0;
                 half shade = 1 - saturate(Luminance(light) / 1.1);
-                // Line boil: the ink is redrawn ten times a second, like hand-drawn animation on twos.
-                float boil = floor(_MindTime * 10) * 7.13;
+                // Line boil: the ink is redrawn a few times a second, like a slow hand-drawn boil.
+                float boil = floor(_MindTime * 2.5) * 7.13;
                 half hatchA = Lines(screen.x + screen.y, plane * 3.1 + boil, 0.12) * smoothstep(0.35, 0.5, shade);
                 half hatchB = Lines(screen.x - screen.y, plane * 2.7 + 5 + boil, 0.12) * smoothstep(0.55, 0.7, shade);
                 col *= 1 - _Hatch * 0.35 * max(hatchA, hatchB);

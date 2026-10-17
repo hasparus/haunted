@@ -285,7 +285,11 @@ namespace Demons
             row.Add(Text(label, "row-label"));
             int index = rows.Count;
             rows.Add(new Row { Element = row, Step = step, Press = press });
-            row.RegisterCallback<PointerEnterEvent>(_ => Focus(index));
+            // On movement, not enter: a rebuild (say, after a colour change) puts a fresh row under a resting pointer.
+            row.RegisterCallback<PointerMoveEvent>(_ =>
+            {
+                if (index != cursor) Focus(index);
+            });
             row.RegisterCallback<ClickEvent>(_ =>
             {
                 Focus(index);

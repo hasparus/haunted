@@ -61,8 +61,11 @@ Shader "Haunted/MindDistort"
                 float2 q = abs(p - (lo + hi) * 0.5) - (hi - lo) * 0.5;
                 float d = length(max(q, 0)) + min(max(q.x, q.y), 0);
 
-                float haze = _CardFire * saturate(1 - abs(d) / 0.14);
-                uv += haze * 0.005 * float2(Noise(p * 30 + float2(0, -t * 4)) - 0.5, Noise(p * 30 + float2(7, -t * 4)) - 0.5);
+                if (_CardFire > 0.001)
+                {
+                    float haze = _CardFire * saturate(1 - abs(d) / 0.14);
+                    uv += haze * 0.005 * float2(Noise(p * 30 + float2(0, -t * 4)) - 0.5, Noise(p * 30 + float2(7, -t * 4)) - 0.5);
+                }
 
                 // Ink ripples: a ring that pushes the picture outward and darkens it a touch, like a wet stroke.
                 half rippleInk = 0;
@@ -96,21 +99,56 @@ Shader "Haunted/MindDistort"
                     col.b = Sample(uv - dir).b;
                 }
 
-                // Flames: tongues of noise rising off the card, reaching furthest above it, cut into three hard bands
-                // (navy rim, electric blue, a near-white core) like a cartoon fire, over a soft blue glow.
-                float above = saturate((p.y - hi.y) / 0.15 + 0.5);
-                float tongues = Fbm(float2(p.x * 16, p.y * 3 - t * 2.4));
-                float reach = (0.01 + 0.13 * tongues * tongues * tongues * 2) * (0.35 + 2.2 * above);
-                float flame = saturate(1 - d / reach) * step(-0.004, d) * _CardFire;
-                // Burning out: the flames eat in across the card from its edges as it fades.
-                float eaten = _CardBurn * 1.4 - Fbm(p * 14 + t) * 0.6;
-                flame = max(flame, step(d, 0) * saturate((eaten + d * 6) * 4) * _CardFire);
-                // Wobbly band edges so the layers lick at each other instead of following the outline.
-                float edge = (Noise(p * 40 + float2(0, -t * 5)) - 0.5) * 0.18;
-                col += half3(0.1, 0.3, 0.9) * saturate(1 - d / 0.12) * step(0, d) * 0.3 * _CardFire;
-                col = lerp(col, half3(0.03, 0.08, 0.35), smoothstep(0.02, 0.05, flame));
-                col = lerp(col, half3(0.15, 0.45, 1.0), smoothstep(0.45, 0.48, flame + edge));
-                col = lerp(col, half3(0.82, 0.95, 1.0), smoothstep(0.82, 0.85, flame + edge));
+                if (_CardFire > 0.001)
+                {
+                    // Flames: tongues of noise rising off the card, reaching furthest above it, cut into three hard bands
+                    // (navy rim, electric blue, a near-white core) like a cartoon fire, over a soft blue glow.
+                    float above = saturate((p.y - hi.y) / 0.15 + 0.5);
+                    float tongues = Fbm(float2(p.x * 16, p.y * 3 - t * 2.4));
+                    float reach = (0.01 + 0.13 * tongues * tongues * tongues * 2) * (0.35 + 2.2 * above);
+                    // Burning out (_CardBurn 0 to 1): the flames eat in across the card from its edges, then die down.
+                    float dying = saturate((1.3 - _CardBurn) * 2.5);
+                    float flame = saturate(1 - d / reach) * step(-0.004, d) * _CardFire * dying;
+                    float eaten = _CardBurn * 1.4 - Fbm(p * 14 + t) * 0.6;
+                    flame = max(flame, step(d, 0) * saturate((eaten + d * 6) * 4) * _CardFire * saturate((1.5 - _CardBurn) * 3));
+
+                    // Then the paper shards: a 9×3 grid of jagged pieces breaks off where the fire reaches (edges first),
+                    // drifting up, shrinking and charring, their edges burning blue (_CardBurn 1 to 3.2).
+                    half shard = 0, shardFire = 0, char = 0;
+                    if (_CardBurn > 0)
+                    {
+                        float2 size = hi - lo, mid = (lo + hi) * 0.5, cell = size / float2(9, 3);
+                        float ix = floor((p.x - lo.x) / cell.x);
+                        for (int sy = 0; sy < 3; sy++)
+                            for (int sx = -1; sx <= 1; sx++)
+                            {
+                                float2 id = float2(ix + sx, sy);
+                                if (id.x < 0 || id.x > 8) continue;
+                                float h = Hash(id), h2 = Hash(id + 17.1);
+                                float2 home = lo + (id + 0.5) * cell;
+                                float centre = 1 - 2 * max(abs(home.x - mid.x) / size.x, abs(home.y - mid.y) / size.y);
+                                float age = _CardBurn - (0.1 + 0.6 * centre + 0.25 * h);
+                                float life = saturate(age / 2);
+                                if (age <= 0 || life >= 1) continue;
+                                float2 at = home + float2((h2 - 0.5) * 0.05 * age, (0.025 + 0.04 * h) * age + 0.012 * age * age);
+                                float2 local = (p - at) / (cell * 0.55 * (1 - life));
+                                float r = max(abs(local.x), abs(local.y)) + (Noise(local * 2.5 + id * 7.3) - 0.5) * 0.55;
+                                if (r >= 1) continue;
+                                shard = 1;
+                                shardFire = max(shardFire, smoothstep(0.5, 1, r) + life * 0.35);
+                                char = max(char, life);
+                            }
+                    }
+                    col = lerp(col, lerp(half3(0.043, 0.118, 0.31), half3(0.05, 0.05, 0.08), char), shard);
+                    flame = max(flame, shardFire);
+                    // Wobbly band edges so the layers lick at each other instead of following the outline.
+                    float edge = (Noise(p * 40 + float2(0, -t * 5)) - 0.5) * 0.18;
+                    col += half3(0.1, 0.3, 0.9) * saturate(1 - d / 0.12) * step(0, d) * 0.3 * _CardFire;
+                    col = lerp(col, half3(0.03, 0.08, 0.35), smoothstep(0.02, 0.05, flame));
+                    col = lerp(col, half3(0.15, 0.45, 1.0), smoothstep(0.45, 0.48, flame + edge));
+                    col = lerp(col, half3(0.82, 0.95, 1.0), smoothstep(0.82, 0.85, flame + edge));
+
+                }
 
                 // Paper grain, re-rolled twelve times a second like film, and Don't Starve's breathing vignette.
                 float2 pixel = floor(input.texcoord * _ScreenParams.xy / 2);

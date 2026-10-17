@@ -76,68 +76,40 @@ namespace Demons
         Springy spring;
         Transform visual;
         MaterialPropertyBlock block;
-        float flashAt = -10, frozenUntil;
+        float flashAt = -10, frozenUntil, flashStrength = 1, flashShown;
         Vector3 frozenAt;
         static readonly int FlashId = Shader.PropertyToID("_Flash");
 
         // Impact on this demon's drawing alone: a paper-white flash and, for a hit-stop, the card holding still for a
         // few frames while the networked body underneath carries on, then catching up. Never touches the simulation.
-        public void Hit(float stop = 0.08f)
+        public void Hit(float stop = 0.08f, float flash = 1)
         {
             if (!Mood.Effects) return;
             flashAt = Time.unscaledTime;
+            flashStrength = flash;
             if (stop <= 0) return;
             frozenUntil = Time.unscaledTime + stop;
             frozenAt = visual.position;
         }
 
-        float ghostUntil, lastGhost;
-
-        // A dash leaves a few fading copies of the drawing behind it, like smear frames.
-        void Ghosts()
-        {
-            if (Time.unscaledTime > ghostUntil || Time.unscaledTime - lastGhost < 0.035f || !sprite.sprite) return;
-            lastGhost = Time.unscaledTime;
-            var copy = new GameObject("Ghost").AddComponent<SpriteRenderer>();
-            copy.sharedMaterial = sprite.sharedMaterial;
-            copy.sprite = sprite.sprite;
-            copy.flipX = sprite.flipX;
-            copy.color = new Color(sprite.color.r, sprite.color.g, sprite.color.b, 0.45f);
-            copy.transform.SetPositionAndRotation(sprite.transform.position, sprite.transform.rotation);
-            copy.transform.localScale = sprite.transform.lossyScale;
-            copy.gameObject.AddComponent<Ghost>();
-        }
-
-        class Ghost : MonoBehaviour
-        {
-            SpriteRenderer drawing;
-            float born, alpha;
-
-            void Start()
-            {
-                drawing = GetComponent<SpriteRenderer>();
-                born = Time.unscaledTime;
-                alpha = drawing.color.a;
-            }
-
-            void Update()
-            {
-                float a = alpha * (1 - (Time.unscaledTime - born) / 0.25f);
-                if (a <= 0) Destroy(gameObject);
-                else drawing.color = new Color(drawing.color.r, drawing.color.g, drawing.color.b, a);
-            }
-        }
+        float windUntil, lastWind;
 
         void Impact()
         {
-            if (Mood.Effects) Ghosts();
+            // A dash streams a few wind lines past the demon.
+            if (Time.unscaledTime < windUntil && Time.unscaledTime - lastWind > 0.04f)
+            {
+                lastWind = Time.unscaledTime;
+                Fx.Wind(transform.position, transform.forward);
+            }
             if (Time.unscaledTime < frozenUntil) visual.position = frozenAt;
             else if (visual.localPosition != Vector3.zero)
                 visual.localPosition = Vector3.MoveTowards(visual.localPosition, Vector3.zero, Time.unscaledDeltaTime * 25);
-            float flash = Mathf.Clamp01(1 - (Time.unscaledTime - flashAt) / 0.18f);
+            float flash = flashStrength * Mathf.Clamp01(1 - (Time.unscaledTime - flashAt) / 0.18f);
+            if (flash == flashShown) return;
+            flashShown = flash;
             block ??= new MaterialPropertyBlock();
             sprite.GetPropertyBlock(block);
-            if (block.GetFloat(FlashId) == flash) return;
             block.SetFloat(FlashId, flash);
             sprite.SetPropertyBlock(block);
         }
@@ -221,7 +193,7 @@ namespace Demons
                 spring.Punch(new Vector3(-0.15f, -0.08f, 0.35f));
                 if (now <= was) return;
                 Audio.Play(Sounds.I.dash, transform.position);
-                ghostUntil = Time.unscaledTime + Balance.I.dashTime + 0.05f;
+                windUntil = Time.unscaledTime + Balance.I.dashTime + 0.05f;
             };
             Throws.OnValueChanged += (was, now) =>
             {
@@ -232,7 +204,7 @@ namespace Demons
             {
                 if (now <= was) return;
                 spring.Punch(Vector3.one * 0.25f);
-                Hit();
+                Hit(0.025f, 0.3f);
             };
             Deliveries.OnValueChanged += (was, now) =>
             {

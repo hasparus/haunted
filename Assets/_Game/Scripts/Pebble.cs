@@ -73,7 +73,7 @@ namespace Demons
             trail = gameObject.AddComponent<TrailRenderer>();
             trail.sharedMaterial = Resources.Load<Material>("Fx/Ink");
             trail.time = 0.22f;
-            trail.widthCurve = new AnimationCurve(new Keyframe(0, 0.32f), new Keyframe(1, 0));
+            trail.widthCurve = new AnimationCurve(new Keyframe(0, 0.36f), new Keyframe(0.15f, 0.3f), new Keyframe(1, 0));
             trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             trail.emitting = false;
         }
@@ -109,7 +109,7 @@ namespace Demons
                 if (trail.emitting)
                 {
                     var color = Mix(Stamps.Value);
-                    trail.startColor = new Color(color.r, color.g, color.b, 0.8f);
+                    trail.startColor = new Color(color.r, color.g, color.b, 0.5f);
                     trail.endColor = new Color(color.r, color.g, color.b, 0);
                 }
                 if (now is PebbleState.Floor or PebbleState.OnStation) spring.Punch(new Vector3(0.3f, -0.3f, 0.3f));
@@ -247,6 +247,7 @@ namespace Demons
         void Paint()
         {
             body.localScale = Vector3.one * (Kind.Value == PebbleKind.Big ? 1.6f : 1);
+            trail.widthMultiplier = body.localScale.x;
             col.radius = 0.25f * body.localScale.x;
             shell.SetActive(Shelled.Value);
             for (int slot = 0; slot < stampDots.Length; slot++)

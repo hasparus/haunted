@@ -723,6 +723,7 @@ namespace Demons.Editor
             var m = Paper(name, color);
             m.SetFloat("_Outline", 0);
             m.SetFloat("_Silhouette", 1);
+            m.SetFloat("_DepthPull", 0.45f);
             return m;
         }
 

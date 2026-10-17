@@ -35,14 +35,18 @@
     border-radius: 14px;
     border-width: 1px;
     border-color: var(--hairline);
+    /* Swings in on a gentle arc: a small turn about a pivot far below. */
+    transform-origin: 50% 500%;
+    rotate: -2.5deg;
     translate: 0 14px;
-    transition-property: translate;
-    transition-duration: 0.24s;
-    transition-timing-function: ease-out-cubic;
+    transition-property: translate, rotate;
+    transition-duration: 0.3s, 0.3s;
+    transition-timing-function: ease-out-cubic, ease-out-cubic;
 }
 
 .scrim--open .panel {
     translate: 0 0;
+    rotate: 0;
 }
 
 .menu-head {
@@ -434,12 +438,14 @@
 }
 
 .card {
-    scale: 0.82 0.82;
-    rotate: -3deg;
+    transform-origin: 50% 500%;
+    scale: 0.9 0.9;
+    rotate: -4deg;
+    translate: 0 26px;
     opacity: 0;
-    transition-property: scale, rotate, opacity;
-    transition-duration: 0.38s, 0.38s, 0.14s;
-    transition-timing-function: ease-out-back, ease-out-back, ease-out-cubic;
+    transition-property: scale, rotate, translate, opacity;
+    transition-duration: 0.4s, 0.4s, 0.4s, 0.14s;
+    transition-timing-function: ease-out-back, ease-out-cubic, ease-out-cubic, ease-out-cubic;
     max-width: 620px;
     padding: 18px 30px 22px 30px;
     background-color: var(--navy);
@@ -527,6 +533,13 @@
 }
 
 .review {
+    transform-origin: 50% 500%;
+    rotate: -3deg;
+    translate: 0 30px;
+    opacity: 0;
+    transition-property: rotate, translate, opacity;
+    transition-duration: 0.45s, 0.45s, 0.16s;
+    transition-timing-function: ease-out-cubic, ease-out-cubic, ease-out-cubic;
     width: 860px;
     max-width: 94%;
     padding: 18px 32px 22px 32px;
@@ -534,6 +547,12 @@
     border-radius: 14px;
     border-width: 1px;
     border-color: var(--hairline);
+}
+
+.review--in {
+    rotate: 0;
+    translate: 0 0;
+    opacity: 1;
 }
 
 .review-title {
@@ -651,6 +670,7 @@
 .card--in {
     scale: 1 1;
     rotate: 0;
+    translate: 0 0;
     opacity: 1;
 }
 

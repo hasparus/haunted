@@ -21,7 +21,8 @@ namespace Demons
 
         static readonly int FxTime = Shader.PropertyToID("_MindFxTime"), Wobble = Shader.PropertyToID("_MindWobble"),
             Inverted = Shader.PropertyToID("_MindInverted"), Clock = Shader.PropertyToID("_MindTime"), CardRect = Shader.PropertyToID("_CardRect"), CardFire = Shader.PropertyToID("_CardFire"), CardBurnId = Shader.PropertyToID("_CardBurn"),
-            PoolCenter = Shader.PropertyToID("_PoolCenter"), RipplesId = Shader.PropertyToID("_Ripples");
+            PoolCenter = Shader.PropertyToID("_PoolCenter"), RipplesId = Shader.PropertyToID("_Ripples"), GlowsId = Shader.PropertyToID("_CrackGlows");
+        static readonly Vector4[] glows = new Vector4[5];
 
         const float RippleTime = 0.6f;
         static readonly Vector4[] ripples = new Vector4[4];
@@ -79,6 +80,18 @@ namespace Demons
                 if (ripples[i].z >= 1) ripples[i].w = 0;
             }
             Shader.SetGlobalVectorArray(RipplesId, ripples);
+            // Light spilling from the cracks onto the floor below each one: xz, unused, strength.
+            for (int i = 0; i < glows.Length; i++)
+            {
+                glows[i] = Vector4.zero;
+                if (!cam || i >= CrackLights.Glows.Count || !Mood.Effects) continue;
+                var g = CrackLights.Glows[i];
+                var ray = cam.ViewportPointToRay(new Vector3(Mathf.Clamp(g.x, 0.1f, 0.9f), Mathf.Clamp(g.y, 0.05f, 0.6f)));
+                if (!new Plane(Vector3.up, Vector3.zero).Raycast(ray, out float hit)) continue;
+                var at = ray.GetPoint(hit);
+                glows[i] = new Vector4(at.x, at.z, 0, g.z);
+            }
+            Shader.SetGlobalVectorArray(GlowsId, glows);
             Shader.SetGlobalFloat(FxTime, fxTime);
             Shader.SetGlobalFloat(Clock, Time.unscaledTime % 1000);
             Shader.SetGlobalFloat(Wobble, wobble);

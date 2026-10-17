@@ -5,7 +5,7 @@ namespace Demons
     public class Fx : MonoBehaviour
     {
         static Fx instance;
-        ParticleSystem ink, dust, motes;
+        ParticleSystem ink, dust, motes, wind;
 
         // Ink stains that stay on the floor for the rest of the day, in the haunters' colours: one texel per ~3 cm over
         // the room, read by Haunted/Paper. Stamped on the CPU; stains are rare, so uploading the whole map each time is fine.
@@ -36,6 +36,11 @@ namespace Demons
             ink = Emitter("Ink", material, gravity: 1.6f, fadeIn: 0);
             dust = Emitter("Dust", material, gravity: -0.15f, fadeIn: 0);
             motes = Emitter("Motes", material, gravity: 0, fadeIn: 0.25f);
+            wind = Emitter("Wind", material, gravity: 0, fadeIn: 0);
+            var streaks = wind.GetComponent<ParticleSystemRenderer>();
+            streaks.renderMode = ParticleSystemRenderMode.Stretch;
+            streaks.velocityScale = 0.07f;
+            streaks.lengthScale = 1;
         }
 
         static ParticleSystem Emitter(string name, Material material, float gravity, float fadeIn)
@@ -82,6 +87,25 @@ namespace Demons
                 p.startLifetime = Random.Range(0.45f, 0.8f);
                 p.startColor = Color.Lerp(color, Color.black, Random.Range(0f, 0.35f));
                 instance.ink.Emit(p, 1);
+            }
+        }
+
+        // Thin wind lines streaming back past something moving fast along dir.
+        public static void Wind(Vector3 at, Vector3 dir)
+        {
+            if (!instance || !Mood.Effects) return;
+            dir.y = 0;
+            dir.Normalize();
+            var side = Vector3.Cross(Vector3.up, dir);
+            var p = new ParticleSystem.EmitParams { applyShapeToPosition = false };
+            for (int i = 0; i < 2; i++)
+            {
+                p.position = at + Vector3.up * Random.Range(0.25f, 1.4f) + side * Random.Range(-0.45f, 0.45f) - dir * Random.Range(0.1f, 0.5f);
+                p.velocity = -dir * Random.Range(6f, 9f);
+                p.startSize = Random.Range(0.03f, 0.05f);
+                p.startLifetime = Random.Range(0.12f, 0.18f);
+                p.startColor = new Color(0.96f, 0.92f, 0.84f, 0.6f);
+                instance.wind.Emit(p, 1);
             }
         }
 
