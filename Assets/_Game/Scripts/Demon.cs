@@ -84,6 +84,33 @@ namespace Demons
             visual.SetParent(transform, false);
             foreach (var part in parts) part.SetParent(visual, false);
             spring = visual.gameObject.AddComponent<Springy>();
+
+            // The drawing stands in for the capsule, which stays behind as an invisible shadow caster.
+            sprite = new GameObject("Sprite").AddComponent<SpriteRenderer>();
+            sprite.transform.SetParent(visual, false);
+            foreach (var r in visual.GetComponentsInChildren<MeshRenderer>())
+                if (r == body || r == head) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+                else if (r.name == "Nose") r.enabled = false;
+        }
+
+        SpriteRenderer sprite;
+        static Sprite front, side, back;
+
+        // Billboard toward the camera; pick the drawing from where the demon faces on screen.
+        void LateUpdate()
+        {
+            var cam = Camera.main;
+            if (!cam) return;
+            front = front ? front : Resources.Load<Sprite>("Art/Devil_Front");
+            side = side ? side : Resources.Load<Sprite>("Art/Devil_Side");
+            back = back ? back : Resources.Load<Sprite>("Art/Devil_Back");
+            var view = cam.transform;
+            sprite.transform.rotation = view.rotation;
+            float x = Vector3.Dot(transform.forward, view.right);
+            float z = Vector3.Dot(transform.forward, Flat(view.forward).normalized);
+            bool sideways = Mathf.Abs(x) > Mathf.Abs(z);
+            sprite.sprite = sideways ? side : z > 0 ? back : front;
+            sprite.flipX = sideways && x < 0;
         }
 
         public override void OnNetworkSpawn()
@@ -149,6 +176,7 @@ namespace Demons
         {
             var tint = Lit.Value ? Color.Lerp(Tint, Color.white, 0.6f) : Tint;
             body.material.color = tint;
+            sprite.color = tint;
             head.material.color = Color.Lerp(tint, Color.white, 0.35f);
             scribble.SetActive(Scribble.Value > 0);
             if (IsOwner && marker) marker.GetComponent<Renderer>().material.color = Tint;

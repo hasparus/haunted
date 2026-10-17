@@ -107,11 +107,12 @@ namespace Demons
             float distance = to.magnitude;
             var aim = Quaternion.LookRotation(to);
             beam.SetPositionAndRotation(source, aim);
-            beam.localScale = new Vector3(radius, radius, distance);
+            // Overshoots the floor a little so the faded rim straddles it instead of cutting off.
+            beam.localScale = new Vector3(radius, radius, distance) * 1.12f;
             lamp.transform.SetPositionAndRotation(source, aim);
             lamp.spotAngle = Mathf.Atan(radius / distance) * 2 * Mathf.Rad2Deg * 1.15f;
             lamp.range = distance + 3;
-            glow.range = radius * 1.8f;
+            glow.range = radius * 2.6f;
         }
 
         void Advance()

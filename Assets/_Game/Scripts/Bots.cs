@@ -117,7 +117,7 @@ namespace Demons
 
         public static Bot Add()
         {
-            if (!FindFirstObjectByType<Bots>()) DontDestroyOnLoad(new GameObject("Bots").AddComponent<Bots>().gameObject);
+            if (!FindAnyObjectByType<Bots>()) DontDestroyOnLoad(new GameObject("Bots").AddComponent<Bots>().gameObject);
             InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
 #if UNITY_EDITOR
             InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;

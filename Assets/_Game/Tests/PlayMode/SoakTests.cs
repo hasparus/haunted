@@ -22,7 +22,7 @@ namespace Demons.PlayTests
         public IEnumerator TearDown()
         {
             Time.timeScale = 1;
-            if (Object.FindFirstObjectByType<Bots>() is { } bots) Object.Destroy(bots.gameObject);
+            if (Object.FindAnyObjectByType<Bots>() is { } bots) Object.Destroy(bots.gameObject);
             if (Unity.Netcode.NetworkManager.Singleton) Object.Destroy(Unity.Netcode.NetworkManager.Singleton.gameObject);
             LocalPlayers.Clear();
             yield return null;

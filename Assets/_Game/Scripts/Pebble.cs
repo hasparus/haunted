@@ -169,6 +169,12 @@ namespace Demons
                     break;
                 case PebbleState.OnStation when Net.Find<Station>(Anchor.Value) is { } station:
                     transform.position = station.Slot.position;
+                    // Being haunted: a faint tremble so the work reads.
+                    if (station.Workers.Value != 0)
+                    {
+                        float t = Time.time * 40;
+                        transform.position += new Vector3(Mathf.Sin(t * 1.3f), Mathf.Sin(t * 1.7f) * 0.5f, Mathf.Sin(t * 1.1f + 1)) * 0.025f;
+                    }
                     break;
                 case PebbleState.Floor:
                     transform.position = FloorPos.Value;
