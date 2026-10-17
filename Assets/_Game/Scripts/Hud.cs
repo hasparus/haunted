@@ -101,6 +101,37 @@ namespace Demons
             }
         }
 
+        readonly List<Label> pickHints = new();
+
+        // Under a demon standing at a free head on its pedestal: the key that puts it on.
+        void RefreshPickHints(Camera cam)
+        {
+            int shown = 0;
+            if (cam)
+                foreach (var d in Demon.All)
+                {
+                    if (!d.IsOwner || d.Carrying.Value != Net.None || HeadPedestal.Near(d.transform.position, d) is not { } pedestal) continue;
+                    var player = LocalPlayers.Find(d.LocalIndex.Value);
+                    if (player == null) continue;
+                    if (shown == pickHints.Count)
+                    {
+                        var label = UI.Text("", "pick-hint");
+                        label.pickingMode = PickingMode.Ignore;
+                        world.Add(label);
+                        pickHints.Add(label);
+                    }
+                    var hint = pickHints[shown++];
+                    UI.Show(hint, true);
+                    UI.Set(hint, $"Pick up with {LocalPlayers.KeysOf(player, p => p.Grab)} to play as {Demon.Names[pedestal.Head]}");
+                    var screen = cam.WorldToScreenPoint(d.transform.position);
+                    var point = RuntimePanelUtils.ScreenToPanel(hud.panel, new Vector2(screen.x, Screen.height - screen.y));
+                    float width = float.IsNaN(hint.resolvedStyle.width) ? 0 : hint.resolvedStyle.width;
+                    hint.style.left = point.x - width / 2;
+                    hint.style.top = point.y + 10;
+                }
+            for (int i = shown; i < pickHints.Count; i++) UI.Show(pickHints[i], false);
+        }
+
         void RefreshPopups()
         {
             var cam = Camera.main;
@@ -233,6 +264,7 @@ namespace Demons
         {
             if (top == null) return;
             RefreshPopups();
+            RefreshPickHints(Camera.main);
             var state = GameState.Instance;
             bool live = state && state.IsSpawned;
             var progress = Progression.Instance && Progression.Instance.IsSpawned ? Progression.Instance : null;

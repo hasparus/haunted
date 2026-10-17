@@ -258,23 +258,22 @@ namespace Demons.Editor
             const float scale = 0.8f, z = 4.6f;
             for (int i = 0; i < DemonRig.Heads; i++)
             {
-                // Under every other colour pad as the headquarters' camera sees it: nearer the camera, the same screen
-                // position is closer to the middle.
-                var pad = new Vector3(-15f + i * 2 * 1.3f, 0, 7f);
-                float Depth(Vector3 p) => Vector3.Dot(p - cam.transform.position, cam.transform.forward);
-                var at = new Vector3(pad.x * Depth(new Vector3(pad.x, 0, z)) / Depth(pad), 0, z);
+                // Evenly across the colour row's span, the first under its first pad and the last under its last.
+                var at = new Vector3(-15f + i * (6 * 1.3f) / (DemonRig.Heads - 1), 0, z);
                 var root = new GameObject($"Head{i}").transform;
                 root.position = at;
                 var stand = Prim(PrimitiveType.Cylinder, "Pedestal", root, new Vector3(0, 0.3f, 0), new Vector3(0.7f, 0.3f, 0.7f), Paper("Pedestal", new Color(0.66f, 0.61f, 0.53f)), collider: true);
                 stand.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
                 var shown = new GameObject("Shown").transform;
                 shown.SetParent(root, false);
-                // The drawings pivot at the demon's feet, 0.63 m under the head at full size.
+                // The drawings pivot at the demon's feet, 0.63 m under the chin at full size.
                 foreach (var (name, sprite) in new[] { ("Head", DemonRig.HeadFront(i)), ("Face", DemonRig.Face(i)) })
                 {
-                    var art = Point(name, shown, new Vector3(0, 0.6f - 0.63f * scale + 0.02f, 0)).gameObject.AddComponent<SpriteRenderer>();
+                    var art = Point(name, shown, Vector3.zero).gameObject.AddComponent<SpriteRenderer>();
                     art.sprite = sprite;
                     art.transform.rotation = cam.transform.rotation;
+                    // The drawing leans back with the camera, so its chin is put on the near edge of the pedestal's top.
+                    art.transform.position = at + new Vector3(0, 0.6f, -0.28f) - art.transform.up * 0.63f * scale;
                     art.transform.localScale = Vector3.one * scale;
                     art.sharedMaterial = Resources.Load<Material>("Fx/Card");
                     if (name == "Face") art.sortingOrder = 1;

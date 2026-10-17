@@ -344,7 +344,9 @@ namespace Demons
                 DashedRpc();
             }
 
-            Component target = GrabTarget();
+            // A free head in reach wins, as it does for grabbing.
+            Component target = Carrying.Value == Net.None ? HeadPedestal.Near(transform.position, this) : null;
+            if (!target) target = GrabTarget();
             if (!target && Carrying.Value == Net.None) target = UseTarget();
             if (target)
             {

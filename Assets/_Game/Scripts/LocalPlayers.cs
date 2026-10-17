@@ -53,13 +53,19 @@ namespace Demons
             var lines = new List<string>();
             foreach (var p in All.Count > 0 ? All.ToArray() : preview)
             {
-                var a = action(p);
-                var names = new List<string>();
-                for (int i = 0; i < a.bindings.Count; i++) names.Add(KeyName(p, a, i));
-                var line = string.Join(" / ", names);
+                var line = KeysOf(p, action);
                 if (!lines.Contains(line)) lines.Add(line);
             }
             return string.Join("\n", lines);
+        }
+
+        // The keys one player presses for an action.
+        public static string KeysOf(LocalPlayer p, Func<LocalPlayer, InputAction> action)
+        {
+            var a = action(p);
+            var names = new List<string>();
+            for (int i = 0; i < a.bindings.Count; i++) names.Add(KeyName(p, a, i));
+            return string.Join(" / ", names);
         }
 
         static string KeyName(LocalPlayer p, InputAction a, int i) => a.bindings[i].effectivePath switch
