@@ -77,15 +77,11 @@ namespace Demons.Editor
 
             var shell = Prim(PrimitiveType.Sphere, "Shell", body, Vector3.zero, Vector3.one * 0.62f, Mat("Shell", Gray(0.28f)));
             shell.SetActive(false);
-            var pill = Prim(PrimitiveType.Capsule, "Pill", body, Vector3.zero, new Vector3(0.28f, 0.22f, 0.28f), Mat("Pill", new Color(0.55f, 0.75f, 1f)));
-            pill.transform.localRotation = Quaternion.Euler(0, 0, 90);
-            pill.SetActive(false);
 
             Set(p, "body", body);
             Set(p, "stone", stone.GetComponent<Renderer>());
             Set(p, "wings", wings);
             Set(p, "shell", shell);
-            Set(p, "pill", pill);
             SetArray(p, "stampDots", dots);
             return SavePrefab(root).GetComponent<Pebble>();
         }
@@ -145,6 +141,7 @@ namespace Demons.Editor
             BuildSpotlight(new Vector3(0, 0.02f, 0), demo: false);
             BuildClaw(new Vector3(0, 7f, 0), demo: false);
             BuildPen(new Vector3(0, 2.2f, -4.5f), demo: false);
+            BuildMeds(new Vector3(0, 1.8f, 6.4f), demo: false);
             new GameObject("Progression").AddComponent<NetworkObject>().gameObject.AddComponent<Progression>();
             SaveScene(OfficePath);
         }
@@ -204,14 +201,14 @@ namespace Demons.Editor
             Seed(bays, together.Slot.position, stamps: 0b0001, desk: together);
 
             var big = BuildStation(new Vector3(2f, 0, a), cam);
-            FloorLabel("BIG THOUGHT\nhaunt it together\n3x points", bays, new Vector3(2f, 0, a - 1.8f));
+            FloorLabel("BIG THOUGHT\nhaunt it together\n5x points", bays, new Vector3(2f, 0, a - 1.8f));
             Seed(bays, big.Slot.position, desk: big, kind: PebbleKind.Big);
 
             FloorLabel("LEFT ALONE\nwings, -influence", bays, new Vector3(7f, 0, a - 1.6f));
             Seed(bays, new Vector3(7f, 0, a - 0.2f), pinned: false);
 
-            FloorLabel("PILL\nif it reaches him,\ncontrols flip", bays, new Vector3(12f, 0, a - 1.8f));
-            Seed(bays, new Vector3(12f, 0, a - 0.2f), kind: PebbleKind.Pill);
+            FloorLabel("MEDS\nwhen he takes one,\ncontrols flip", bays, new Vector3(12f, 0, a - 1.8f));
+            BuildMeds(new Vector3(12f, 0.9f, a), demo: true);
 
             BuildStation(new Vector3(-12f, 0, b), cam, StationKind.Pot, Feature.Pot);
             FloorLabel("POT\nhaunts by itself", bays, new Vector3(-12f, 0, b - 1.8f));
@@ -297,6 +294,21 @@ namespace Demons.Editor
             Prim(PrimitiveType.Cylinder, "Cap", look.transform, new Vector3(0, 0.8f, 0), new Vector3(0.13f, 0.08f, 0.13f), Mat("Phone", new Color(0.98f, 0.8f, 0.08f)));
             look.SetActive(false);
             Set(pen, "look", look);
+        }
+
+        static void BuildMeds(Vector3 pos, bool demo)
+        {
+            var go = new GameObject(demo ? "MedsDemo" : "Meds");
+            go.transform.position = pos;
+            var meds = go.AddComponent<Meds>();
+            meds.Demo = demo;
+            var look = new GameObject("Look");
+            look.transform.SetParent(go.transform, false);
+            var pill = Prim(PrimitiveType.Capsule, "Pill", look.transform, Vector3.zero, new Vector3(0.6f, 0.55f, 0.6f), Mat("Pill", new Color(0.55f, 0.75f, 1f)));
+            pill.transform.localRotation = Quaternion.Euler(0, 0, 90);
+            Prim(PrimitiveType.Sphere, "Cap", look.transform, new Vector3(0.3f, 0, 0), Vector3.one * 0.62f, Mat("PillCap", Gray(0.95f)));
+            look.SetActive(false);
+            Set(meds, "look", look.transform);
         }
 
         static void BuildSpotlight(Vector3 pos, bool demo)

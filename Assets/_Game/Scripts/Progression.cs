@@ -32,7 +32,7 @@ namespace Demons
             "WEDNESDAY\n214 unread emails. IT finally sent a tool: the pot.\nDrop a thought in and it haunts itself.",
             "THURSDAY\nHe's getting defensive.\nShelled thoughts need the hammer first.",
             "FRIDAY\nTherapy at five. Homework: write it all down.\nStay out of the light. Mash to shake off the pen.",
-            "SATURDAY\nNew meds. The waiting-room music won't stop.\nDon't let pills ride out to him.",
+            "SATURDAY\nNew meds. The waiting-room music won't stop.\nWhen he takes a pill, controls flip.",
             "SUNDAY\nMom keeps calling. He tries to pull himself together.\nAnswer the phone. Save thoughts from his hand.",
         };
 
@@ -50,6 +50,7 @@ namespace Demons
         public NetworkVariable<FixedString512Bytes> Card = new();
         public NetworkVariable<double> CardUntil = new();
         public NetworkVariable<double> InvertedUntil = new();
+        public NetworkVariable<double> PillAt = new();
         public NetworkVariable<float> Best = new();
         public NetworkVariable<float> Peak = new();
         public NetworkVariable<bool> Review = new();
@@ -60,7 +61,7 @@ namespace Demons
 
         const string NameKey = "player_name";
 
-        double startTime, nextCall, endAt;
+        double startTime, nextCall, nextPill, endAt;
         bool over;
         int signers;
         float typingSince;
@@ -102,9 +103,11 @@ namespace Demons
             Peak.Value = 0;
             Review.Value = false;
             InvertedUntil.Value = 0;
+            PillAt.Value = 0;
             Best.Value = PlayerPrefs.GetFloat(BestKey, 0);
             startTime = Now;
             nextCall = Now + 20;
+            nextPill = Now + 30;
             ShowCard(Mode.Value == GameMode.Week
                 ? DayCards[0]
                 : "INFINITE SURVIVAL\nEvery trick at once. Keep him haunted as long as you can.");
@@ -116,7 +119,7 @@ namespace Demons
             CardUntil.Value = Now + seconds;
         }
 
-        public void PillTaken()
+        void PillTaken()
         {
             InvertedUntil.Value = Now + Balance.I.pillTime;
             ShowCard("THE MEDS KICK IN\nControls flipped!", 2.5f);
@@ -160,6 +163,7 @@ namespace Demons
                     {
                         Day.Value++;
                         ShowCard(DayCards[Day.Value]);
+                        if (Day.Value == UnlockDay(Feature.Pill)) nextPill = Now + 12;
                     }
                 }
             }
@@ -186,6 +190,17 @@ namespace Demons
                         typingSince = Time.unscaledTime;
                         LocalPlayers.SetEnabled(false);
                     }
+                }
+            }
+
+            if (Has(Feature.Pill))
+            {
+                // The host reaches for the bottle (PillAt, shown by Meds), then swallows.
+                if (PillAt.Value < nextPill && Now >= nextPill) PillAt.Value = Now + Balance.I.pillWarning;
+                else if (PillAt.Value >= nextPill && Now >= PillAt.Value)
+                {
+                    PillTaken();
+                    nextPill = Now + Balance.I.pillTime + Random.Range(Balance.I.pillGapMin, Balance.I.pillGapMax);
                 }
             }
 

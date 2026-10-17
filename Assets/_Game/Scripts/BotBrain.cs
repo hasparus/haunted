@@ -48,7 +48,8 @@ namespace Demons
                 TapNow(bot, GamepadButton.West);
                 return;
             }
-            if (d.Lit.Value && Object.FindAnyObjectByType<Spotlight>() is { } light)
+            var light = Spotlight.Instance;
+            if (light && (d.Lit.Value || light.Threatens(d.transform.position)))
             {
                 Doing = "lit";
                 Release();
@@ -145,12 +146,7 @@ namespace Demons
             {
                 if (p.State.Value is not (PebbleState.OnBelt or PebbleState.Floor)) continue;
                 float score;
-                if (p.Kind.Value == PebbleKind.Pill)
-                {
-                    if (p.State.Value == PebbleState.Floor) continue;
-                    score = 3 + 5 / Mathf.Max(1, p.BeltLeft);
-                }
-                else if (p.Stamps.Value != 0 && p.State.Value == PebbleState.OnBelt)
+                if (p.Stamps.Value != 0 && p.State.Value == PebbleState.OnBelt)
                     continue;
                 else
                     score = 2 + p.Weight + Urgency(p);
@@ -161,13 +157,6 @@ namespace Demons
         IEnumerable<Task> CarryTasks(Demon d, Pebble p)
         {
             var me = d.transform.position;
-            if (p.Kind.Value == PebbleKind.Pill)
-            {
-                var belt = Belt.Instance.ClosestPoint(me);
-                var away = Dist(me, belt) > 2.5f ? me : me + (me - belt).normalized * 3;
-                yield return new Task { Score = 1, Goal = away, Act = Act.Tap, Button = GamepadButton.South };
-                yield break;
-            }
             if (p.Stamps.Value != 0 && !p.Shelled.Value && Scoring.StampCount(p.Stamps.Value) >= DesiredStamps(p))
             {
                 yield return new Task { Score = 10, Goal = Belt.Instance.ClosestPoint(me), Act = Act.Tap, Button = GamepadButton.South };

@@ -30,10 +30,8 @@ namespace Demons
             var pebble = Instantiate(pebblePrefab, start.position, Quaternion.identity);
             if (progress)
             {
-                float roll = Random.value;
-                if (Progression.Has(Feature.Pill) && roll < 0.08f) pebble.SpawnKind = PebbleKind.Pill;
-                else if (Progression.Has(Feature.Big) && roll < 0.28f) pebble.SpawnKind = PebbleKind.Big;
-                pebble.SpawnShelled = pebble.SpawnKind != PebbleKind.Pill && Progression.Has(Feature.Shell) && Random.value < 0.3f;
+                if (Progression.Has(Feature.Big) && Random.value < 0.2f) pebble.SpawnKind = PebbleKind.Big;
+                pebble.SpawnShelled = Progression.Has(Feature.Shell) && Random.value < 0.3f;
             }
             pebble.NetworkObject.Spawn(destroyWithScene: true);
         }

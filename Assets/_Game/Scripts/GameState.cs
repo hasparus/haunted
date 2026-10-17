@@ -123,7 +123,7 @@ namespace Demons
         public void Deliver(Pebble pebble)
         {
             var prestige = new float[Scoring.MaxDemons];
-            float gained = Scoring.Deliver(pebble.Stamps.Value, pebble.LastHolder.Value, prestige, pebble.Weight);
+            float gained = Scoring.Deliver(pebble.Stamps.Value, pebble.LastHolder.Value, prestige, pebble.Points);
             Influence.Value += gained;
             if (gained > 0) PopupRpc(pebble.transform.position, $"+{gained:0.#}", pebble.LastHolder.Value);
             if (pebble.Stamps.Value != 0 && Demon.All.Find(d => d.Slot.Value == pebble.LastHolder.Value) is { } deliverer)

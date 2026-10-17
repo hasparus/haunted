@@ -6,7 +6,7 @@ namespace Demons
 {
     public enum PebbleState : byte { OnBelt, Held, OnStation, Floor, Flying, Thrown }
 
-    public enum PebbleKind : byte { Normal, Big, Pill }
+    public enum PebbleKind : byte { Normal, Big }
 
     public class Pebble : NetworkBehaviour
     {
@@ -37,7 +37,7 @@ namespace Demons
         [SerializeField] Transform body;
         [SerializeField] Renderer stone;
         [SerializeField] Renderer[] stampDots;
-        [SerializeField] GameObject wings, shell, pill;
+        [SerializeField] GameObject wings, shell;
 
         double flyStart;
         Rigidbody rb;
@@ -53,8 +53,9 @@ namespace Demons
         public float BeltLeft => Belt.Instance.Length - BeltDistance;
         double SinceThrow => Now - ThrowSince.Value;
         public bool IsGrabbable => State.Value is PebbleState.OnBelt or PebbleState.Floor or PebbleState.OnStation;
-        public bool Hauntable => !Shelled.Value && Kind.Value != PebbleKind.Pill;
+        public bool Hauntable => !Shelled.Value;
         public float Weight => Kind.Value == PebbleKind.Big ? Balance.I.bigWeight : 1;
+        public float Points => Kind.Value == PebbleKind.Big ? Balance.I.bigPoints : 1;
 
         void Awake()
         {
@@ -183,8 +184,6 @@ namespace Demons
             body.localScale = Vector3.one * (Kind.Value == PebbleKind.Big ? 1.6f : 1);
             col.radius = 0.25f * body.localScale.x;
             shell.SetActive(Shelled.Value);
-            pill.SetActive(Kind.Value == PebbleKind.Pill);
-            stone.enabled = Kind.Value != PebbleKind.Pill;
             for (int slot = 0; slot < stampDots.Length; slot++)
                 stampDots[slot].gameObject.SetActive((Stamps.Value & (1 << slot)) != 0);
         }
@@ -299,12 +298,7 @@ namespace Demons
 
         void ReachHost()
         {
-            if (Kind.Value != PebbleKind.Pill) GameState.Instance.Deliver(this);
-            else
-            {
-                if (Progression.Instance) Progression.Instance.PillTaken();
-                Consume();
-            }
+            GameState.Instance.Deliver(this);
         }
 
         public void Consume()
@@ -318,7 +312,7 @@ namespace Demons
             Release();
             State.Value = PebbleState.Flying;
             flyStart = Time.timeAsDouble;
-            if (Kind.Value != PebbleKind.Pill) GameState.Instance.Forgotten(transform.position);
+            GameState.Instance.Forgotten(transform.position);
         }
 
         void Release()

@@ -1,41 +1,52 @@
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 
 namespace Demons
 {
     public class Spotlight : NetworkBehaviour
     {
+        public enum Phase : byte { Rest, Hunt, Aim, Strike }
+
         public bool Demo;
         [SerializeField] GameObject look;
 
-        readonly NetworkVariable<bool> resting = new();
+        readonly NetworkVariable<Phase> phase = new();
 
         Vector3 home;
         Demon target;
         float retargetAt, phaseEnd;
+        int strikesLeft;
+        bool strikeNext = true;
 
         bool Active => Demo || (Progression.Instance && Progression.Has(Feature.Therapist));
+        float Scale => phase.Value switch { Phase.Rest => 0.35f, Phase.Hunt => 1, _ => Balance.I.strikeScale };
 
-        void Awake() => home = transform.position;
+        public bool Threatens(Vector3 p) =>
+            phase.Value is Phase.Aim or Phase.Strike && Flat(p - transform.position) < Balance.I.spotRadius * Scale;
+
+        public static Spotlight Instance;
+
+        void Awake()
+        {
+            Instance = this;
+            home = transform.position;
+        }
 
         void Update()
         {
             bool active = Active;
-            look.SetActive(active);
-            look.transform.localScale = Vector3.Lerp(look.transform.localScale, Vector3.one * (resting.Value ? 0.35f : 1), Time.deltaTime * 4);
+            bool blink = phase.Value == Phase.Aim && Mathf.Repeat(Time.time * 6, 1) < 0.4f;
+            look.SetActive(active && !blink);
+            look.transform.localScale = Vector3.Lerp(look.transform.localScale, Vector3.one * Scale, Time.deltaTime * 8);
             if (!IsServer || !IsSpawned) return;
-            if (active && !Demo && Time.time >= phaseEnd)
-            {
-                resting.Value = !resting.Value;
-                phaseEnd = Time.time + (resting.Value ? Balance.I.spotRest : Balance.I.spotHunt);
-            }
+            if (active && Time.time >= phaseEnd) Advance();
             if (active) Move();
-            active &= !resting.Value;
+            bool lighting = active && phase.Value is Phase.Hunt or Phase.Strike;
 
             foreach (var d in Demon.All)
             {
-                var off = d.transform.position - transform.position;
-                bool lit = active && new Vector2(off.x, off.z).magnitude < Balance.I.spotRadius && d.transform.position.y > -1;
+                bool lit = lighting && Flat(d.transform.position - transform.position) < Balance.I.spotRadius * Scale && d.transform.position.y > -1;
                 if (lit == d.Lit.Value) continue;
                 d.Lit.Value = lit;
                 if (!lit) continue;
@@ -44,17 +55,45 @@ namespace Demons
             }
         }
 
+        void Advance()
+        {
+            var b = Balance.I;
+            var next = phase.Value switch
+            {
+                Phase.Rest => (strikeNext = !strikeNext) ? Phase.Aim : Phase.Hunt,
+                Phase.Aim => Phase.Strike,
+                Phase.Strike => --strikesLeft > 0 ? Phase.Aim : Phase.Rest,
+                _ => Phase.Rest,
+            };
+            if (phase.Value == Phase.Rest && next == Phase.Aim) strikesLeft = b.strikeCount;
+            if (next == Phase.Aim) GetComponent<NetworkTransform>().Teleport(StrikeAt(), transform.rotation, transform.localScale);
+            phase.Value = next;
+            float seconds = next switch { Phase.Rest => b.spotRest, Phase.Hunt => b.spotHunt, Phase.Aim => b.strikeAim, _ => b.strikeTime };
+            phaseEnd = Time.time + seconds * (Demo ? 0.5f : 1);
+        }
+
+        Vector3 StrikeAt()
+        {
+            var at = Demo || Demon.All.Count == 0
+                ? home + Quaternion.Euler(0, Random.Range(0, 360f), 0) * Vector3.forward * Random.Range(0, 1.5f)
+                : Demon.All[Random.Range(0, Demon.All.Count)].transform.position;
+            at.y = transform.position.y;
+            return at;
+        }
+
         void Move()
         {
+            float speed = Balance.I.moveSpeed * Balance.I.spotSpeed * Time.deltaTime;
+            if (phase.Value is Phase.Aim or Phase.Strike) return;
+            if (phase.Value == Phase.Rest)
+            {
+                transform.position = Vector3.MoveTowards(transform.position, home, speed);
+                return;
+            }
             if (Demo)
             {
                 float t = Time.time * 0.5f;
-                transform.position = home + new Vector3(Mathf.Cos(t), 0, Mathf.Sin(t)) * 1.5f;
-                return;
-            }
-            if (resting.Value)
-            {
-                transform.position = Vector3.MoveTowards(transform.position, home, Balance.I.moveSpeed * Balance.I.spotSpeed * Time.deltaTime);
+                transform.position = Vector3.MoveTowards(transform.position, home + new Vector3(Mathf.Cos(t), 0, Mathf.Sin(t)) * 1.5f, speed * 2);
                 return;
             }
             if (!target || Time.time >= retargetAt)
@@ -64,7 +103,9 @@ namespace Demons
             }
             var goal = target ? target.transform.position : home;
             goal.y = transform.position.y;
-            transform.position = Vector3.MoveTowards(transform.position, goal, Balance.I.moveSpeed * Balance.I.spotSpeed * Time.deltaTime);
+            transform.position = Vector3.MoveTowards(transform.position, goal, speed);
         }
+
+        static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
     }
 }
