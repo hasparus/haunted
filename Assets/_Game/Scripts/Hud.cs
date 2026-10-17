@@ -254,9 +254,15 @@ namespace Demons
             if (burning != null && !cardBurning)
             {
                 burning.style.opacity = StyleKeyword.Null;
+                burning.RemoveFromClassList("burning");
                 if (!burningOut) burning = null;
             }
-            if (cardBurning) burning.style.opacity = 1 - burn * burn;
+            // Opaque for the first third while it chars black, then gone; a plain fade reads as dissolving, not burning.
+            if (cardBurning)
+            {
+                burning.AddToClassList("burning");
+                burning.style.opacity = 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.35f, 1, burn));
+            }
             CardBurn = burningOut ? burn : 0;
 
             if (!cardBurning)
