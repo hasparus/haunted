@@ -69,9 +69,17 @@ namespace Demons
             if (!bouncy) bouncy = new PhysicsMaterial("Pebble") { bounciness = Balance.I.throwBounce, bounceCombine = PhysicsMaterialCombine.Maximum, dynamicFriction = 1, staticFriction = 1, frictionCombine = PhysicsMaterialCombine.Maximum };
             col.sharedMaterial = bouncy;
             spring = gameObject.AddComponent<Springy>();
+            // An ink streak behind a thrown thought, in its haunters' colours.
+            trail = gameObject.AddComponent<TrailRenderer>();
+            trail.sharedMaterial = Resources.Load<Material>("Fx/Ink");
+            trail.time = 0.22f;
+            trail.widthCurve = new AnimationCurve(new Keyframe(0, 0.32f), new Keyframe(1, 0));
+            trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            trail.emitting = false;
         }
 
         Springy spring;
+        TrailRenderer trail;
 
         public override void OnNetworkSpawn()
         {
@@ -85,10 +93,22 @@ namespace Demons
             Stamps.OnValueChanged += (was, now) =>
             {
                 Paint();
-                if (now != 0 && now != was) spring.Punch(Vector3.one * 0.5f);
+                if (now != 0 && now != was)
+                {
+                    spring.Punch(Vector3.one * 0.5f);
+                    byte fresh = (byte)(now & ~was);
+                    Fx.Splat(transform.position, Mix(fresh != 0 ? fresh : now));
+                }
             };
             State.OnValueChanged += (_, now) =>
             {
+                trail.emitting = now is PebbleState.Thrown or PebbleState.Flying && Mood.Effects;
+                if (trail.emitting)
+                {
+                    var color = Mix(Stamps.Value);
+                    trail.startColor = new Color(color.r, color.g, color.b, 0.8f);
+                    trail.endColor = new Color(color.r, color.g, color.b, 0);
+                }
                 if (now is PebbleState.Floor or PebbleState.OnStation) spring.Punch(new Vector3(0.3f, -0.3f, 0.3f));
                 else if (now == PebbleState.Held) spring.Punch(Vector3.one * 0.2f);
             };

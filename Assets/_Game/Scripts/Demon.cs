@@ -270,6 +270,7 @@ namespace Demons
             if (stride < Sounds.I.stepLength) return;
             stride = 0;
             Audio.Play(Sounds.I.step, transform.position);
+            Fx.Puff(transform.position);
         }
 
         const float MarkerRadius = 0.5f;

@@ -10,6 +10,7 @@ Shader "Haunted/Paper"
         _TileSize("Tile size", Float) = 1.6
         _Outline("Ink outline (px)", Range(0, 4)) = 1.0
         _PoolRadius("Light pool radius", Float) = 9
+        _Slats("Belt slats", Range(0, 1)) = 0
     }
 
     SubShader
@@ -37,9 +38,10 @@ Shader "Haunted/Paper"
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
                 half _Hatch, _Tiles;
-                float _TileSize, _Outline, _PoolRadius;
+                float _TileSize, _Outline, _PoolRadius, _Slats;
             CBUFFER_END
-            float4 _PoolCenter; // xz of the floor point under the middle of the board, set by MindFx
+            float4 _PoolCenter;
+            float _BeltTravel; // how far the belt has moved, set by Belt // xz of the floor point under the middle of the board, set by MindFx
 
             struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 uv : TEXCOORD0; };
             struct Varyings
@@ -95,6 +97,10 @@ Shader "Haunted/Paper"
                     albedo *= 1 - grid * 0.16 * _Tiles;
                     albedo *= 0.96 + 0.08 * Hash(floor(t));
                 }
+
+                // The belt's slats, drawn as pale ridges on its top that roll along with the thoughts.
+                if (_Slats > 0 && n.y > 0.5)
+                    albedo += _Slats * 0.16 * (1 - smoothstep(0.02, 0.07, abs(frac((i.positionWS.x - _BeltTravel) / 0.45) - 0.5) - 0.38));
 
                 float4 shadowCoord = TransformWorldToShadowCoord(i.positionWS);
                 Light sun = GetMainLight(shadowCoord);

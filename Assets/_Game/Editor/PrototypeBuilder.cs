@@ -537,7 +537,7 @@ namespace Demons.Editor
             beltGo.transform.position = new Vector3(0, 0, beltZ);
             beltGo.AddComponent<NetworkObject>();
             var belt = beltGo.AddComponent<Belt>();
-            Prim(PrimitiveType.Cube, "Conveyor", beltGo.transform, new Vector3((beltStart + beltEnd) / 2, 0.25f, 0), new Vector3(beltEnd - beltStart + 0.4f, 0.5f, 1), Paper("Belt", new Color(0.14f, 0.13f, 0.16f)), collider: true);
+            Prim(PrimitiveType.Cube, "Conveyor", beltGo.transform, new Vector3((beltStart + beltEnd) / 2, 0.25f, 0), new Vector3(beltEnd - beltStart + 0.4f, 0.5f, 1), Paper("Belt", new Color(0.14f, 0.13f, 0.16f), slats: true), collider: true);
             Set(belt, "start", Point("Start", beltGo.transform, new Vector3(beltStart, 0.75f, 0)));
             Set(belt, "end", Point("End", beltGo.transform, new Vector3(beltEnd, 0.75f, 0)));
             Set(belt, "pebblePrefab", pebble);
@@ -717,11 +717,12 @@ namespace Demons.Editor
         static Material Unlit(string name, Color color) => Mat(name, color, "Universal Render Pipeline/Unlit");
 
         // The inked-paper look for the office's own geometry; see Haunted/Paper.
-        static Material Paper(string name, Color color, bool tiles = false)
+        static Material Paper(string name, Color color, bool tiles = false, bool slats = false)
         {
             var m = Mat(name, color, "Haunted/Paper");
             m.shader = Shader.Find("Haunted/Paper");
             m.SetFloat("_Tiles", tiles ? 1 : 0);
+            m.SetFloat("_Slats", slats ? 1 : 0);
             return m;
         }
 
