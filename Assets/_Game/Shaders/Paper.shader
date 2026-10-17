@@ -10,7 +10,6 @@ Shader "Haunted/Paper"
         _TileSize("Tile size", Float) = 1.6
         _Outline("Ink outline (px)", Range(0, 4)) = 1.8
         _PoolRadius("Light pool radius", Float) = 9
-        _Saturation("Saturation", Range(0, 1)) = 0.4
     }
 
     SubShader
@@ -38,7 +37,7 @@ Shader "Haunted/Paper"
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
                 half _Hatch, _Tiles;
-                float _TileSize, _Outline, _PoolRadius, _Saturation;
+                float _TileSize, _Outline, _PoolRadius;
             CBUFFER_END
             float4 _PoolCenter; // xz of the floor point under the middle of the board, set by MindFx
 
@@ -85,8 +84,7 @@ Shader "Haunted/Paper"
                 // Planar coordinates on whichever face this is, so the paper doesn't smear on walls.
                 float2 plane = abs(n.y) > 0.5 ? i.positionWS.xz : (abs(n.x) > 0.5 ? i.positionWS.zy : i.positionWS.xy);
 
-                // Muted: colour belongs mostly to the demons and their thoughts. Light keeps its own tint.
-                half3 albedo = lerp(Luminance(_BaseColor.rgb).xxx, _BaseColor.rgb, _Saturation);
+                half3 albedo = _BaseColor.rgb;
                 albedo *= 0.93 + 0.14 * Noise(plane * 1.3) * Noise(plane * 0.37 + 7.1);
                 albedo *= 0.97 + 0.06 * Hash(floor(plane * 90));
 
