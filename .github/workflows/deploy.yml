@@ -79,6 +79,8 @@ jobs:
           versioning: Custom
           version: ${{ steps.version.outputs.value }}
           dockerShmSize: 4g
+          # The default cap is 95% of RAM, which leaves the swap above unused; WebGL linking needs it.
+          dockerMemoryLimit: 22g
 
       # Zipped here because upload-artifact drops executable bits.
       - name: Zip build

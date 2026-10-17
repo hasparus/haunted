@@ -16,7 +16,7 @@ namespace Demons
 
         const float Height = 2.2f, DemoRadius = 3.5f;
 
-        bool Enabled => Demo || (Progression.Instance && Progression.Has(Feature.Pen));
+        bool Enabled => Demo || Progression.Interrupting(Feature.Pen);
 
         void Awake() => home = transform.position;
 

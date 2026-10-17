@@ -10,6 +10,12 @@ namespace Demons
 
         public bool Demo;
         [SerializeField] GameObject look;
+        [SerializeField] Transform beam;
+        [SerializeField] Light lamp, glow;
+        [SerializeField] Material ringMaterial;
+
+        // Where the therapist's lamp hangs, relative to the light's home: above and behind, off screen.
+        static readonly Vector3 LampOffset = new(0, 9, 7);
 
         readonly NetworkVariable<Phase> phase = new();
 
@@ -21,7 +27,7 @@ namespace Demons
         int strikesLeft;
         bool strikeNext = true;
 
-        bool Active => Demo || (Progression.Instance && Progression.Has(Feature.Therapist));
+        bool Active => Demo || Progression.Interrupting(Feature.Therapist);
         float Scale => phase.Value switch { Phase.Rest => 0.35f, Phase.Hunt => 1, _ => Balance.I.strikeScale };
 
         public bool Threatens(Vector3 p) =>
@@ -45,7 +51,7 @@ namespace Demons
             line.loop = true;
             line.positionCount = 48;
             line.widthMultiplier = 0.12f;
-            line.sharedMaterial = look.GetComponentInChildren<Renderer>(true).sharedMaterial;
+            line.sharedMaterial = ringMaterial;
             line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             float radius = Balance.I.spotRadius * Balance.I.strikeScale;
             for (int i = 0; i < line.positionCount; i++)
@@ -66,9 +72,15 @@ namespace Demons
             look.SetActive(active && !aiming);
             if (phase.Value == Phase.Strike && heard != Phase.Strike) look.transform.localScale = Vector3.one * Scale * 0.55f;
             look.transform.localScale = Vector3.Lerp(look.transform.localScale, Vector3.one * Scale, Time.deltaTime * (phase.Value == Phase.Strike ? 20 : 8));
+            Shine(look.activeSelf);
             if (phase.Value != heard && active && !Demo) Audio.Play(Sounds.I.For(phase.Value), transform.position);
             heard = phase.Value;
             if (!IsServer || !IsSpawned) return;
+            if (!active && phase.Value != Phase.Rest)
+            {
+                phase.Value = Phase.Rest;
+                phaseEnd = 0;
+            }
             if (active && Time.time >= phaseEnd) Advance();
             if (active) Move();
             bool lighting = active && phase.Value is Phase.Hunt or Phase.Strike;
@@ -82,6 +94,24 @@ namespace Demons
                 d.Using = null;
                 if (Net.Find<Pebble>(d.Carrying.Value) is { } held) held.Drop(d.transform.position + d.transform.forward * 0.6f);
             }
+        }
+
+        void Shine(bool on)
+        {
+            beam.gameObject.SetActive(on);
+            lamp.enabled = glow.enabled = on;
+            if (!on) return;
+            float radius = Balance.I.spotRadius * look.transform.localScale.x;
+            var source = home + LampOffset;
+            var to = transform.position - source;
+            float distance = to.magnitude;
+            var aim = Quaternion.LookRotation(to);
+            beam.SetPositionAndRotation(source, aim);
+            beam.localScale = new Vector3(radius, radius, distance);
+            lamp.transform.SetPositionAndRotation(source, aim);
+            lamp.spotAngle = Mathf.Atan(radius / distance) * 2 * Mathf.Rad2Deg * 1.15f;
+            lamp.range = distance + 3;
+            glow.range = radius * 1.8f;
         }
 
         void Advance()

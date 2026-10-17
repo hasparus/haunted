@@ -135,7 +135,7 @@ namespace Demons.Editor
 
         static void BuildOffice(Pebble pebble, Demon demon, NetworkPrefabsList prefabs)
         {
-            var cam = NewRoom(pebble, demon, prefabs, new Vector2(8.5f, 5.5f), walls: true, beltZ: 4.2f, beltStart: -9.8f, beltEnd: 9.8f);
+            var cam = NewRoom(pebble, demon, prefabs, new Vector2(8.5f, 5.5f), walls: true, beltZ: 5f, beltStart: -9.8f, beltEnd: 9.8f);
             foreach (var pos in new[] { new Vector3(-6.5f, 0, -1.5f), new Vector3(-2.2f, 0, 0.6f), new Vector3(2.2f, 0, 0.6f), new Vector3(6.5f, 0, -1.5f) })
                 BuildStation(pos, cam);
             BuildStation(new Vector3(-4.5f, 0, -4f), cam, StationKind.Hammer, Feature.Shell);
@@ -240,7 +240,7 @@ namespace Demons.Editor
             FloorLabel("THE HAND\nsave thoughts before it lands", bays, new Vector3(-5.5f, 0, c - 1.9f));
 
             BuildPen(new Vector3(2f, 2.2f, c), demo: true);
-            FloorLabel("THE PEN: MASH\n{haunt}\nTO SHAKE IT OFF", bays, new Vector3(2f, 0, c - 1.6f));
+            FloorLabel("THE PEN: MASH\n{haunt}\nOR WIGGLE ←→", bays, new Vector3(2f, 0, c - 1.6f));
             FloorLabel("{dash}\nTO DASH", bays, new Vector3(6.5f, 0, c + 0.4f));
 
             BuildSpotlight(new Vector3(12.5f, 0.02f, c), demo: true);
@@ -325,22 +325,118 @@ namespace Demons.Editor
             nt.SyncScaleX = nt.SyncScaleY = nt.SyncScaleZ = false;
             var spot = go.AddComponent<Spotlight>();
             spot.Demo = demo;
+            var warm = new Color(1f, 0.88f, 0.6f);
 
             var look = new GameObject("Look");
             look.transform.SetParent(go.transform, false);
-            float d = Balance.I.spotRadius * 2;
-            var disc = Prim(PrimitiveType.Cylinder, "Disc", look.transform, Vector3.zero, new Vector3(d, 0.005f, d), Unlit("Spot", new Color(1f, 0.9f, 0.6f)));
+            float d = Balance.I.spotRadius * 2 / 0.8f;
+            var disc = Prim(PrimitiveType.Quad, "Glow", look.transform, new Vector3(0, 0.02f, 0), new Vector3(d, d, 1),
+                Additive("SpotGlow", new Color(1f, 0.85f, 0.55f, 0.6f), Gradient("SpotGlow", radial: true)));
+            disc.transform.localRotation = Quaternion.Euler(90, 0, 0);
             disc.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            var light = new GameObject("Light").AddComponent<Light>();
-            light.transform.SetParent(look.transform, false);
-            light.transform.localPosition = new Vector3(0, 6, 0);
-            light.transform.localRotation = Quaternion.Euler(90, 0, 0);
-            light.type = LightType.Spot;
-            light.spotAngle = 32;
-            light.range = 10;
-            light.intensity = 30;
-            light.color = new Color(1f, 0.88f, 0.6f);
+
+            var beam = new GameObject("Beam");
+            beam.transform.SetParent(go.transform, false);
+            beam.AddComponent<MeshFilter>().sharedMesh = Cone();
+            var beamRenderer = beam.AddComponent<MeshRenderer>();
+            beamRenderer.sharedMaterial = Additive("SpotBeam", new Color(1f, 0.88f, 0.62f, 0.07f), Gradient("SpotBeam", radial: false));
+            beamRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+
+            var lamp = new GameObject("Lamp").AddComponent<Light>();
+            lamp.transform.SetParent(go.transform, false);
+            lamp.type = LightType.Spot;
+            lamp.intensity = 90;
+            lamp.color = warm;
+            lamp.shadows = LightShadows.Soft;
+
+            var glow = new GameObject("FloorGlow").AddComponent<Light>();
+            glow.transform.SetParent(go.transform, false);
+            glow.transform.localPosition = new Vector3(0, 0.9f, 0);
+            glow.type = LightType.Point;
+            glow.intensity = 3;
+            glow.color = warm;
+
             Set(spot, "look", look);
+            Set(spot, "beam", beam.transform);
+            Set(spot, "lamp", lamp);
+            Set(spot, "glow", glow);
+            Set(spot, "ringMaterial", Unlit("SpotRing", warm));
+        }
+
+        // Soft alpha falloff: radial for the pool of light, lengthwise for the beam (faint at the lamp).
+        static Texture2D Gradient(string name, bool radial)
+        {
+            var path = $"{Root}/Materials/{name}.png";
+            const int size = 128;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float a;
+                if (radial)
+                {
+                    float r = new Vector2(x - size / 2f + 0.5f, y - size / 2f + 0.5f).magnitude / (size / 2f);
+                    a = 1 - Mathf.SmoothStep(0.62f, 1f, r);
+                }
+                else a = Mathf.Pow(y / (size - 1f), 1.6f);
+                tex.SetPixel(x, y, new Color(1, 1, 1, a));
+            }
+            File.WriteAllBytes(path, tex.EncodeToPNG());
+            Object.DestroyImmediate(tex);
+            AssetDatabase.ImportAsset(path);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.alphaIsTransparency = true;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.SaveAndReimport();
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        }
+
+        static Material Additive(string name, Color color, Texture2D texture)
+        {
+            var m = Unlit(name, color);
+            m.SetTexture("_BaseMap", texture);
+            m.SetFloat("_Surface", 1);
+            m.SetFloat("_Blend", 2);
+            m.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            m.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            m.SetFloat("_SrcBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+            m.SetFloat("_DstBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+            m.SetFloat("_ZWrite", 0);
+            m.SetFloat("_Cull", 0);
+            m.SetOverrideTag("RenderType", "Transparent");
+            m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            EditorUtility.SetDirty(m);
+            return m;
+        }
+
+        // Open cone, apex at the origin, unit radius at z = 1; v runs from the apex (0) to the rim (1).
+        static Mesh Cone()
+        {
+            var path = $"{Root}/Materials/Beam.asset";
+            AssetDatabase.DeleteAsset(path);
+            const int sides = 32;
+            var vertices = new List<Vector3>();
+            var uvs = new List<Vector2>();
+            var triangles = new List<int>();
+            for (int i = 0; i <= sides; i++)
+            {
+                float a = i * Mathf.PI * 2 / sides;
+                vertices.Add(Vector3.zero);
+                uvs.Add(new Vector2(i / (float)sides, 0));
+                vertices.Add(new Vector3(Mathf.Cos(a), Mathf.Sin(a), 1));
+                uvs.Add(new Vector2(i / (float)sides, 1));
+                if (i == sides) break;
+                int k = i * 2;
+                triangles.AddRange(new[] { k, k + 1, k + 3, k, k + 3, k + 2 });
+            }
+            var mesh = new Mesh { name = "Beam" };
+            mesh.SetVertices(vertices);
+            mesh.SetUVs(0, uvs);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateBounds();
+            AssetDatabase.CreateAsset(mesh, path);
+            return mesh;
         }
 
         static void Seed(Transform parent, Vector3 pos, byte stamps = 0, Station desk = null, bool pinned = true,

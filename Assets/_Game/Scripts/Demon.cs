@@ -51,6 +51,7 @@ namespace Demons
         float dashUntil, nextDash;
         bool falling, fallen;
         float respawnAt, nextPick;
+        int wiggle;
         bool usingHeld;
 
         static bool Frozen => GameState.Instance && GameState.Instance.Paused;
@@ -252,6 +253,9 @@ namespace Demons
             if (input == null) return;
             var m = input.Move.ReadValue<Vector2>();
             if (Progression.Instance && Progression.Instance.Inverted) m = -m;
+            int side = Mathf.Abs(m.x) > 0.6f ? (int)Mathf.Sign(m.x) : 0;
+            if (Scribble.Value > 0 && side != 0 && side != wiggle) ShakeOffRpc();
+            if (side != 0) wiggle = side;
             var want = new Vector3(m.x, 0, m.y) * Balance.I.moveSpeed * (Scribble.Value > 0 ? Balance.I.scribbledSpeed : 1);
             if (want.sqrMagnitude > 0.01f) rb.MoveRotation(Quaternion.LookRotation(want));
             if (Time.time < dashUntil)
@@ -336,6 +340,13 @@ namespace Demons
                 else held.Toss(this, from, facing, Flat(momentum) * Balance.I.dropInherit + Vector3.up * Balance.I.dropLift);
             }
             else if (target is Pebble pebble) pebble.Hold(this);
+        }
+
+        // Left-right wiggles shake off the pen, same as mashing haunt.
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+        void ShakeOffRpc()
+        {
+            if (Scribble.Value > 0) Scribble.Value--;
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]

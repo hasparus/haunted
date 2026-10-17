@@ -113,7 +113,7 @@ namespace Demons
                 Ringing.Value = false;
                 Progress.Value = 0;
                 Workers.Value = 0;
-                if (Progression.Instance) Progression.Instance.Answered();
+                if (Progression.Instance) Progression.Instance.Answered(this);
                 return;
             }
 

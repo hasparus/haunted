@@ -592,3 +592,28 @@
 .notice > .button {
     margin: 0;
 }
+
+.bubble {
+    position: absolute;
+    max-width: 280px;
+    padding: 10px 16px 12px 16px;
+    background-color: rgba(11, 30, 79, 0.95);
+    border-width: 1px;
+    border-color: var(--hairline);
+    border-radius: 12px;
+}
+
+.bubble-title {
+    font-size: 28px;
+    color: var(--yellow);
+    margin: 0;
+    padding: 0;
+}
+
+.bubble-body {
+    font-size: 17px;
+    color: var(--ink);
+    white-space: normal;
+    margin: 2px 0 0 0;
+    padding: 0;
+}

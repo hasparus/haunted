@@ -35,7 +35,7 @@ namespace Demons
         public float bigPoints = 5f;
         public float potTime = 4f;
         public float hammerTime = 1.2f;
-        public float answerTime = 1.5f;
+        public float answerTime = 3f;
 
         [Header("Week events")]
         public float pillTime = 10f;
@@ -59,7 +59,15 @@ namespace Demons
 
         [Header("Survival")]
         public float survivalFloor = -5f;
-        public float survivalRampSeconds = 120f;
+        public float survivalRampSeconds = 150f;
+        public float survivalStageSeconds = 30f;
+        public float survivalHardAt = 360f;
+
+        [Header("Interruptions")]
+        public float therapistSession = 24f;
+        public float penSession = 16f;
+        public float interruptGapMin = 10f;
+        public float interruptGapMax = 35f;
 
         static Balance instance;
 

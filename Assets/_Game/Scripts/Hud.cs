@@ -36,9 +36,46 @@ namespace Demons
             instance.popups.Add((label, at, Time.time));
         }
 
+        const float BubbleTime = 4.5f;
+        readonly List<(VisualElement box, Vector3 at, float born)> bubbles = new();
+
+        // A speech bubble pinned beside a world point, e.g. the phone that was just answered.
+        public static void Bubble(Vector3 at, string line)
+        {
+            if (!instance || instance.hud == null) return;
+            var box = UI.Box("bubble", instance.hud);
+            box.Add(UI.Text("Ring ring", "bubble-title", UI.Jolly));
+            box.Add(UI.Text(line, "bubble-body"));
+            instance.bubbles.Add((box, at, Time.time));
+        }
+
+        void RefreshBubbles(Camera cam)
+        {
+            for (int i = bubbles.Count - 1; i >= 0; i--)
+            {
+                var (box, at, born) = bubbles[i];
+                float age = Time.time - born;
+                if (age > BubbleTime || !cam)
+                {
+                    box.RemoveFromHierarchy();
+                    bubbles.RemoveAt(i);
+                    continue;
+                }
+                var screen = cam.WorldToScreenPoint(at + Vector3.up * 0.8f);
+                var point = RuntimePanelUtils.ScreenToPanel(hud.panel, new Vector2(screen.x, Screen.height - screen.y));
+                float width = float.IsNaN(box.resolvedStyle.width) ? 0 : box.resolvedStyle.width;
+                float height = float.IsNaN(box.resolvedStyle.height) ? 0 : box.resolvedStyle.height;
+                bool left = point.x > hud.resolvedStyle.width * 0.6f;
+                box.style.left = left ? point.x - 40 - width : point.x + 40;
+                box.style.top = point.y - height / 2;
+                box.style.opacity = Mathf.Clamp01((BubbleTime - age) / 0.4f);
+            }
+        }
+
         void RefreshPopups()
         {
             var cam = Camera.main;
+            RefreshBubbles(cam);
             for (int i = popups.Count - 1; i >= 0; i--)
             {
                 var (label, at, born) = popups[i];

@@ -31,9 +31,20 @@ namespace Demons
             "TUESDAY\nThe boss: \"Got a minute?\"\nBig thoughts take long. Haunt them together.",
             "WEDNESDAY\n214 unread emails. IT finally sent a tool: the pot.\nDrop a thought in and it haunts itself.",
             "THURSDAY\nHe's getting defensive.\nShelled thoughts need the hammer first.",
-            "FRIDAY\nTherapy at five. Homework: write it all down.\nStay out of the light. Mash to shake off the pen.",
+            "FRIDAY\nTherapy at five. Homework: write it all down.\nStay out of the light. Mash or wiggle off the pen.",
             "SATURDAY\nNew meds. The waiting-room music won't stop.\nWhen he takes a pill, controls flip.",
             "SUNDAY\nMom keeps calling. He tries to pull himself together.\nAnswer the phone. Save thoughts from his hand.",
+        };
+
+        static readonly string[] SurvivalCards =
+        {
+            "",
+            "BIG THOUGHTS\nThey take long. Haunt them together.",
+            "THE POT\nDrop a thought in and it haunts itself.",
+            "SHELLS\nCrack them at the hammer first.",
+            "THERAPY\nStay out of the light. Mash or wiggle off the pen.",
+            "MEDS\nWhen he takes a pill, controls flip.",
+            "MOM\nAnswer the phone. Save thoughts from his hand.",
         };
 
         static readonly string[] Calls =
@@ -51,6 +62,8 @@ namespace Demons
         public NetworkVariable<double> CardUntil = new();
         public NetworkVariable<double> InvertedUntil = new();
         public NetworkVariable<double> PillAt = new();
+        // The therapist and the pen take turns; at most one interrupts at a time.
+        public NetworkVariable<Feature> Interrupt = new();
         public NetworkVariable<float> Best = new();
         public NetworkVariable<float> Peak = new();
         public NetworkVariable<bool> Review = new();
@@ -61,7 +74,8 @@ namespace Demons
 
         const string NameKey = "player_name";
 
-        double startTime, nextCall, nextPill, endAt;
+        double startTime, nextCall, nextPill, nextInterrupt, interruptUntil, endAt;
+        Feature lastInterrupt;
         bool over;
         int signers;
         float typingSince;
@@ -74,7 +88,11 @@ namespace Demons
 
         public static bool Has(Feature f) => f == Feature.None || !Instance || Instance.Unlocked(f);
 
-        bool Unlocked(Feature f) => Mode.Value == GameMode.Survival || Day.Value >= UnlockDay(f);
+        bool Unlocked(Feature f) => Day.Value >= UnlockDay(f);
+
+        public static bool Interrupting(Feature f) => Instance && Instance.IsSpawned && Instance.Interrupt.Value == f;
+
+        float Elapsed => (float)(Now - startTime);
 
         static int UnlockDay(Feature f) => f switch
         {
@@ -87,7 +105,7 @@ namespace Demons
         };
 
         public float SpawnRateScale =>
-            Mode.Value == GameMode.Survival ? 1 + (float)(Now - startTime) / Balance.I.survivalRampSeconds : 1;
+            Mode.Value == GameMode.Survival ? 0.75f + Elapsed / Balance.I.survivalRampSeconds : 1;
 
         void Awake() => Instance = this;
 
@@ -119,13 +137,15 @@ namespace Demons
             Review.Value = false;
             InvertedUntil.Value = 0;
             PillAt.Value = 0;
+            Interrupt.Value = Feature.None;
             Best.Value = PlayerPrefs.GetFloat(BestKey, 0);
             startTime = Now;
             nextCall = Now + 20;
             nextPill = Now + 30;
+            nextInterrupt = Now + 8;
             ShowCard(Mode.Value == GameMode.Week
                 ? DayCards[0]
-                : "INFINITE SURVIVAL\nEvery trick at once. Keep him haunted as long as you can.");
+                : "INFINITE SURVIVAL\nIt starts easy. It doesn't stay easy.");
         }
 
         void ShowCard(string text, float seconds = 4)
@@ -140,7 +160,10 @@ namespace Demons
             ShowCard("THE MEDS KICK IN\nControls flipped!", 2.5f);
         }
 
-        public void Answered() => ShowCard("RING RING\n" + Calls[Random.Range(0, Calls.Length)], 3);
+        public void Answered(Station desk) => CallRpc(desk.Slot.position, Calls[Random.Range(0, Calls.Length)]);
+
+        [Rpc(SendTo.Everyone)]
+        void CallRpc(Vector3 at, FixedString128Bytes line) => Hud.Bubble(at, line.ToString());
 
         void End(string text)
         {
@@ -184,6 +207,13 @@ namespace Demons
             }
             else
             {
+                int stage = Mathf.Min(Days.Length - 1, (int)(Elapsed / Balance.I.survivalStageSeconds));
+                if (stage > Day.Value)
+                {
+                    Day.Value = stage;
+                    ShowCard(SurvivalCards[stage], 3);
+                    if (stage == UnlockDay(Feature.Pill)) nextPill = Now + 12;
+                }
                 if (influence > Peak.Value) Peak.Value = influence;
                 if (Peak.Value > Best.Value)
                 {
@@ -208,6 +238,8 @@ namespace Demons
                 }
             }
 
+            Interrupts();
+
             if (Has(Feature.Pill))
             {
                 // The host reaches for the bottle (PillAt, shown by Meds), then swallows.
@@ -225,6 +257,27 @@ namespace Demons
                 var idle = Station.All.FindAll(s => s.Kind == StationKind.Desk && !s.Ringing.Value);
                 if (idle.Count > 0) idle[Random.Range(0, idle.Count)].Ring();
             }
+        }
+
+        void Interrupts()
+        {
+            var b = Balance.I;
+            if (Interrupt.Value != Feature.None)
+            {
+                if (Now < interruptUntil) return;
+                Interrupt.Value = Feature.None;
+                float gap = Mode.Value == GameMode.Survival
+                    ? Mathf.Lerp(b.interruptGapMax, b.interruptGapMin, Elapsed / b.survivalHardAt)
+                    : b.interruptGapMin;
+                nextInterrupt = Now + gap * Random.Range(0.75f, 1.25f);
+                return;
+            }
+            bool light = Has(Feature.Therapist), pen = Has(Feature.Pen);
+            if (Now < nextInterrupt || !(light || pen)) return;
+            var next = light && pen ? (lastInterrupt == Feature.Therapist ? Feature.Pen : Feature.Therapist) : light ? Feature.Therapist : Feature.Pen;
+            if (light && pen && Random.value < 0.25f) next = lastInterrupt;
+            lastInterrupt = Interrupt.Value = next;
+            interruptUntil = Now + (next == Feature.Therapist ? b.therapistSession : b.penSession);
         }
 
         public void Sign()
