@@ -271,7 +271,7 @@ namespace Demons
                     PlayerPrefs.Save();
                     signers = Demon.All.FindAll(d => !Bots.IsBot(d)).Count;
                     bool assisted = Bots.All.Count > 0;
-                    End($"YOU'VE BEEN DOWNSIZED\nHe's coping now. Please return your badge at reception.\nPeak KPIs {Peak.Value:0}  ·  best {Best.Value:0}", System.Array.FindAll(Balance.I.survivalStarSeconds, s => Elapsed >= s).Length);
+                    End($"YOU HAVE BEEN DOWNSIZED\nHe's coping now. Please return your badge at reception.\nPeak revenue {Peak.Value:0} zł  ·  best {Best.Value:0} zł", System.Array.FindAll(Balance.I.survivalStarSeconds, s => Elapsed >= s).Length);
                     if (Peak.Value > 0 && signers > 0 && !assisted)
                     {
                         Signing.Value = true;

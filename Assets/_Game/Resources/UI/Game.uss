@@ -265,27 +265,32 @@
     top: 12px;
     flex-direction: row;
     align-items: center;
-    padding: 6px 14px;
-    background-color: rgba(11, 30, 79, 0.86);
-    border-radius: 10px;
 }
 
 .hud-status {
-    font-size: 18px;
+    font-size: 20px;
     color: var(--ink);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
     margin: 0;
     padding: 0;
 }
 
-.hud-chips {
+.hud-scores {
+    position: absolute;
+    right: 16px;
+    top: 4px;
     flex-direction: row;
     align-items: center;
 }
 
-.hud-chip {
-    flex-direction: row;
-    align-items: center;
-    margin-left: 16px;
+.hud-score {
+    font-size: 40px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    margin: 0 0 0 24px;
+    padding: 0;
+    transition-property: translate, rotate, scale;
+    transition-duration: 0.16s, 0.16s, 0.16s;
+    transition-timing-function: ease-out-back, ease-out-back, ease-out-back;
 }
 
 .hud-chip-dot {
@@ -295,11 +300,10 @@
     margin-right: 6px;
 }
 
-.hud-chip-value {
-    font-size: 18px;
-    color: var(--ink);
-    margin: 0;
-    padding: 0;
+.hud-score--hop {
+    translate: 0 -14px;
+    rotate: -8deg;
+    scale: 1.2 1.2;
 }
 
 .hud-net {

@@ -208,7 +208,7 @@ namespace Demons.Editor
             FloorLabel("Big thought\nhaunt it together\n5x points", bays, new Vector3(2f, 0, a - 1.8f));
             Seed(bays, big.Slot.position, desk: big, kind: PebbleKind.Big);
 
-            FloorLabel("Left alone\nwings, -KPIs", bays, new Vector3(7f, 0, a - 1.6f));
+            FloorLabel("Left alone\nwings, -revenue", bays, new Vector3(7f, 0, a - 1.6f));
             Seed(bays, new Vector3(7f, 0, a - 0.2f), pinned: false);
 
             FloorLabel("Meds\nwhen he takes one,\ncontrols flip", bays, new Vector3(12f, 0, a - 1.8f));

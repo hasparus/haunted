@@ -7,15 +7,16 @@ namespace Demons
 {
     public class Hud : MonoBehaviour
     {
-        static readonly string[] Columns = { "Prestige", "Haunts", "Deliveries", "Assists", "Throws", "Dashes" };
+        static readonly string[] Columns = { "Revenue", "Haunts", "Deliveries", "Assists", "Throws", "Dashes" };
 
-        VisualElement top, chips, net, offline, joining, online, notice, cpu, cardWrap, card, reviewWrap, table, sign;
+        VisualElement top, scores, net, offline, joining, online, notice, cpu, cardWrap, card, reviewWrap, table, sign;
         Label status, netStatus, noticeTitle, noticeBody, cardTitle, cardBody, paused, reviewTitle, reviewBody, signHint, signWait;
         TextField code, signature;
         Button removeCpu;
         VisualElement footer;
         string footerShape;
         string chipShape, tableShape;
+        readonly float[] scoreSeen = new float[Scoring.MaxDemons];
         bool signFocused, codeFocused, reviewing;
         readonly VisualElement[] stars = new VisualElement[3];
         float reviewAt;
@@ -105,7 +106,7 @@ namespace Demons
             top = UI.Box("hud-top", hud);
             status = UI.Text("", "hud-status");
             top.Add(status);
-            chips = UI.Box("hud-chips", top);
+            scores = UI.Box("hud-scores", hud);
 
             net = UI.Box("hud-net", hud);
             offline = UI.Box("hud-net-row", net);
@@ -195,6 +196,7 @@ namespace Demons
             var progress = Progression.Instance && Progression.Instance.IsSpawned ? Progression.Instance : null;
 
             UI.Show(top, live && !state.IsLobby);
+            UI.Show(scores, live && !state.IsLobby);
             if (live && !state.IsLobby) RefreshTop(state, progress);
 
             RefreshNet(state);
@@ -222,10 +224,10 @@ namespace Demons
 
         void RefreshTop(GameState state, Progression progress)
         {
-            var text = progress == null ? ""
-                : progress.Mode.Value == GameMode.Week ? $"{progress.DayName}  ·  goal {progress.Goal:0}  ·  "
-                : $"Survival  ·  best {progress.Best.Value:0}  ·  fired below {progress.FireLine:0}  ·  ";
-            UI.Set(status, text + $"KPIs {state.Influence.Value:0.0}");
+            float revenue = state.Influence.Value;
+            UI.Set(status, progress == null ? ""
+                : progress.Mode.Value == GameMode.Week ? $"{progress.DayName}  ·  {revenue:0.#} / {progress.Goal:0} zł"
+                : $"Survival  ·  {revenue:0.#} zł  ·  best {progress.Best.Value:0} zł  ·  fired below {progress.FireLine:0} zł");
 
             var demons = Demon.All.FindAll(d => d.Slot.Value >= 0);
             demons.Sort((a, b) => a.Slot.Value.CompareTo(b.Slot.Value));
@@ -234,20 +236,31 @@ namespace Demons
             if (shape.ToString() != chipShape)
             {
                 chipShape = shape.ToString();
-                chips.Clear();
+                scores.Clear();
                 foreach (var d in demons)
                 {
-                    var chip = UI.Box("hud-chip", chips);
-                    UI.Box("hud-chip-dot", chip).style.backgroundColor = d.Tint;
-                    chip.Add(UI.Text("", "hud-chip-value", UI.PlexBold));
+                    var score = UI.Text("", "hud-score", UI.Jolly);
+                    score.style.color = d.Tint;
+                    scores.Add(score);
                 }
+                System.Array.Fill(scoreSeen, float.NaN);
             }
-            for (int i = 0; i < demons.Count && i < chips.childCount; i++)
+            for (int i = 0; i < demons.Count && i < scores.childCount; i++)
             {
                 int slot = demons[i].Slot.Value;
                 var value = state.Prestige.Count > slot ? state.Prestige[slot] : 0;
-                UI.Set(chips[i].Q<Label>(), value.ToString("0"));
+                var score = (Label)scores[i];
+                UI.Set(score, $"{value:0.#} zł");
+                if (value > scoreSeen[slot]) Hop(score);
+                scoreSeen[slot] = value;
             }
+        }
+
+        // A jolly hop when a demon's revenue goes up: up with a tilt, then back down with a bounce.
+        static void Hop(VisualElement score)
+        {
+            score.AddToClassList("hud-score--hop");
+            score.schedule.Execute(() => score.RemoveFromClassList("hud-score--hop")).ExecuteLater(160);
         }
 
         void RefreshNet(GameState state)

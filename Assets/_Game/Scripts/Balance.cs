@@ -32,7 +32,8 @@ namespace Demons
         [Header("Throwing")]
         public float throwSpeed = 7f;
         public float throwLift = 2f;
-        public float throwInherit = 0.25f;
+        [Tooltip("Share of the thrower's own velocity the thought keeps. 1 is physical: a dash throw outruns the dash.")]
+        public float throwInherit = 1f;
         public float dropLift = 1f;
         public float dropInherit = 0.7f;
         public float throwBounce = 0.35f;

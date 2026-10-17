@@ -135,7 +135,7 @@ namespace Demons
             var prestige = new float[Scoring.MaxDemons];
             float gained = Scoring.Deliver(pebble.Stamps.Value, pebble.LastHolder.Value, prestige, pebble.Points);
             Influence.Value += gained;
-            if (gained > 0) PopupRpc(pebble.transform.position, $"+{gained:0.#}", pebble.LastHolder.Value);
+            if (gained > 0) PopupRpc(pebble.transform.position, $"+{gained:0.#} zł", pebble.LastHolder.Value);
             if (pebble.Stamps.Value != 0 && Demon.All.Find(d => d.Slot.Value == pebble.LastHolder.Value) is { } deliverer)
                 deliverer.Deliveries.Value++;
             for (int slot = 0; slot < Scoring.MaxDemons; slot++)
@@ -167,13 +167,13 @@ namespace Demons
         public void Missed(Vector3 at)
         {
             Influence.Value -= Balance.I.survivalMissPenalty;
-            PopupRpc(at, $"\u2212{Balance.I.survivalMissPenalty:0.#}", -1);
+            PopupRpc(at, $"\u2212{Balance.I.survivalMissPenalty:0.#} zł", -1);
         }
 
         public void Forgotten(Vector3 at)
         {
             Influence.Value -= Balance.I.forgottenPenalty;
-            PopupRpc(at, $"\u2212{Balance.I.forgottenPenalty:0.#}", -1);
+            PopupRpc(at, $"\u2212{Balance.I.forgottenPenalty:0.#} zł", -1);
         }
 
         [Rpc(SendTo.Everyone)]
