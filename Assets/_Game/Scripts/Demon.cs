@@ -224,6 +224,14 @@ namespace Demons
             Lit.OnValueChanged += (_, _) => Paint();
             Scribble.OnValueChanged += (_, _) => Paint();
             ColorIndex.OnValueChanged += (_, _) => Paint();
+            // Putting a head on lands like a haunt: a pulse and a flash.
+            Head.OnValueChanged += (was, now) =>
+            {
+                if (now == was) return;
+                spring.Punch(Vector3.one * 0.25f);
+                Hit(0.025f, 0.3f);
+                Audio.Play(Sounds.I.colorPick, transform.position);
+            };
             ColorIndex.OnValueChanged += (_, _) => Audio.Play(Sounds.I.colorPick, transform.position);
             Scribble.OnValueChanged += (was, now) =>
             {

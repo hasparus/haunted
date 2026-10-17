@@ -33,13 +33,22 @@ namespace Demons
             return null;
         }
 
+        // The name on the floor turns into the key to press while one of this machine's demons could put the head on.
         void Update()
         {
             Demon wearer = null;
+            string press = null;
             foreach (var d in Demon.All)
+            {
                 if (d.Head.Value == Head) wearer = d;
+                else if (press == null && d.IsOwner && d.Carrying.Value == Net.None && Near(d.transform.position, d) == this
+                         && LocalPlayers.Find(d.LocalIndex.Value) is { } player)
+                    press = $"Press {LocalPlayers.KeysOf(player, p => p.Grab)}";
+            }
             if (shown.activeSelf != !wearer) shown.SetActive(!wearer);
             label.color = wearer ? wearer.Tint : free;
+            var text = press ?? Demon.Names[Head];
+            if (label.text != text) label.text = text;
         }
     }
 }

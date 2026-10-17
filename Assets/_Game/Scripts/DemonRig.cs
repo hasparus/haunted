@@ -13,18 +13,17 @@ namespace Demons
         static readonly Vector2 Shoulder = new(0.15f, 0.66f);
         static readonly int FlashId = Shader.PropertyToID("_Flash"), AloftId = Shader.PropertyToID("_Aloft");
 
-        static Sprite legsStand, bodyFront, bodyBack, bodySide, tieArt, handArt;
+        static Sprite legsStand, bodyFront, bodyBack, bodySide, tieArt;
         static Sprite[] walk, headFront, headBack, headSide, faces, sideFaces;
         static Material card, limb;
 
         SpriteRenderer legs, body, tie, head, face;
-        readonly SpriteRenderer[] hands = new SpriteRenderer[2];
         readonly LineRenderer[] arms = new LineRenderer[2];
         readonly Vector2[] reach = new Vector2[2];
         MaterialPropertyBlock block;
         float flash, walked, throwAt = -10, throwSide;
         Vector3 lastPosition;
-        bool sideways, facingLeft, facingAway;
+        bool sideways, facingLeft, facingAway, turned;
         int headIndex = -1;
 
         static void Load()
@@ -37,7 +36,6 @@ namespace Demons
             bodyBack = Art("BodyBack");
             bodySide = Art("BodySide");
             tieArt = Art("Tie");
-            handArt = Art("Hand");
             headFront = new Sprite[Heads];
             headBack = new Sprite[Heads];
             faces = new Sprite[Heads];
@@ -100,9 +98,6 @@ namespace Demons
                 line.numCornerVertices = 2;
                 line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 arms[i] = line;
-                hands[i] = Part(i == 0 ? "HandLeft" : "HandRight");
-                hands[i].sprite = handArt;
-                hands[i].transform.localScale = Vector3.one * 1.5f;
             }
             foreach (var r in new Renderer[] { legs, body, head }) r.gameObject.AddComponent<SpriteShadow>();
             lastPosition = transform.position;
@@ -111,7 +106,6 @@ namespace Demons
         public void Tint(Color color)
         {
             body.color = tie.color = head.color = color;
-            foreach (var h in hands) h.color = color;
         }
 
         public void Flash(float value) => flash = value;
@@ -126,9 +120,11 @@ namespace Demons
         {
             headIndex = demon.Head.Value;
             float x = Vector3.Dot(facing, transform.right), z = Vector3.Dot(facing, ahead);
+            bool wasSideways = sideways, wasLeft = facingLeft, wasAway = facingAway;
             sideways = Mathf.Abs(x) > Mathf.Abs(z);
             facingAway = !sideways && z > 0;
             facingLeft = sideways && x < 0;
+            turned = sideways != wasSideways || facingLeft != wasLeft || facingAway != wasAway;
             int h = Mathf.Clamp(headIndex, 0, Heads - 1);
             body.sprite = sideways ? bodySide : facingAway ? bodyBack : bodyFront;
             head.sprite = sideways ? headSide[h] : facingAway ? headBack[h] : headFront[h];
@@ -179,7 +175,8 @@ namespace Demons
                     target = rest + (sideways ? new Vector2((facingLeft ? -1 : 1) * swing * side * 0.13f, 0)
                         : new Vector2(0, swing * side * 0.06f)) * Mathf.Clamp01(speed / 4);
                 else target = rest;
-                reach[i] = Vector2.Lerp(reach[i] == Vector2.zero ? rest : reach[i], target, 1 - Mathf.Exp(-Time.deltaTime * 18));
+                // Hands stay on a carried thought and jump with the drawing when it turns; other poses ease in.
+                reach[i] = held || turned || reach[i] == Vector2.zero ? target : Vector2.Lerp(reach[i], target, 1 - Mathf.Exp(-Time.deltaTime * 18));
                 // In profile both shoulders sit near the middle of the body, one a little behind the other.
                 float shoulder = sideways ? (facingLeft ? -1 : 1) * side * 0.03f : side * Shoulder.x;
                 Limb(i, new Vector2(shoulder, Shoulder.y), reach[i], sideways ? (facingLeft ? 1 : -1) : side);
@@ -205,7 +202,6 @@ namespace Demons
             arms[i].SetPosition(0, shoulder);
             arms[i].SetPosition(1, elbow);
             arms[i].SetPosition(2, hand);
-            hands[i].transform.localPosition = hand;
         }
 
         void Sort()
@@ -219,7 +215,6 @@ namespace Demons
             {
                 bool far = sideways && (i == 0) != facingLeft;
                 float at = far ? Behind : Front;
-                Set(hands[i], at + 0.001f);
                 arms[i].GetPropertyBlock(block);
                 block.SetFloat(AloftId, at);
                 arms[i].SetPropertyBlock(block);

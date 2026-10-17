@@ -740,12 +740,3 @@
     margin: 2px 0 0 0;
     padding: 0;
 }
-
-.pick-hint {
-    position: absolute;
-    font-size: 15px;
-    color: rgb(240, 236, 228);
-    background-color: rgba(10, 12, 28, 0.82);
-    padding: 3px 8px;
-    -unity-text-align: middle-center;
-}
