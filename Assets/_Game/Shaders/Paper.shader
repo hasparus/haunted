@@ -20,6 +20,18 @@ Shader "Haunted/Paper"
     {
         Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" "Queue" = "Geometry" }
 
+        // Every pass declares the same UnityPerMaterial, so the SRP Batcher can take these materials.
+        HLSLINCLUDE
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            CBUFFER_START(UnityPerMaterial)
+                half4 _BaseColor;
+                half _Hatch, _Tiles;
+                float _TileSize, _Outline, _PoolRadius, _Slats, _Silhouette, _DepthPull;
+                float4 _Anchor;
+            CBUFFER_END
+        ENDHLSL
+
         Pass
         {
             Name "ForwardLit"
@@ -35,15 +47,8 @@ Shader "Haunted/Paper"
             #pragma multi_compile _ _FORWARD_PLUS _CLUSTER_LIGHT_LOOP
             #pragma multi_compile_fog
 
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
-            CBUFFER_START(UnityPerMaterial)
-                half4 _BaseColor;
-                half _Hatch, _Tiles;
-                float _TileSize, _Outline, _PoolRadius, _Slats, _Silhouette, _DepthPull;
-                float4 _Anchor;
-            CBUFFER_END
             float4 _PoolCenter; // xz of the floor point under the middle of the board, set by MindFx
             float _BeltTravel; // how far the belt has moved, set by Belt
             float _MindTime; // unscaled seconds, set by MindFx
@@ -178,7 +183,40 @@ Shader "Haunted/Paper"
             ENDHLSL
         }
 
-        UsePass "Universal Render Pipeline/Lit/ShadowCaster"
-        UsePass "Universal Render Pipeline/Lit/DepthOnly"
+        // Lit's ShadowCaster and DepthOnly, minus the material keywords these materials never set.
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags { "LightMode" = "ShadowCaster" }
+            ZWrite On ZTest LEqual ColorMask 0 Cull [_Cull]
+
+            HLSLPROGRAM
+            #pragma target 2.0
+            #pragma vertex ShadowPassVertex
+            #pragma fragment ShadowPassFragment
+            #pragma multi_compile_instancing
+            #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DOTS.hlsl"
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/ShadowCasterPass.hlsl"
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "DepthOnly"
+            Tags { "LightMode" = "DepthOnly" }
+            ZWrite On ColorMask R Cull [_Cull]
+
+            HLSLPROGRAM
+            #pragma target 2.0
+            #pragma vertex DepthOnlyVertex
+            #pragma fragment DepthOnlyFragment
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile_instancing
+            #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DOTS.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/DepthOnlyPass.hlsl"
+            ENDHLSL
+        }
     }
 }
