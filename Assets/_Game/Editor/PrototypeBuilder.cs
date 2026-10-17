@@ -60,7 +60,7 @@ namespace Demons.Editor
 
             var body = new GameObject("Body").transform;
             body.SetParent(root.transform, false);
-            var stone = Prim(PrimitiveType.Sphere, "Stone", body, Vector3.zero, Vector3.one * 0.5f, Mat("Pebble", Gray(0.85f)));
+            var stone = Prim(PrimitiveType.Sphere, "Stone", body, Vector3.zero, Vector3.one * 0.5f, Ink("Pebble", Gray(0.85f)));
 
             var dots = new Renderer[Scoring.MaxDemons];
             for (int i = 0; i < dots.Length; i++)
@@ -78,7 +78,7 @@ namespace Demons.Editor
             Prim(PrimitiveType.Cube, "WingR", wings.transform, new Vector3(0.35f, 0.1f, 0), new Vector3(0.45f, 0.03f, 0.25f), Mat("Wing", Color.white));
             wings.SetActive(false);
 
-            var shell = Prim(PrimitiveType.Sphere, "Shell", body, Vector3.zero, Vector3.one * 0.62f, Mat("Shell", Gray(0.28f)));
+            var shell = Prim(PrimitiveType.Sphere, "Shell", body, Vector3.zero, Vector3.one * 0.62f, Ink("Shell", Gray(0.28f)));
             shell.SetActive(false);
 
             Set(p, "body", body);
@@ -716,6 +716,15 @@ namespace Demons.Editor
         }
 
         static Material Unlit(string name, Color color) => Mat(name, color, "Universal Render Pipeline/Unlit");
+
+        // Paper with a silhouette outline instead of face edges, for the round thoughts and their shells.
+        static Material Ink(string name, Color color)
+        {
+            var m = Paper(name, color);
+            m.SetFloat("_Outline", 0);
+            m.SetFloat("_Silhouette", 1);
+            return m;
+        }
 
         // The inked-paper look for the office's own geometry; see Haunted/Paper.
         static Material Paper(string name, Color color, bool tiles = false, bool slats = false)

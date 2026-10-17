@@ -4,13 +4,14 @@ Shader "Haunted/Paper"
 {
     Properties
     {
-        _BaseColor("Color", Color) = (1, 1, 1, 1)
+        [MainColor] _BaseColor("Color", Color) = (1, 1, 1, 1)
         _Hatch("Hatching in shade", Range(0, 1)) = 0.7
         _Tiles("Floor tiles", Range(0, 1)) = 0
         _TileSize("Tile size", Float) = 1.6
         _Outline("Ink outline (px)", Range(0, 4)) = 1.0
         _PoolRadius("Light pool radius", Float) = 9
         _Slats("Belt slats", Range(0, 1)) = 0
+        _Silhouette("Silhouette ink (for round things)", Range(0, 1)) = 0
     }
 
     SubShader
@@ -38,7 +39,7 @@ Shader "Haunted/Paper"
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
                 half _Hatch, _Tiles;
-                float _TileSize, _Outline, _PoolRadius, _Slats;
+                float _TileSize, _Outline, _PoolRadius, _Slats, _Silhouette;
             CBUFFER_END
             float4 _PoolCenter; // xz of the floor point under the middle of the board, set by MindFx
             float _BeltTravel; // how far the belt has moved, set by Belt
@@ -146,6 +147,10 @@ Shader "Haunted/Paper"
                 half wobble = 0.7 + 0.6 * Noise(plane * 6 + boil);
                 half ink = 1 - smoothstep(_Outline * wobble - 0.75, _Outline * wobble + 0.75, min(edge.x, edge.y));
                 col = lerp(col, half3(0.06, 0.05, 0.08), ink * 0.85);
+
+                // Round things have no face edges to ink, so outline where the surface turns away from the camera.
+                half facing = dot(n, normalize(GetWorldSpaceViewDir(i.positionWS)));
+                col = lerp(col, half3(0.06, 0.05, 0.08), _Silhouette * (1 - smoothstep(0.35, 0.5, facing + (Noise(plane * 9 + boil) - 0.5) * 0.08)));
 
                 col = MixFog(col, i.fog);
                 return half4(col, 1);
