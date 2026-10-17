@@ -14,7 +14,7 @@ namespace Demons
         static readonly int FlashId = Shader.PropertyToID("_Flash"), AloftId = Shader.PropertyToID("_Aloft");
 
         static Sprite legsStand, bodyFront, bodyBack, bodySide, tieArt, handArt;
-        static Sprite[] walk, headFront, headBack, faces;
+        static Sprite[] walk, headFront, headBack, headSide, faces, sideFaces;
         static Material card, limb;
 
         SpriteRenderer legs, body, tie, head, face;
@@ -41,11 +41,15 @@ namespace Demons
             headFront = new Sprite[Heads];
             headBack = new Sprite[Heads];
             faces = new Sprite[Heads];
+            headSide = new Sprite[Heads];
+            sideFaces = new Sprite[Heads];
             for (int i = 0; i < Heads; i++)
             {
                 headFront[i] = Art($"Head{HeadArt[i]}Front");
                 headBack[i] = Art($"Head{HeadArt[i]}Back");
                 faces[i] = Art($"Head{HeadArt[i]}Face");
+                headSide[i] = Art($"Head{HeadArt[i]}Side");
+                sideFaces[i] = Art($"Head{HeadArt[i]}SideFace");
             }
             card = Resources.Load<Material>("Fx/Card");
             limb = Resources.Load<Material>("Fx/Limb");
@@ -120,26 +124,18 @@ namespace Demons
 
         public void Pose(Demon demon, Vector3 facing, Vector3 ahead)
         {
-            if (demon.Head.Value != headIndex)
-            {
-                headIndex = demon.Head.Value;
-                face.sprite = faces[Mathf.Clamp(headIndex, 0, Heads - 1)];
-            }
+            headIndex = demon.Head.Value;
             float x = Vector3.Dot(facing, transform.right), z = Vector3.Dot(facing, ahead);
             sideways = Mathf.Abs(x) > Mathf.Abs(z);
             facingAway = !sideways && z > 0;
             facingLeft = sideways && x < 0;
             int h = Mathf.Clamp(headIndex, 0, Heads - 1);
             body.sprite = sideways ? bodySide : facingAway ? bodyBack : bodyFront;
-            head.sprite = facingAway ? headBack[h] : headFront[h];
+            head.sprite = sideways ? headSide[h] : facingAway ? headBack[h] : headFront[h];
+            face.sprite = sideways ? sideFaces[h] : faces[h];
             body.flipX = head.flipX = face.flipX = facingLeft;
             face.enabled = !facingAway;
             tie.enabled = !facingAway && !sideways;
-            // The heads have no side view: in profile the front head narrows and its face slides towards where it looks.
-            float turn = sideways ? (facingLeft ? -1 : 1) : 0;
-            head.transform.localScale = new Vector3(sideways ? 0.88f : 1, 1, 1);
-            face.transform.localScale = new Vector3(sideways ? 0.8f : 1, 1, 1);
-            face.transform.localPosition = new Vector3(turn * 0.13f, 0, 0);
 
             var moved = demon.transform.position - lastPosition;
             lastPosition = demon.transform.position;

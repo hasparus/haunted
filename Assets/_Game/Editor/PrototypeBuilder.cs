@@ -255,10 +255,11 @@ namespace Demons.Editor
         // Lodger. Grabbing beside one puts it on.
         static void BuildHeadPedestals(Camera cam)
         {
-            const float scale = 0.45f;
+            const float scale = 0.62f;
             for (int i = 0; i < DemonRig.Heads; i++)
             {
-                var at = new Vector3(-15.4f + i * 2.5f, 0, 4.6f);
+                // Spread across the same span as the colour pads above.
+                var at = new Vector3(-15f + i * 2.6f, 0, 4.7f);
                 var root = new GameObject($"Head{i}").transform;
                 root.position = at;
                 var stand = Prim(PrimitiveType.Cylinder, "Pedestal", root, new Vector3(0, 0.3f, 0), new Vector3(0.7f, 0.3f, 0.7f), Paper("Pedestal", new Color(0.66f, 0.61f, 0.53f)), collider: true);
