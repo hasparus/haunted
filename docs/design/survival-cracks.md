@@ -36,7 +36,7 @@ Careful with the theme. In this game a cracking mind is **good for the demons**.
 - **HUD:** 5 crack pips by the influence counter replace "fired below X".
 - **Escalation is tied to open cracks, not to lifetime misses**, so recovering calms everything down again:
   - 3 open: the light flickers, the gloom vignette eases off a little (the room gets brighter, which is bad).
-  - 4 open: heartbeat, low-pass on the music, the last pip pulses, he hums happily.
+  - 4 open: heartbeat, the music goes muffled, the last pip pulses, he hums happily. On WebGL the only mixer property that works is volume, and audio filters such as low-pass aren't supported ([Unity WebGL audio](https://docs.unity3d.com/6000.0/Documentation/Manual/webgl-audio.html)). So "muffled" means crossfading to a pre-muffled copy of the music track with the existing crossfading music player, plus a small pitch drop (`AudioSource.pitch`, positive values work on WebGL). No `AudioLowPassFilter`.
   - 5: the darkness **shatters**. White-out to sunlight, 0.5 s visual slow-mo (render only, never `Time.timeScale`, the networked clock depends on it), then the DOWNSIZED card.
 
 ## Screen shake: yes, but small, scaled by danger, with a hard cap

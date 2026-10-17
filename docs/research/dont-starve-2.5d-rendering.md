@@ -2,7 +2,7 @@
 
 Status: research note, October 2026. Target: this repo (Unity 6000.6, URP 17.6, Universal Renderer; PC tier = Forward+, **WebGL tier = Mobile_RPAsset → plain Forward, no depth texture, no additional-light shadows**). Every recommendation below is meant to also work in the WebGL build.
 
-How to read the evidence: Klei has never published a rendering postmortem, so most specifics come from **DST's shipped Lua scripts** (mirrored on GitHub) and **the GLSL source embedded in Don't Starve's `.ksh` shader files** (also mirrored). Facts taken from that code are marked **[code]**. Things I reasoned out from the engine API or from looking at the game are marked **[inferred]**.
+How to read the evidence: Klei has never published a rendering postmortem, so most specifics come from **DST's shipped Lua scripts** (mirrored on GitHub) and **the GLSL source embedded in Don't Starve's `.ksh` shader files** (also mirrored). Facts taken from that code are marked **[code]**. Things I reasoned out from the engine API or from looking at the game are marked **[inferred]**. Conference talks I couldn't fetch (YouTube) are cited only for what they're widely known to say, marked **[talk]**. What Klei has said publicly about its tech is short and is quoted where used: per lead programmer Kevin Forbes, "The Don't Starve engine is custom-built in C++", "Most of the gameplay code is written in Lua", "We use FMOD as our audio backend", and "The art was mostly made in Flash, and then exported into our own animation format" ([Game Developer, Road to the IGF](https://www.gamedeveloper.com/design/road-to-the-igf-klei-entertainment-s-i-don-t-starve-i-)).
 
 ---
 
@@ -34,31 +34,74 @@ The camera is already close to DST's numbers (DST uses FOV 35 and 30–60° pitc
 - `ANIM_ORIENTATION = { BillBoard = 0, OnGround = 1, OnGroundFixed = 2 }`, and the default is `BillBoard`. Characters, trees and items are billboards. Rugs, scorch marks and turf decals are `OnGround` (lying flat on the XZ plane, turning with the camera heading) or `OnGroundFixed` (fixed in world space).
 - [inferred] A billboard here is **view-plane aligned**: the quad's right is the camera's right and its up is the camera's up. It is *not* cylindrical. Because the camera never rolls and `right` stays horizontal, sprites look upright and undistorted at any pitch. A cylindrical (Y-only) billboard would look squashed by `cos(pitch)`, about 0.64× at 50°. The shader uniform list includes `CAMERARIGHT` [code: shader uniform dump], which fits this construction.
 - The pivot is the sprite's foot on the ground. The quad tilts back with the camera, so its top leans *away* from the viewer and never dips below y = 0.
+- Other engines that went this way confirm the recipe. Game Dev Beginner separates the **LookAt method** (turn toward the camera's *position*: sprites near the screen edge visibly turn and "reveal them as flat 3D surfaces") from the **Rotation method** (`transform.rotation = mainCamera.transform.rotation`, so all sprites face the same way, "a more convincing 2D effect") ([Game Dev Beginner](https://gamedevbeginner.com/billboards-in-unity-and-how-to-make-your-own/)). DS-style games want the Rotation method, which is what `Demon.cs` does. The Defold *Smash Bash* thread uses the same thing ("All sprites (characters, trees, houses, etc) are rotated onto the same angle as camera"), pivots at the feet, a low FOV, and explicit draw order "tilemap → ground objects → all other objects", because otherwise trees near the ground plane vanish into the tilemap ([Defold forum](https://forum.defold.com/t/view-like-in-smash-bash-solved/12917)).
+
+### CPU rotation (ours) vs vertex-shader billboarding (*Songs of Conquest*)
+- **Ours:** `Demon.LateUpdate` copies `camera.rotation` onto each sprite's transform. With four demons that costs nothing and keeps the `SpriteRenderer` workflow (flipX, sprite swaps, sorting) intact.
+- **Songs of Conquest** ([80.lv / Lavapotion](https://80.lv/articles/the-shader-approach-to-billboarding/)) needed "thousands of animated billboards". Per-object MonoBehaviour rotation "worked pretty well as long as our camera angle did not change" but fell apart once the camera zoomed and rotated. They moved it into a Shader Graph sub-graph. The camera rotation is passed in from the CPU, and vertices are displaced so the quad *appears* turned. Their constraints are worth knowing:
+  - It rotates on one axis only. That's a deliberately limited billboard, not DS's full view alignment.
+  - A **displacement weight is baked into UV2.y**: black at the base (stays planted), brighter with height.
+  - Normals are reconstructed statically for lighting.
+  - It "batches well", but characters and buildings stayed out of it, because "any performance gains are quickly outweighed by the complexity of the system."
+- Game Dev Beginner measured the two approaches as roughly equal up to ~20,000 billboards. The shader version won only because its renderers were culled when off-screen. One gotcha: when a shader moves vertices, the renderer's CPU bounds no longer match what's drawn, so pad the bounds or the sprite pops at screen edges.
+- **Verdict for `haunted`:** keep CPU rotation for demons and other hero sprites. Use a vertex-shader billboard (§7.3) for many-instance props (thoughts on the belt, clutter, plants) and wherever the pivot-depth trick is needed. Take SoC's idea of storing a per-vertex height weight, which plain quads can get from `uv.y` (as in our sway term).
 
 ### For `haunted`
-1. Keep the view-aligned billboard (`Demon.cs` already does `rotation = view.rotation`). Move it into the vertex shader (§7.3) so every sprite gets it for free and can apply the pivot-depth trick from §3.
+1. Keep the view-aligned billboard (`Demon.cs` already does `rotation = view.rotation`). Move it into the vertex shader (§7.3) for bulk sprites and anything that needs the pivot-depth trick from §3.
 2. Add a `heading` to `CameraRig` with optional 45° steps and DST's ease (`heading += (target - heading) * (1 - exp(-20·dt))`). Keep DST's distance→pitch coupling: `pitch = lerp(40°, 60°, inverseLerp(MinDistance, MaxDistance, distance))` works with the current 28–100 range. When the rig pulls out to fit four demons it also tilts toward top-down, which helps readability.
 3. If you rotate, the three-facing logic in `Demon.cs` already works per frame because it reads `view.right` and `view.forward`.
 4. When the heading changes, the sort axis has to follow (§3).
 
 ---
 
+## Art direction (as Klei describes it)
+
+**What Klei says.** Lead programmer Kevin Forbes is the source in both interviews, so these are the studio's words, not an artist's process notes:
+- "The art direction borrows a lot from Gorey and Burton, obviously, but there are also elements of early 20th century advertising and German Expressionism" ([Game-Wisdom, Jan 2013](https://game-wisdom.com/?p=3185)).
+- They wanted a setting "creepy and just alien enough to keep the player guessing". As "big animation fans", they wanted the style "super-expressive" with "lots of appeal". "The Burton/Gorey/Addams look that we settled on fit the bill". Creative director **Jeff Agala** "worked with the art team to come up with something to communicate that" ([Game Developer](https://www.gamedeveloper.com/design/road-to-the-igf-klei-entertainment-s-i-don-t-starve-i-)).
+- Each update shipped with a poster "to help invoke the setting and theme". That's the early-advertising strand used for marketing as well as in-game.
+
+**What each influence means for our sprites and grading** (this is my reading, not Klei's):
+
+| Influence | Visual trait | For our ink-outline sprites | For grading and lighting |
+|---|---|---|---|
+| **Edward Gorey** | Pen-and-ink, fine hatching, deadpan Victorian figures, lots of empty space | Black ink outlines carry the form. Use hatching instead of gradients for shade. Keep figures small inside the empty space of the frame | Keep the palette low-chroma. Darkness reads as paper turning grey-black, not as blue night |
+| **Tim Burton** | Spindly, elongated silhouettes, spirals, stripes, cute-macabre | Exaggerate proportions (long limbs, big heads) and design silhouettes that read solid black. The demons' horns and tails are the hook | Small saturated accents (a red pad, a candle flame) against desaturated surroundings |
+| **Early 20th-century advertising** | Flat spot colour, bold lettering, slightly off-register print, cheery-sinister mascots | Flat fills with limited tones, a slight print texture. UI type and the Monday→Sunday posters can lean into it | Paper grain + a faint misregistration (a 1–2 px chroma offset) as the "calm" baseline. The **pill-inversion chromatic split** (§7.3) grows out of the same print-misregistration idea, so it stays on-style |
+| **German Expressionism** (*Caligari*, *Nosferatu*) | Skewed architecture, hard light, long theatrical shadows, painted shadows | Draw office furniture slightly askew, never on a perfect grid. Long cast shadows are welcome, so the sun-facing silhouette cards should stay | Hard radial lights on near-black ambient (DS's night, §5.3). The therapist spotlight is literally Expressionist staging. As *mind* rises, push contrast and darken the edges harder (§5.4) |
+
+The lines and silhouettes are authored. The renderer must not wash them out: premultiplied alpha, mip bias, no strong bloom on paper whites, and grades applied as LUTs so blacks stay black.
+
+---
+
 ## 2. Sprite pipeline
+
+### Klei's route: Flash → own format → (for modders) Spriter, and back out via ktools
+1. **Authoring in Flash** (Klei internal). "The art was mostly made in Flash, and then exported into our own animation format" ([Game Developer](https://www.gamedeveloper.com/design/road-to-the-igf-klei-entertainment-s-i-don-t-starve-i-)). Flash symbols map to Klei *symbols*, and Flash's per-instance matrices (including shear) map to the per-element 2×3 affine in `anim.bin`.
+2. **Klei's own format**: `anim.bin` (bank) + `build.bin` (build) + `atlas-N.tex` (KTEX) in a ZIP, loaded by the custom C++ engine and driven from Lua (`AnimState:SetBank/SetBuild/PlayAnimation`).
+3. **Mod tools: Spriter + autocompiler.** Klei shipped Spriter with the Don't Starve Mod Tools. The naming convention: the Spriter *file* name is the **build**, the top-level *Entity* is the **bank**, and its children are the **animations**. An `.scml` with its PNGs inside a mod's `exported/` folder "is automatically converted into an asset when the game starts up". Edits are recompiled on the next run, and errors go to a text file next to the `.scml` ([Klei forum: New asset tools](https://forums.kleientertainment.com/topic/27247-new-asset-tools-animations-textures-sounds-and-layouts/), from search-result excerpts; the page returned 403). The same tools covered textures (PNG ↔ TEX), FMOD sound projects and Tiled layouts.
+4. **ktools (community, reverse direction)**: `krane` turns `anim.bin` + `build.bin` (+ atlases found from the build) **into a Spriter project**, and `ktech` converts KTEX ↔ PNG. "Not all of Don't Starve's animations can be faithfully represented as a Spriter project": Spriter has no shear, and `--check-animation-fidelity` reports the loss ([ktools README](https://github.com/nsimplex/ktools/blob/master/README.md)). Klei's mod tools could therefore *compile* Spriter into the native format, but Spriter could never represent Klei's own Flash-authored animations exactly.
+
+**Is any of it worth copying for Unity 2D Animation?**
+- **Copy the data model, not the tools.** The parts worth having: one rig, many builds; named symbol slots; runtime symbol override (`OverrideSymbol`); a facing suffix convention; atlases built per character. All of it maps onto **2D Animation + Sprite Library Asset + Sprite Resolver**: a Category is a symbol/slot, a Label is a variant, and swapping the Library Asset swaps the whole "build". Mirror the Spriter naming: rig prefab = bank, Sprite Library Asset = build, AnimationClip = animation, with clips named `<anim>_<front|side|back>`.
+- **Copy the "drop files, it compiles" loop.** `ArtImport.cs` is already a small autocompiler. Extend it so a folder `Art/<Character>/<facing>/<part>.png` produces the sprites, a Sprite Library Asset with categories per part, and a Sprite Atlas, all on import. Artists then never touch Unity settings, which is the convenience Klei's mod tools gave modders.
+- **Skip:** Flash/Animate (dead-end tooling), Klei's binary formats, ktools, and Spriter itself. 2D Animation does bones, weights and swaps in-editor. Spine is the alternative if animators want an external tool with a mature runtime.
+- **One capability gap:** Klei's per-element **shear** comes free with Flash's matrices. Unity 2D Animation has no per-part shear key: bones are Transforms that translate, rotate and scale. For squash-and-stretch on rigid cutout parts, use bone scale, or bake a few extra drawn frames per part. `Springy.cs` already gives whole-sprite squash on the Visual pivot.
 
 ### Klei's format [code: ktools README; DST `AnimState` API]
 - An animation ZIP contains **`anim.bin`** (the *bank*: named animations, each a list of frames, each frame a list of elements = symbol hash + symbol frame + layer + **full 2×3 affine matrix** + z order), **`build.bin`** (the *build*: named **symbols**, each with frames that reference regions in atlas pages), and **`atlas-N.tex`** (KTEX textures).
 - KTEX defaults to **DXT5, premultiplied alpha, and Lanczos-filtered mip chains** (ktech defaults). Premultiplied alpha is what keeps thick ink lines from getting white or black fringes when mipped.
-- Spriter can't hold everything: "shearing isn't supported" (krane `--check-animation-fidelity`). The native format has per-element shear because the art originated in **Flash**, where Klei drew and animated Wilson and friends [forum: modding tool post; Klei dev mentions a Flash→Spriter exporter]. For mods, Klei shipped **Spriter + an autocompiler** that compiles `exported/*.scml` into these ZIPs at game start.
+- Spriter can't hold everything: "shearing isn't supported" (krane `--check-animation-fidelity`). The native format has per-element shear because the art was authored in **Flash** (confirmed by Forbes, above). For mods, Klei shipped **Spriter + an autocompiler** that compiles `exported/*.scml` into these ZIPs at game start.
 - **Bank/build separation is the key idea.** One skeleton (bank) can play with any build, and individual body parts can be swapped at runtime (`AnimState:OverrideSymbol("swap_object", build, symbol)`, `HideSymbol`, `Hide(layer)`). That is how every hat, tool and DST skin works, with no new animation needed.
 - **Facings.** `Transform:SetFourFaced()` (players), `SetSixFaced`, `SetEightFaced`, `SetTwoFaced`, `SetNoFaced`. Each animation exists per facing (exported as `_down`, `_side`, `_up` variants). The engine picks a variant from the entity's rotation relative to the camera heading, and mirrors `side` for left [code: `player_common.lua` `SetFourFaced`; the facing suffix convention comes from the mod tools].
 - **Anim shader** [code: `anim.ksh`]: two atlas pages selected per vertex by `TEXCOORD0.z < 0.5`, **alpha test then `discard`** (`PARAMS.x`), `TINT_MULT` and `TINT_ADD` (hit flashes, ghosting, `SetMultColour`), lighting sampled from a **world-XZ lightmap** with a `LIGHT_OVERRIDE` floor (glowing things ignore darkness), and an optional **`FADE_OUT` erosion** (dissolve against an erosion texture in a camera-projected space, driven by `EROSION_PARAMS`).
 
 ### Art authoring (Klei look)
-- The look is hand-drawn: heavy **variable-width black ink contours**, flat or limited colour fills with a little dry-brush texture, and Gorey/Burton/early-20th-century-advertising references per Klei's Kevin Forbes [Game Developer, Game-Wisdom interviews]. Line weight carries the style. It survives downscaling because the lines are thick relative to the shape.
+- The look is hand-drawn: heavy **variable-width black ink contours** and flat or limited colour fills with a little dry-brush texture. For the influences, see **Art direction** above. Line weight carries the style. It survives downscaling because the lines are thick relative to the shape.
 - Characters are made of **many small rigid parts** (head, torso, arms, hands, legs, plus swap slots), animated by affine transforms with a few drawn frames for faces and hands. That's cutout animation, not mesh deformation.
 
 ### For `haunted` (Unity)
-- **Animation tool.** Pick one: Unity **2D Animation (bones + Sprite Library/Resolver for swaps)** or **Spine (spine-unity)**. Both support Klei's "bank vs build" idea. 2D Animation is free and in-package. Spine is the closest to Klei's workflow and has a proper runtime for skin swaps. Unity 2D Animation's **Sprite Library Asset + Sprite Resolver** is the direct analogue of `OverrideSymbol`. Use it for the per-player colour variants and the "devil sprites / desk drawing" swaps.
+- **Animation tool.** (See "Is any of it worth copying" above for the mapping from Klei's model.) Pick one: Unity **2D Animation (bones + Sprite Library/Resolver for swaps)** or **Spine (spine-unity)**. Both support Klei's "bank vs build" idea. 2D Animation is free and in-package. Spine is the closest to Klei's workflow and has a proper runtime for skin swaps. Unity 2D Animation's **Sprite Library Asset + Sprite Resolver** is the direct analogue of `OverrideSymbol`. Use it for the per-player colour variants and the "devil sprites / desk drawing" swaps.
 - **Facings.** Keep three authored facings (front/side/back) and mirror the side. Add 3/4 facings later only for hero characters.
 - **Texel density, computed for this camera.** At distance *d* and FOV 34°, the visible height at the focus is `2·d·tan 17° ≈ 0.61·d`. At the rig's `MinDistance = 28`, that's 17.1 units, or about **63 px/unit at 1080p** and 126 px/unit at 4K. `ArtImport.PixelsPerUnit = 300` is therefore oversampled 2.4–4.8×. That's fine for the EyeView close-up but wastes memory. Recommendation: author at 2× of the closest on-screen size, **≈150–200 PPU**, keep mipmaps on, and use trilinear filtering with **mip bias ≈ −0.5** so ink lines don't go soft. The mip chain should be generated from premultiplied colour (or with `alphaIsTransparency`, which the importer already sets) to avoid dark halos.
 - **Atlases.** Use **Sprite Atlas v2** per character or set (all facings and parts of one demon in one atlas, or at most 2 pages like Klei) so a character draws in one batch. Use 2–4 px padding and extrude borders. Use **Tight** mesh type for large sprites with lots of empty space; `ArtImport` currently forces FullRect, which costs overdraw on transparent sprites. Compression: ASTC 6×6 or BC7 on desktop, ASTC/ETC2 on WebGL. Note that BC7 isn't available on every WebGL device. Unity's WebGL build can ship both DXT and ASTC.
@@ -78,7 +121,7 @@ The camera is already close to DST's numbers (DST uses FOV 35 and 30–60° pitc
 Two workable strategies. Use (A) by default, (B) for crowds of clutter.
 
 **(A) Sorted transparent billboards (DS-faithful, soft edges)**
-- In URP's Universal Renderer, transparent `SpriteRenderer`s sort by sorting layer → order in layer → distance. Set **`camera.transparencySortMode = TransparencySortMode.CustomAxis`** and **`camera.transparencySortAxis = flattened camera forward`** (or the project-wide `GraphicsSettings` equivalents; check in the Frame Debugger that URP 17 honours it for your shader's queue) (`Vector3.ProjectOnPlane(cam.forward, Vector3.up).normalized`). Update it whenever the heading changes. Use **Sprite Sort Point = Pivot**; the importer already pivots at the bottom centre.
+- In URP's Universal Renderer, transparent `SpriteRenderer`s sort by sorting layer → order in layer → distance. Set **`camera.transparencySortMode = TransparencySortMode.CustomAxis`** and **`camera.transparencySortAxis = flattened camera forward`** (or the project-wide `GraphicsSettings` equivalents; check in the Frame Debugger that URP 17 honours it for your shader's queue) (`Vector3.ProjectOnPlane(cam.forward, Vector3.up).normalized`). Update it whenever the heading changes. Use **Sprite Sort Point = Pivot**; the importer already pivots at the bottom centre. Unity's manual describes the same setup for 2D: Custom Axis sorts "Renderers based on their distance along the custom axis", and a Sprite's Sort Point can be "its Pivot position in World Space". It also notes that in URP's *2D* Renderer the sort mode lives on the 2D Renderer asset rather than in Project Settings. We use the Universal Renderer, so set it per camera ([Unity Manual: 2D Sorting](https://docs.unity3d.com/2023.2/Documentation/Manual/2DSorting.html)). (The gamedev.net "Making a 2.5D game in Unity, part 2" sorting tutorial returned 403 and isn't used for any claim here.)
 - Sorting layers that mirror Klei: `Ground` (tile mesh, if drawn as sprites), `GroundDecal` (blob shadows, rugs, spotlight rings), `World`, `WorldFX`, `Overlay`. Use a **`SortingGroup`** on each multi-part character so its parts sort as one unit (the equivalent of `SetFinalOffset`).
 - Keep ZTest on (so 3D props like desks, walls and the belt still occlude sprites) and ZWrite off.
 - **Pivot-depth trick** so a tilted billboard's top doesn't clip into a wall or desk behind it. In the vertex shader, compute the clip position of the *pivot* and give every vertex of the quad the pivot's depth. The sprite then occludes and is occluded as a flat card standing at its feet. This is the 2.5D equivalent of DS's "pivot sorts the whole sprite". Shader in §7.3.
@@ -129,6 +172,7 @@ ZoomBlur  →  Bloom  →  Distort  →  ColourCube (base)  →  Lunacy  →  Mo
 - Insanity table **per phase**: `insane_day_cc`, `insane_dusk_cc`, `insane_night_cc`. So the insanity look itself changes with time of day.
 - **Blend times**: phase changes take day 4 s, dusk 6 s, night 8 s. Season changes take 10 s. Overrides (e.g. the mole hat's night vision) take 0.25 s. If a new target arrives mid-blend, the blend restarts from the current destination.
 - Cube format: **32³ unwrapped to 1024×32** (blue slices laid horizontally). That is **the same layout URP's Color Lookup uses**, and this project's `m_ColorGradingLutSize: 32` already matches. Klei's cubes can be recreated in any grading tool by grading a neutral 1024×32 strip.
+- **Night vision is just another cube table.** `components/playervision.lua` defines `NIGHTVISION_COLOURCUBES` (`mole_vision_off_cc` by day, `mole_vision_on_cc` at dusk and night), `GHOSTVISION_COLOURCUBES` (`ghost_cc` in every phase) and `NIGHTMARE_COLORCUBES` (the ruins' calm/warn/wild/dawn cycle, 8 s blends) plus a phase function each, and pushes them to the colour-cube component as an override (the `ccoverrides`/`ccphasefn` events, 0.25 s blend). Separately, `ambientlighting.lua` swaps to `NIGHTVISION_COLOURS`, a flat grey 200/255 ambient, so the world is lit *and* graded differently. Both are client-only [code]. (The Klei forum thread on a dedicated-server night-vision component returned 403, so this is from the scripts alone.) For us, the same mechanism gives one-shot looks such as "therapist session" or "pill" grades, layered without touching the base weekday cubes.
 
 ### 5.3 Ambient light and the darkness [code: `components/ambientlighting.lua`, `lighting.ksh`, `anim.ksh`/`ground.ksh`, `player_common.lua`, `prefabs/campfirefire.lua`]
 - **Ambient colour by phase**: day `(255,230,158)` (warm), dusk `(150,150,150)`, **night `(0,0,0)`**. Full moon is `(84,122,156)`, caves are 0. Lerp times are 4, 6 and 8 s. Night is *literally* black ambient. Anything you can see at night is lit by a light source.
@@ -236,7 +280,7 @@ Add a **Distortion slider** next to the existing "effects" and "screen shake" to
 | 9 | Paper grain + animated vignette overlay (UI Toolkit/uGUI image with animated mask, like DST's `vig`) | UI | All |
 
 Notes:
-- **LUT layering.** Bake the blend per frame, as Klei does. A 1024×32 `RenderTexture` (linear, not sRGB) gets `lerp(lerp(ambA, ambB, tPhase), lerp(insA, insB, tPhase), lutW)` from a tiny blit shader, and is assigned to URP's `ColorLookup.texture`. URP's `ValidateLUT` accepts a 2D RenderTexture whose width is `size²` and height `size` (32 here), as long as it isn't sRGB (verify on 6000.6). This gives DST's three-channel cube system in one URP lookup. Author `office_mon … office_sun` and `office_haunted_day/night` cubes from a neutral strip.
+- **LUT layering.** Bake the blend per frame, as Klei does. A 1024×32 `RenderTexture` (linear, not sRGB) gets `lerp(lerp(ambA, ambB, tPhase), lerp(insA, insB, tPhase), lutW)` from a tiny blit shader, and is assigned to URP's `ColorLookup.texture`. **Settled:** the [Color Lookup manual page](https://docs.unity3d.com/6000.0/Documentation/Manual/urp/post-processing-color-lookup.html) only says Lookup Texture "Contains a color lookup table (LUT) texture" and Contribution "Defines how much of the color-graded image Unity blends with the original image". The URP source is explicit, though. `ColorLookup.ValidateLUT()` requires `height == colorGradingLutSize` and accepts either a `Texture2D` with `width == size²` in a non-sRGB format, **or a `RenderTexture` with `dimension == Tex2D`, `width == size²` and `!sRGB`**. `IsActive()` is `contribution > 0 && ValidateLUT()`. The code is identical in the `6000.0/staging`, `6000.3/staging` and `master` branches ([ColorLookup.cs](https://github.com/Unity-Technologies/Graphics/blob/master/Packages/com.unity.render-pipelines.universal/Runtime/Overrides/ColorLookup.cs)). So a runtime 1024×32 linear RT works. You have to bake it, because **Volume blending cannot cross-fade two LUTs**: `TextureParameter` uses the default `Interp`, `m_Value = t > 0f ? to : from`, which snaps ([VolumeParameter.cs](https://github.com/Unity-Technologies/Graphics/blob/6000.0/staging/Packages/com.unity.render-pipelines.core/Runtime/Volume/VolumeParameter.cs)). Use `contribution` as DST's layer weight for a single LUT, and the baked RT for anything layered. This gives DST's three-channel cube system in one URP lookup. Author `office_mon … office_sun` and `office_haunted_day/night` cubes from a neutral strip.
 - **Everything full-screen in one pass on WebGL.** Every extra full-screen pass costs a full read and write. `MindDistort` should do distortion, chromatic split and grain in a single fragment, and skip itself when `wobbleW == 0 && inverted == 0` (`SetActive(false)` on the feature).
 - **Render Graph.** URP 17 runs on Render Graph. Write any custom `ScriptableRenderPass` with `RecordRenderGraph` (Compatibility Mode is deprecated). The built-in **Full Screen Pass Renderer Feature** + a Fullscreen Shader Graph/HLSL material needs no custom pass code at all. Use it for step 7.
 - Add the features to **both** `PC_Renderer` and `Mobile_Renderer`, because WebGL uses Mobile.
@@ -316,6 +360,37 @@ Compute "is this demon or thought lit?" on the CPU **with the same falloff funct
 
 ---
 
+## 8. Camera feel (brief; game feel itself lives in the design docs)
+- **Eiserloh, "Juicing Your Cameras With Math" (GDC 2016)** [talk]: drive shake from a **trauma** value. Shake = trauma² (or ³), sampled from **Perlin noise** rather than random so it stays smooth and can be slowed down. Trauma decays linearly, and translational shake is mixed with *rotational* shake. Camera follow should be smoothed (asymptotic or critically damped). `CameraRig` already does trauma² × Perlin with linear decay and exponential follow (`1 − exp(−3·dt)`). The one missing piece is a small **roll** component, ±1–2° × trauma². That only works if the billboards follow the camera's full rotation. Ours do, because they copy `camera.rotation`, so roll keeps sprites upright *relative to the screen*.
+- **Nijman, "The Art of Screenshake" (INDIGO 2013)** [talk], **Jonasson & Purho, "Juice it or lose it" (GDC Europe 2012)** [talk], **GMTK, "Secrets of Game Feel and Juice"** [talk]: hit-stop, kickback, permanence, tweened squash and stretch, and layering many small reactions on every event. For the renderer, that means the post stack's "mind" response should **pulse on events** (a short spike of wobble or chromatic split when a thought is lost or a crack opens) on top of the slow `mind` ramp. Keep every channel behind the existing effects/shake toggles and the new Distortion slider.
+
+---
+
+## 9. WebGL / itch.io constraints that shape the pipeline
+
+**Audio (Unity WebGL)** ([Unity Manual: Audio on the Web](https://docs.unity3d.com/6000.0/Documentation/Manual/webgl-audio.html)):
+- Why: "FMOD relies on threads, which the WebGL API doesn't support", so Unity uses the browser's Web Audio API, and "the Web platform supports limited audio functionality, which only includes the basic features."
+- AudioMixer: "Create an Audio Mixer asset. Add AudioMixerGroups to the hierarchy. Adjust the volume of each group." Then: "**Volume is the only property you can change on Web. Other properties and sound effects aren't supported.**" So the WebGL build gets **no mixer effects (low-pass, reverb) and no snapshot effect parameters**. Any "muffled mind" audio has to be authored alternate stems with crossfaded volumes.
+- Filter components: the supported-classes table lists only AudioSource, AudioListener, AudioClip, AudioMixer, `SystemInfo.supportsAudio` and Microphone (not supported). `AudioLowPassFilter` and the other filter components aren't mentioned at all. Assume they don't work on Web.
+- `AudioSource.pitch`: "WebGL only supports positive pitch values." Our `pitchJitter` (±0.06) is fine. No reverse playback.
+- Autoplay: "browsers don't allow audio playback until an end user interacts with your application webpage via a mouse click, touch event, or key press. Use a loading screen to allow the end user to interact with your application and start audio playback before your main content begins." Chrome's policy means music set to autoplay "won't play automatically unless you click or tap on the website."
+- Clips are encoded as AAC. Encoders can change the first 1024 samples, which shifts loop points (fix: WAV source with ≥1024 samples of leading silence and an adjusted `smpl` chunk). `CompressedInMemory` has more latency, which suits music. `DecompressOnLoad` uses more memory but has lower latency, which suits SFX. However, **DecompressOnLoad clips "might not be audible on iOS devices that are in Silent Mode"**, so if iOS Safari matters, use CompressedInMemory and preload via an additive scene. `AudioClip.Create` needs Stream = false. Microphone isn't supported.
+
+**itch.io HTML5** ([itch.io creator docs](https://itch.io/docs/creators/html5)):
+- Upload a ZIP with `index.html`, relative paths only, **case-sensitive** filenames (a mismatch shows as a 403).
+- The ZIP must not exceed **1,000 files** after extraction, **240-character** paths, **500 MB total** or **200 MB per file**. Unity's WebGL output is a handful of files, so the limits only matter if we ever stream addressable bundles.
+- Compression: itch detects gzip and serves `.br` as Brotli by extension. This project uses `webGLCompressionFormat: 1` (gzip) with `webGLDecompressionFallback: 1`, which works on itch either way. Switching to Brotli with the fallback turned off would give smaller downloads.
+- "Click to play" is on by default. With auto-start, "audio may be muted on some browsers", which is another reason for a title screen that waits for a click. itch can add a fullscreen button. **Mobile visitors always get click-to-launch-fullscreen** with a device-shaped viewport, so the UI and the post stack must handle arbitrary aspect ratios (the vignette and the radial wobble mask should use an aspect-correct distance).
+- External requests must be HTTPS. That's relevant for `server/scores`.
+
+**GPU features (WebGL 2) that limit the rendering plan** (general platform knowledge, not from the pages above):
+- No compute shaders. JFA, SDF and radiance-cascade passes (§6) must be fragment-shader ping-pong blits, or stay PC-only.
+- The Mobile quality tier is used on WebGL: Forward (8 additional lights per object), no depth texture, no additional-light shadows. That's why the lightmap and per-object fog in §7 are the default path.
+- Float render targets need `EXT_color_buffer_float`, so keep the lightmap and LUT RTs RGBA8 (fine for LDR lights and 32³ LUTs).
+- Texture compression: ship DXT/BC for desktop browsers and ASTC/ETC2 for mobile (Unity can build both). There's no BC7 guarantee.
+
+---
+
 ## Sources
 
 **Primary: Klei game code (DST scripts mirror and DS shader source)**
@@ -339,10 +414,35 @@ Compute "is this demon or thought lit?" on the CPU **with the same falloff funct
 - Klei forum: anim tools (Flash origins, Spine): https://kleiforums.com/forums/topic/142963-tool-some-animation-tools , https://forums.kleientertainment.com/forums/topic/159394-tool-new-anim-tool/
 - Klei forum: colour cubes via postprocessing / custom cubes: https://kleiforums.com/forums/topic/102751-mod-that-disables-insanity-colour-cube/ , https://forums.kleientertainment.com/forums/topic/158145-how-do-you-makegenerate-a-color-cube/
 
-**Art direction**
-- Road to the IGF: Klei's *Don't Starve* (Kevin Forbes on the Burton/Gorey/Addams look): https://gamedeveloper.com/design/road-to-the-igf-klei-entertainment-s-i-don-t-starve-i-
+- Klei forum: New asset tools (animations, textures, sounds, layouts; Spriter build/bank/animation mapping, autocompile): https://forums.kleientertainment.com/topic/27247-new-asset-tools-animations-textures-sounds-and-layouts/ (403 to direct fetch; used via search excerpts)
+- Klei forum: dedicated-server night-vision component: https://forums.kleientertainment.com/topic/49419-dedicated-server-working-nightvision-component/ (403 to direct fetch; claims taken from `playervision.lua` instead)
+
+**Art direction and Klei tech**
+- Road to the IGF: Klei's *Don't Starve* (Forbes: C++ engine, Lua gameplay, FMOD, Flash → own animation format, Burton/Gorey/Addams look, Jeff Agala): https://www.gamedeveloper.com/design/road-to-the-igf-klei-entertainment-s-i-don-t-starve-i-
 - *Don't Starve*: a Tim Burton take on Minecraft: https://gamedeveloper.com/design/-i-don-t-starve-i-a-tim-burton-take-on-i-minecraft-i-
-- Seeing the Forest for the Trees: A Don't Starve interview: https://game-wisdom.com/?p=3185
+- Seeing the Forest for the Trees: A Don't Starve interview (Forbes: Gorey, Burton, early 20th-century advertising, German Expressionism): https://game-wisdom.com/?p=3185
+
+**Billboards and sorting**
+- Songs of Conquest: the shader approach to billboarding: https://80.lv/articles/the-shader-approach-to-billboarding/
+- Game Dev Beginner: Billboards in Unity: https://gamedevbeginner.com/billboards-in-unity-and-how-to-make-your-own/
+- Defold forum: view like in Smash Bash: https://forum.defold.com/t/view-like-in-smash-bash-solved/12917
+- Unity Manual: 2D Sorting (Custom Axis, Sort Point = Pivot): https://docs.unity3d.com/2023.2/Documentation/Manual/2DSorting.html
+- gamedev.net: Making a 2.5D game in Unity, part 2: https://gamedev.net/tutorials/programming/graphics/making-25d-game-in-unity-part-2-r5368/ (403 to fetch; not used for claims)
+
+**Colour lookup (URP)**
+- URP Color Lookup manual: https://docs.unity3d.com/6000.0/Documentation/Manual/urp/post-processing-color-lookup.html
+- URP `ColorLookup.cs` (`ValidateLUT` accepts a Tex2D RenderTexture): https://github.com/Unity-Technologies/Graphics/blob/master/Packages/com.unity.render-pipelines.universal/Runtime/Overrides/ColorLookup.cs
+- SRP Core `VolumeParameter.cs` (texture parameters snap, no blending): https://github.com/Unity-Technologies/Graphics/blob/6000.0/staging/Packages/com.unity.render-pipelines.core/Runtime/Volume/VolumeParameter.cs
+
+**Camera feel [talk]**
+- Juice it or lose it (Jonasson & Purho): https://www.youtube.com/watch?v=Fy0aCDmgnxg
+- The Art of Screenshake (Nijman): https://www.youtube.com/watch?v=AJdEqssNZ-U
+- GMTK, Secrets of Game Feel and Juice: https://www.youtube.com/watch?v=216_5nu4aVQ
+- Eiserloh, Math for Game Programmers: Juicing Your Cameras With Math: https://www.youtube.com/watch?v=tu-Qe66AvtY
+
+**WebGL / itch.io**
+- Unity Manual: Audio on the Web: https://docs.unity3d.com/6000.0/Documentation/Manual/webgl-audio.html
+- itch.io: Uploading HTML5 games: https://itch.io/docs/creators/html5
 
 **Unity / URP**
 - Full Screen Pass Renderer Feature: https://docs.unity3d.com/Manual/urp/renderer-features/renderer-feature-full-screen-pass.html
