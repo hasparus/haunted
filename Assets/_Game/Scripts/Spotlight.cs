@@ -22,6 +22,7 @@ namespace Demons
         Vector3 home;
         Phase heard;
         LineRenderer ring;
+        AudioSource sweep;
         Demon target;
         float retargetAt, phaseEnd;
         int strikesLeft;
@@ -75,6 +76,7 @@ namespace Demons
             Shine(look.activeSelf);
             if (phase.Value != heard && active && !Demo) Audio.Play(Sounds.I.For(phase.Value), transform.position);
             heard = phase.Value;
+            sweep = Audio.Loop(sweep, this, active && !Demo && phase.Value == Phase.Hunt ? Sounds.I.spotSweep : null, transform.position);
             if (!IsServer || !IsSpawned) return;
             if (!active && phase.Value != Phase.Rest)
             {

@@ -32,7 +32,9 @@ namespace Demons
             All.Add(this);
             Ringing.OnValueChanged += (was, now) =>
             {
-                if (was && !now) Audio.Play(Sounds.I.answer, Slot.position);
+                if (!was || now) return;
+                Audio.Play(Sounds.I.answer, Slot.position);
+                talkUntil = Time.time + Hud.BubbleTime;
             };
             Workers.OnValueChanged += (was, now) =>
             {
@@ -82,13 +84,14 @@ namespace Demons
         }
 
         AudioSource hum;
+        float talkUntil;
 
         AudioClip Hum()
         {
             var s = Sounds.I;
             if (!IsSpawned || Locked) return null;
             if (Ringing.Value) return s.phoneRing;
-            if (Workers.Value == 0) return null;
+            if (Workers.Value == 0) return Time.time < talkUntil ? s.phoneTalk : null;
             return Kind switch { StationKind.Pot => s.potLoop, StationKind.Hammer => s.hammerLoop, _ => s.hauntLoop };
         }
 
