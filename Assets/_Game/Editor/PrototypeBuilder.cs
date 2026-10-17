@@ -880,6 +880,8 @@ namespace Demons.Editor
             m.SetFloat("_Tiles", tiles ? 1 : 0);
             m.SetFloat("_Slats", slats ? 1 : 0);
             m.SetFloat("_Scenery", scenery ? 1 : 0);
+            if (scenery) m.EnableKeyword("_SCENERY");
+            else m.DisableKeyword("_SCENERY");
             return m;
         }
 

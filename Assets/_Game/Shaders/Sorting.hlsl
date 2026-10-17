@@ -16,6 +16,20 @@ float SortedZ(float4 positionCS, float3 at)
 
 float3 PushedBack(float3 positionWS, float metres) { return positionWS + GetViewForwardDir() * metres; }
 
+// Device depth for a scenery pixel, pushed SORT_SCENERY_PUSH metres back. Written per pixel (SV_Depth): moving depth per
+// vertex isn't linear across a triangle, and a huge floor triangle reaching behind a close camera then covers what stands
+// on it. GL's clip depth runs -1..1 and has to be remapped to the 0..1 a depth write takes.
+float SceneryDepth(float3 positionWS)
+{
+    float4 cs = TransformWorldToHClip(PushedBack(positionWS, SORT_SCENERY_PUSH));
+    float z = cs.z / cs.w;
+    #if UNITY_REVERSED_Z
+    return z;
+    #else
+    return UNITY_NEAR_CLIP_VALUE < 0 ? z * 0.5 + 0.5 : z;
+    #endif
+}
+
 float3 Underneath(float3 positionWS) { return float3(positionWS.x, 0, positionWS.z); }
 
 #endif

@@ -24,7 +24,8 @@ Material:
   m_Shader: {fileID: 4800000, guid: 91a80e2f42a064cea8f335c6f43452f9, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
+  m_ValidKeywords:
+  - _SCENERY
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -111,6 +112,7 @@ Material:
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
+    - _Fade: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
@@ -140,6 +142,7 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _Anchor: {r: 0, g: 0, b: 0, a: 0}
+    - _AnchorFrom: {r: 0, g: 0, b: 0, a: 0}
     - _BaseColor: {r: 0.3, g: 0.35, b: 0.37, a: 1}
     - _Color: {r: 0.31999996, g: 0.31999996, b: 0.31999996, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}

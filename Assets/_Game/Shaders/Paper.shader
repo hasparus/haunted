@@ -12,7 +12,7 @@ Shader "Haunted/Paper"
         _PoolRadius("Light pool radius", Float) = 9
         _Slats("Belt slats", Range(0, 1)) = 0
         _Silhouette("Silhouette ink (for round things)", Range(0, 1)) = 0
-        [ToggleUI] _Scenery("Scenery: covers only the floor (walls, belt, floor)", Float) = 0
+        [Toggle(_SCENERY)] _Scenery("Scenery: covers only the floor (walls, belt, floor)", Float) = 0
         _Anchor("Where it stands (xyz), when w is 1", Vector) = (0, 0, 0, 0)
         _AnchorFrom("The point of it that stands there", Vector) = (0, 0, 0, 0)
         _Fade("Shown (dithered, stays opaque)", Range(0, 1)) = 1
@@ -48,6 +48,7 @@ Shader "Haunted/Paper"
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
             #pragma multi_compile _ _FORWARD_PLUS _CLUSTER_LIGHT_LOOP
             #pragma multi_compile_fog
+            #pragma shader_feature_local _SCENERY
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Sorting.hlsl"
@@ -87,10 +88,11 @@ Shader "Haunted/Paper"
                 // it stands: the floor under its origin, or a point the game sets (a thought on a desk, in a hand). There
                 // its parts keep a tenth of their depth around it, so a thought's shell still covers its stone without
                 // the sphere's front reaching past the point.
-                float3 at = _Scenery > 0.5 ? PushedBack(o.positionWS, SORT_SCENERY_PUSH)
-                    : _Anchor.w > 0 ? _Anchor.xyz + (o.positionWS - _AnchorFrom.xyz) * 0.1
-                    : Underneath(TransformObjectToWorld(float3(0, 0, 0)));
-                o.positionCS.z = SortedZ(o.positionCS, at);
+                // Scenery writes its depth per pixel instead (Frag): pushed back exactly, whatever the triangle's size.
+                #if !defined(_SCENERY)
+                o.positionCS.z = SortedZ(o.positionCS, _Anchor.w > 0 ? _Anchor.xyz + (o.positionWS - _AnchorFrom.xyz) * 0.1
+                    : Underneath(TransformObjectToWorld(float3(0, 0, 0))));
+                #endif
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
                 o.fog = ComputeFogFactor(o.positionCS.z);
                 o.uv = v.uv;
@@ -113,8 +115,15 @@ Shader "Haunted/Paper"
                 return 1 - smoothstep(0, width, abs(frac(u) - 0.5) * 2 - (1 - width * 2));
             }
 
-            half4 Frag(Varyings i) : SV_Target
+            half4 Frag(Varyings i
+            #if defined(_SCENERY)
+                , out float depth : SV_Depth
+            #endif
+            ) : SV_Target
             {
+                #if defined(_SCENERY)
+                depth = SceneryDepth(i.positionWS);
+                #endif
                 // Fading in through an ordered dither, so a half-shown thing still writes depth and sorts.
                 uint2 cell = uint2(i.positionCS.xy) % 4;
                 static const float bayer[16] = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
