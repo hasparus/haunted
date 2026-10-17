@@ -5,11 +5,11 @@ using UnityEngine.SceneManagement;
 
 namespace Demons.Editor
 {
-    // A fresh editor (no scene open yet) opens the Workshop, the game's first scene.
+    // A fresh editor (no scene open yet) opens Headquarters, the game's first scene.
     [InitializeOnLoad]
     static class StartScene
     {
-        const string Path = "Assets/_Game/Scenes/Workshop.unity";
+        const string Path = "Assets/_Game/Scenes/Headquarters.unity";
 
         static StartScene()
         {

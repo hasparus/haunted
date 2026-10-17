@@ -82,14 +82,16 @@ namespace Demons
 
         static double Now => Net.Now;
         public bool Inverted => IsSpawned && Now < InvertedUntil.Value;
-        public float Goal
+        // Locked when the day starts, so demons joining or leaving don't move the finish line mid-day.
+        public NetworkVariable<float> DayGoal = new();
+
+        public float Goal => DayGoal.Value > 0 ? DayGoal.Value : GoalFor(Day.Value);
+
+        static float GoalFor(int day)
         {
-            get
-            {
-                var b = Balance.I;
-                float scale = b.goalScaleByDemons[Mathf.Clamp(Demon.All.Count - 1, 0, b.goalScaleByDemons.Length - 1)];
-                return Mathf.Round(b.dayGoals[Mathf.Min(Day.Value, b.dayGoals.Length - 1)] * scale);
-            }
+            var b = Balance.I;
+            float scale = b.goalScaleByDemons[Mathf.Clamp(Demon.All.Count - 1, 0, b.goalScaleByDemons.Length - 1)];
+            return Mathf.Round(b.dayGoals[Mathf.Min(day, b.dayGoals.Length - 1)] * scale);
         }
         public string DayName => Days[Day.Value % Days.Length];
 
@@ -145,6 +147,7 @@ namespace Demons
             if (!IsServer) return;
             Mode.Value = NextMode;
             Day.Value = 0;
+            DayGoal.Value = 0;
             Peak.Value = 0;
             Review.Value = false;
             InvertedUntil.Value = 0;
@@ -185,6 +188,11 @@ namespace Demons
             ShowCard(text, 12);
         }
 
+        public void BackToHq()
+        {
+            if (IsServer) NetworkManager.SceneManager.LoadScene("Headquarters", LoadSceneMode.Single);
+        }
+
         void Update()
         {
             if (!IsServer || !IsSpawned || !GameState.Instance) return;
@@ -192,7 +200,7 @@ namespace Demons
             {
                 if (Now < endAt) return;
                 endAt = double.MaxValue;
-                NetworkManager.SceneManager.LoadScene("Workshop", LoadSceneMode.Single);
+                BackToHq();
                 return;
             }
 
@@ -206,12 +214,14 @@ namespace Demons
             float influence = GameState.Instance.Influence.Value;
             if (Mode.Value == GameMode.Week)
             {
-                if (influence >= Goal)
+                if (DayGoal.Value <= 0 && Demon.All.Count > 0) DayGoal.Value = GoalFor(Day.Value);
+                if (DayGoal.Value > 0 && influence >= DayGoal.Value)
                 {
                     if (Day.Value == Days.Length - 1) End("THE WEEKEND IS OVER\nYou haunted him through his whole first week.");
                     else
                     {
                         Day.Value++;
+                        DayGoal.Value = GoalFor(Day.Value);
                         ShowCard(DayCards[Day.Value]);
                         if (Day.Value == UnlockDay(Feature.Pill)) nextPill = Now + 12;
                     }

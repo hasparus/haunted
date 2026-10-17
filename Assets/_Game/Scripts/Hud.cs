@@ -10,7 +10,7 @@ namespace Demons
         static readonly string[] Columns = { "Prestige", "Haunts", "Deliveries", "Assists", "Throws", "Dashes" };
 
         VisualElement top, chips, net, offline, joining, online, notice, cpu, cardWrap, card, reviewWrap, table, sign;
-        Label status, netStatus, noticeBody, cardTitle, cardBody, paused, reviewTitle, reviewBody, signHint, signWait;
+        Label status, netStatus, noticeTitle, noticeBody, cardTitle, cardBody, paused, reviewTitle, reviewBody, signHint, signWait;
         TextField code, signature;
         Button removeCpu;
         VisualElement footer;
@@ -135,7 +135,8 @@ namespace Demons
             net.Add(netStatus);
 
             notice = UI.Box("notice", hud);
-            notice.Add(UI.Text("Couldn't connect", "notice-title", UI.PlexBold));
+            noticeTitle = UI.Text("", "notice-title", UI.PlexBold);
+            notice.Add(noticeTitle);
             noticeBody = UI.Text("", "notice-body");
             notice.Add(noticeBody);
             UI.Button("OK", () => NetBootstrap.Instance.DismissError(), notice).AddToClassList("button--primary");
@@ -252,6 +253,7 @@ namespace Demons
             UI.Show(online, show && boot.Online);
             UI.Show(notice, !string.IsNullOrEmpty(boot.Error) && !Menu.Open);
             UI.Set(noticeBody, boot.Error);
+            UI.Set(noticeTitle, boot.ErrorTitle);
             UI.Show(netStatus, !string.IsNullOrEmpty(boot.Status));
             UI.Set(netStatus, boot.Status);
             if (NetBootstrap.TypingCode && !codeFocused)

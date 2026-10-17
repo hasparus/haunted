@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Demons
 {
-    public class Workshop : NetworkBehaviour
+    public class Headquarters : NetworkBehaviour
     {
         [SerializeField] Pebble pebblePrefab;
         [SerializeField] float refillDelay = 2f;

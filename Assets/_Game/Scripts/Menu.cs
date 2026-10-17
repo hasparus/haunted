@@ -139,7 +139,8 @@ namespace Demons
             var players = LocalPlayers.All.FindAll(p => !Bots.IsBot(p.Device));
             var joins = LocalPlayers.JoinOptions().ConvertAll(o => o.key == "A" ? "A on a gamepad" : o.key);
             var key = new StringBuilder().Append(string.Join(",", joins)).Append(CameraRig.ShakeEnabled)
-                .Append(ScaleIndex).Append(NetBootstrap.Instance && NetBootstrap.Instance.Online).Append(Screen.fullScreen).Append(Mood.Effects);
+                .Append(ScaleIndex).Append(NetBootstrap.Instance && NetBootstrap.Instance.Online).Append(Screen.fullScreen).Append(Mood.Effects).Append(Audio.MusicLevel).Append(Audio.SoundLevel)
+                .Append(Progression.Instance && Progression.Instance.IsSpawned);
             foreach (var p in players) key.Append('|').Append(p.Index).Append(p.Scheme).Append(LocalPlayers.DemonOf(p) is { } d ? d.ColorIndex.Value : -1);
             foreach (var d in Demon.All) key.Append(',').Append(d.ColorIndex.Value);
             if (key.ToString() == shape) return;
@@ -167,8 +168,19 @@ namespace Demons
             AddRow(display, "Effects", effects, null).Add(Value(Mood.Effects ? "On" : "Off", effects));
             Action<int> toggleShake = _ => CameraRig.ShakeEnabled = !CameraRig.ShakeEnabled;
             AddRow(display, "Screen shake", toggleShake, null).Add(Value(CameraRig.ShakeEnabled ? "On" : "Off", toggleShake));
+            var audio = UI.Box("group", panel);
+            Action<int> music = step => Audio.MusicLevel = StepLevel(Audio.MusicLevel, step);
+            AddRow(audio, "Music", music, null).Add(Value($"{Audio.MusicLevel * 100:0}%", music));
+            Action<int> sound = step => Audio.SoundLevel = StepLevel(Audio.SoundLevel, step);
+            AddRow(audio, "Sounds", sound, null).Add(Value($"{Audio.SoundLevel * 100:0}%", sound));
             var actions = UI.Box("group", panel);
             AddRow(actions, "Resume", null, () => Show(false)).AddToClassList("row--primary");
+            if (Progression.Instance is { IsSpawned: true, IsServer: true } run)
+                AddRow(actions, "Back to the HQ", null, () =>
+                {
+                    Show(false);
+                    run.BackToHq();
+                });
             if (NetBootstrap.Instance is { Online: true } boot)
                 AddRow(actions, boot.IsServer ? "Close online room" : "Leave online room", null, () =>
                 {
@@ -196,11 +208,15 @@ namespace Demons
             }
         }
 
+        // Tenths, wrapping from 100% back to 0% when cycled with Enter.
+        static float StepLevel(float level, int step) => (Mathf.RoundToInt(level * 10) + step + 11) % 11 / 10f;
+
         static int ScaleIndex => Mathf.Clamp(PlayerPrefs.GetInt(ScaleKey, 0), 0, Scales.Length - 1);
 
         static void StepScale(int step)
         {
             PlayerPrefs.SetInt(ScaleKey, (ScaleIndex + step + Scales.Length) % Scales.Length);
+            PlayerPrefs.Save();
             ApplyScale();
         }
 

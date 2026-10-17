@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Demons
 {
-    // Wardrobe pad in the Workshop: step on it to wear its color. Taken colors shrink.
+    // Wardrobe pad in Headquarters: step on it to wear its color. Taken colors shrink.
     public class ColorPad : MonoBehaviour
     {
         public static readonly List<ColorPad> All = new();

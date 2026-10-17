@@ -22,7 +22,11 @@ namespace Demons
         public static bool ShakeEnabled
         {
             get => PlayerPrefs.GetInt(ShakeKey, 1) == 1;
-            set => PlayerPrefs.SetInt(ShakeKey, value ? 1 : 0);
+            set
+            {
+                PlayerPrefs.SetInt(ShakeKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
         }
 
         // Trauma 0..1; the offset grows with its square and decays over about a second.

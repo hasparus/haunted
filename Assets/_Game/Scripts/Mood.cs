@@ -20,7 +20,11 @@ namespace Demons
         public static bool Effects
         {
             get => PlayerPrefs.GetInt(EffectsKey, 1) == 1;
-            set => PlayerPrefs.SetInt(EffectsKey, value ? 1 : 0);
+            set
+            {
+                PlayerPrefs.SetInt(EffectsKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]

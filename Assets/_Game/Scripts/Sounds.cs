@@ -6,7 +6,7 @@ namespace Demons
     public class Sounds : ScriptableObject
     {
         [Header("Music (looped)")]
-        [Tooltip("Workshop lobby")] public AudioClip workshopMusic;
+        [Tooltip("Headquarters lobby")] public AudioClip headquartersMusic;
         [Tooltip("Week mode, all seven days")] public AudioClip weekMusic;
         [Tooltip("Infinite Survival")] public AudioClip survivalMusic;
         [Tooltip("Waiting-room music while the meds flip controls. Falls back to the mode's music")] public AudioClip pillMusic;

@@ -25,6 +25,29 @@ namespace Demons
             instance = go.AddComponent<Audio>();
         }
 
+        public const string MusicKey = "music_volume", SoundKey = "sound_volume";
+
+        // Player settings on top of the designer's mix in Sounds.asset.
+        public static float MusicLevel
+        {
+            get => PlayerPrefs.GetFloat(MusicKey, 1);
+            set
+            {
+                PlayerPrefs.SetFloat(MusicKey, value);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static float SoundLevel
+        {
+            get => PlayerPrefs.GetFloat(SoundKey, 1);
+            set
+            {
+                PlayerPrefs.SetFloat(SoundKey, value);
+                PlayerPrefs.Save();
+            }
+        }
+
         readonly AudioSource[] voices = new AudioSource[Voices];
         int next;
         AudioSource music, fading;
@@ -47,9 +70,9 @@ namespace Demons
             return source;
         }
 
-        public static void Play(AudioClip[] clips, Vector3? at = null) => Play(clips, at, Sounds.I.sfxVolume, Sounds.I.pitchJitter);
+        public static void Play(AudioClip[] clips, Vector3? at = null) => Play(clips, at, Sounds.I.sfxVolume * SoundLevel, Sounds.I.pitchJitter);
 
-        public static void Ui(AudioClip[] clips) => Play(clips, null, Sounds.I.uiVolume, 0);
+        public static void Ui(AudioClip[] clips) => Play(clips, null, Sounds.I.uiVolume * SoundLevel, 0);
 
         static void Play(AudioClip[] clips, Vector3? at, float volume, float jitter)
         {
@@ -93,7 +116,7 @@ namespace Demons
                 if (!clip) return null;
                 source = Source(owner.gameObject, true);
             }
-            source.volume = Sounds.I.sfxVolume;
+            source.volume = Sounds.I.sfxVolume * SoundLevel;
             if (source.clip != clip)
             {
                 source.Stop();
@@ -120,7 +143,7 @@ namespace Demons
                 }
             }
             float step = Time.unscaledDeltaTime / Mathf.Max(0.05f, s.musicFade);
-            music.volume = Mathf.MoveTowards(music.volume, s.musicVolume * (Paused ? s.pausedMusic : 1), step);
+            music.volume = Mathf.MoveTowards(music.volume, s.musicVolume * MusicLevel * (Paused ? s.pausedMusic : 1), step);
             fading.volume = Mathf.MoveTowards(fading.volume, 0, step);
             if (fading.volume == 0 && fading.isPlaying) fading.Pause();
         }
@@ -128,7 +151,7 @@ namespace Demons
         static AudioClip Wanted(Sounds s)
         {
             var p = Progression.Instance;
-            if (!p || !p.IsSpawned) return s.workshopMusic;
+            if (!p || !p.IsSpawned) return s.headquartersMusic;
             if (p.Review.Value && s.reviewMusic) return s.reviewMusic;
             if (p.Inverted && s.pillMusic) return s.pillMusic;
             return p.Mode.Value == GameMode.Week ? s.weekMusic : s.survivalMusic;

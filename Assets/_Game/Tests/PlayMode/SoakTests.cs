@@ -89,8 +89,8 @@ namespace Demons.PlayTests
             GameState.Instance.Influence.Value = 1000;
             // The review runs on network time, which ignores timeScale.
             float back = Time.unscaledTime + 30;
-            while (SceneManager.GetActiveScene().name != "Workshop" && Time.unscaledTime < back) yield return null;
-            Assert.AreEqual("Workshop", SceneManager.GetActiveScene().name, $"week never ended: day {(Progression.Instance ? Progression.Instance.Day.Value : -1)}, influence {(GameState.Instance ? GameState.Instance.Influence.Value : float.NaN)}");
+            while (SceneManager.GetActiveScene().name != "Headquarters" && Time.unscaledTime < back) yield return null;
+            Assert.AreEqual("Headquarters", SceneManager.GetActiveScene().name, $"week never ended: day {(Progression.Instance ? Progression.Instance.Day.Value : -1)}, influence {(GameState.Instance ? GameState.Instance.Influence.Value : float.NaN)}");
             Assert.AreEqual(2, Demon.All.Count);
         }
 

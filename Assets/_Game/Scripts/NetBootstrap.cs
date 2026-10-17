@@ -39,7 +39,8 @@ namespace Demons
             {
                 if (session == null || busy) return;
                 string reason = net.DisconnectReason;
-                _ = BackToCouch("", string.IsNullOrEmpty(reason) ? "Lost connection to the room." : reason);
+                string title = reason == Closed ? "Room closed" : reason == Full || reason.StartsWith("Different builds") ? "Couldn't join" : "Disconnected";
+                _ = BackToCouch("", string.IsNullOrEmpty(reason) ? "Lost connection to the room." : reason, title);
             };
 
             var args = Environment.GetCommandLineArgs();
@@ -58,18 +59,27 @@ namespace Demons
             net.StartHost();
         }
 
+        const string Closed = "The host closed the room.";
+        const string Full = "The room is full: four demons already work there. CPU demons step aside for people, so ask the host to remove one.";
+
         static void Approve(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
         {
             string theirs = Encoding.UTF8.GetString(request.Payload);
             response.Approved = theirs == Application.version;
             if (!response.Approved)
                 response.Reason = $"Different builds: the host runs v{Application.version}, you run {(theirs.Length > 0 ? "v" + theirs : "an older one")}. Everyone needs the latest version from itch.io.";
+            else if (request.ClientNetworkId != NetworkManager.ServerClientId && Demon.All.FindAll(d => !Bots.IsBot(d)).Count >= Scoring.MaxDemons)
+            {
+                response.Approved = false;
+                response.Reason = Full;
+            }
         }
 
-        async Task BackToCouch(string why, string error = "")
+        async Task BackToCouch(string why, string error = "", string title = "Couldn't connect")
         {
             status = why;
             Error = error;
+            ErrorTitle = title;
             var leaving = session;
             session = null;
             if (leaving != null)
@@ -129,6 +139,8 @@ namespace Demons
         // Shown until dismissed: failed joins, version mismatches, dropped rooms.
         public string Error { get; private set; } = "";
 
+        public string ErrorTitle { get; private set; } = "";
+
         public void DismissError() => Error = "";
 
         public bool Online => session != null;
@@ -142,7 +154,7 @@ namespace Demons
             if (net.IsServer)
             {
                 foreach (var id in net.ConnectedClientsIds)
-                    if (id != NetworkManager.ServerClientId) net.DisconnectClient(id, "The host closed the room.");
+                    if (id != NetworkManager.ServerClientId) net.DisconnectClient(id, Closed);
                 for (int i = 0; i < 10; i++) await Awaitable.NextFrameAsync();
             }
             busy = false;

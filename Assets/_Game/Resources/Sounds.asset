@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90e3b382cf8f48428a0208d2d736cd11, type: 3}
   m_Name: Sounds
   m_EditorClassIdentifier: Demons::Demons.Sounds
-  workshopMusic: {fileID: 0}
+  headquartersMusic: {fileID: 0}
   weekMusic: {fileID: 0}
   survivalMusic: {fileID: 0}
   pillMusic: {fileID: 0}

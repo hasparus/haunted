@@ -12,7 +12,7 @@ namespace Demons.Editor
     {
         const string Root = "Assets/_Game";
         const string OfficePath = Root + "/Scenes/Office.unity";
-        const string WorkshopPath = Root + "/Scenes/Workshop.unity";
+        const string HeadquartersPath = Root + "/Scenes/Headquarters.unity";
 
         static readonly Dictionary<string, Material> mats = new();
 
@@ -43,11 +43,11 @@ namespace Demons.Editor
             AssetDatabase.CreateAsset(prefabs, $"{Root}/NetworkPrefabs.asset");
 
             BuildOffice(pebble, demon, prefabs);
-            BuildWorkshop(pebble, demon, prefabs);
+            BuildHeadquarters(pebble, demon, prefabs);
             PlayerSettings.defaultWebScreenWidth = 960;
             PlayerSettings.defaultWebScreenHeight = 540;
             PlayerSettings.WebGL.template = "PROJECT:Fill";
-            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(WorkshopPath, true), new EditorBuildSettingsScene(OfficePath, true) };
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(HeadquartersPath, true), new EditorBuildSettingsScene(OfficePath, true) };
             AssetDatabase.SaveAssets();
         }
 
@@ -149,7 +149,7 @@ namespace Demons.Editor
             SaveScene(OfficePath);
         }
 
-        static void BuildWorkshop(Pebble pebble, Demon demon, NetworkPrefabsList prefabs)
+        static void BuildHeadquarters(Pebble pebble, Demon demon, NetworkPrefabsList prefabs)
         {
             var half = new Vector2(18f, 20f);
             var spawn = new Vector3(0, 0, 7f);
@@ -182,10 +182,10 @@ namespace Demons.Editor
             FloorArrow(new Vector3(-4.6f, 0, 4f), -1);
             FloorArrow(new Vector3(4.6f, 0, 4f), -1);
 
-            var go = new GameObject("Workshop");
+            var go = new GameObject("Headquarters");
             go.AddComponent<NetworkObject>();
-            var workshop = go.AddComponent<Workshop>();
-            Set(workshop, "pebblePrefab", pebble);
+            var headquarters = go.AddComponent<Headquarters>();
+            Set(headquarters, "pebblePrefab", pebble);
             var bays = go.transform;
 
             const float a = -6f, b = -11.6f, c = -16.8f;
@@ -228,7 +228,7 @@ namespace Demons.Editor
 
             var phone = BuildStation(new Vector3(13f, 0, b), cam);
             FloorLabel("Phone: hold\n{haunt}\nto answer", bays, new Vector3(13f, 0, b - 2f));
-            Set(workshop, "phoneDesk", phone);
+            Set(headquarters, "phoneDesk", phone);
 
             FloorLabel("Haunted by many", bays, new Vector3(-12f, 0, c + 1.2f));
             byte[] mixes = { 1, 2, 4, 8, 3, 12, 15 };
@@ -247,7 +247,7 @@ namespace Demons.Editor
             BuildSpotlight(new Vector3(12.5f, 0.02f, c), demo: true);
             FloorLabel("Therapist's light\nlit demons drop things", bays, new Vector3(12.5f, 0, c - 2.2f));
 
-            SaveScene(WorkshopPath);
+            SaveScene(HeadquartersPath);
         }
 
         static void BuildClaw(Vector3 pos, bool demo)
