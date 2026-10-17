@@ -27,7 +27,7 @@ namespace Demons
         static readonly string[] DayCards =
         {
             "MONDAY\nFirst day at the new job. Everyone smiles a little too much.",
-            "TUESDAY\nThe boss: \"Got a minute?\"\nBig thoughts take long. Haunt them together.",
+            "TUESDAY\nBig thoughts take long. Haunt them together.",
             "WEDNESDAY\n214 unread emails. IT finally sent a tool: the pot.\nDrop a thought in and it haunts itself.",
             "THURSDAY\nHe's getting defensive.\nShelled thoughts need the hammer first.",
             "FRIDAY\nTherapy at five. Homework: write it all down.\nStay out of the light. Mash or wiggle off the pen.",
@@ -45,6 +45,23 @@ namespace Demons
             (Feature.Phone, "MOM\nAnswer the phone."),
             (Feature.Claw, "THE HAND\nSave thoughts before it lands."),
         };
+
+        // The boss, when he copes anyway.
+        static readonly string[] Roasts =
+        {
+            "\"I'm not angry. I'm documenting.\"",
+            "\"Let's take this offline. Permanently.\"",
+            "\"HR has a calendar invite for you.\"",
+            "\"Per my last email: haunt him.\"",
+            "\"I've seen interns haunt harder.\"",
+            "\"We'll circle back on your role.\"",
+            "\"Not a great look for the department.\"",
+            "\"Let's put a pin in your career.\"",
+            "\"Great work, if the goal was his wellbeing.\"",
+            "\"This will affect your performance review.\"",
+        };
+
+        static string Roast => Roasts[Random.Range(0, Roasts.Length)];
 
         static readonly string[] Calls =
         {
@@ -196,12 +213,12 @@ namespace Demons
                 : "INFINITE SURVIVAL\nIt starts easy. It doesn't stay easy.", hold: true);
         }
 
-        // Held cards pause the game while they're up; game time stands still, so they leave right after.
+        // Held cards pause the game until someone gets back to work; game time stands still, so they leave right after.
         void ShowCard(string text, float seconds = 4, bool hold = false)
         {
             Card.Value = text;
             hold &= GameState.Instance && GameState.Instance.IsSpawned;
-            if (hold) GameState.Instance.Hold(seconds);
+            if (hold) GameState.Instance.Hold();
             CardUntil.Value = Now + (hold ? 0.3f : seconds);
         }
 
@@ -259,7 +276,7 @@ namespace Demons
         // The Week's loss: the day starts over from its opening influence with a clear belt.
         void GoodDay()
         {
-            ShowCard($"HE HAD A GOOD DAY\nHe's coping. Try {DayTitle} again.", 4, hold: true);
+            ShowCard($"HE HAD A GOOD DAY\nHe's coping. Try {DayTitle} again.\n{Roast}", 4, hold: true);
             var state = GameState.Instance;
             state.Influence.Value = dayStartInfluence;
             for (int i = 0; i < dayStartPrestige.Length && i < state.Prestige.Count; i++) state.Prestige[i] = dayStartPrestige[i];
@@ -273,7 +290,7 @@ namespace Demons
             PlayerPrefs.Save();
             signers = Demon.All.FindAll(d => !Bots.IsBot(d)).Count;
             bool assisted = Bots.All.Count > 0;
-            End($"YOU HAVE BEEN DOWNSIZED\nHe's coping now. Please return your badge at reception.\nPeak revenue {Peak.Value:0} zł  ·  best {Best.Value:0} zł", System.Array.FindAll(Balance.I.survivalStarSeconds, s => Elapsed >= s).Length);
+            End($"YOU HAVE BEEN DOWNSIZED\n{Roast}\nPlease return your badge at reception.\nPeak revenue {Peak.Value:0} zł  ·  best {Best.Value:0} zł", System.Array.FindAll(Balance.I.survivalStarSeconds, s => Elapsed >= s).Length);
             if (Peak.Value > 0 && signers > 0 && !assisted)
             {
                 Signing.Value = true;

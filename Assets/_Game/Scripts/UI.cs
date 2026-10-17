@@ -93,5 +93,20 @@ namespace Demons
         {
             if (label.text != text) label.text = text;
         }
+
+        // CSS text-wrap: balance. The narrowest width that keeps the same number of lines, so no lonely last word.
+        public static void Balance(Label label, float maxWidth)
+        {
+            const VisualElement.MeasureMode atMost = VisualElement.MeasureMode.AtMost, free = VisualElement.MeasureMode.Undefined;
+            float lines = label.MeasureTextSize(label.text, maxWidth, atMost, 0, free).y;
+            float lo = maxWidth * 0.3f, hi = maxWidth;
+            for (int i = 0; i < 10; i++)
+            {
+                float mid = (lo + hi) / 2;
+                if (label.MeasureTextSize(label.text, mid, atMost, 0, free).y > lines + 0.5f) lo = mid;
+                else hi = mid;
+            }
+            label.style.maxWidth = Mathf.Ceil(hi) + 2;
+        }
     }
 }

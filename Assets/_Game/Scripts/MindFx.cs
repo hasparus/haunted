@@ -20,7 +20,7 @@ namespace Demons
         public static float Mind { get; private set; }
 
         static readonly int FxTime = Shader.PropertyToID("_MindFxTime"), Wobble = Shader.PropertyToID("_MindWobble"),
-            Inverted = Shader.PropertyToID("_MindInverted"), CardRect = Shader.PropertyToID("_CardRect"), CardFire = Shader.PropertyToID("_CardFire");
+            Inverted = Shader.PropertyToID("_MindInverted"), Clock = Shader.PropertyToID("_MindTime"), CardRect = Shader.PropertyToID("_CardRect"), CardFire = Shader.PropertyToID("_CardFire");
 
         FullScreenPassRendererFeature[] passes;
         float fxTime, inverted, fire;
@@ -48,6 +48,7 @@ namespace Demons
             float wobble = Distortion ? Mind * Mind : 0;
 
             Shader.SetGlobalFloat(FxTime, fxTime);
+            Shader.SetGlobalFloat(Clock, Time.unscaledTime % 1000);
             Shader.SetGlobalFloat(Wobble, wobble);
             Shader.SetGlobalFloat(Inverted, inverted);
             Shader.SetGlobalFloat(CardFire, fire);

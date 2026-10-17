@@ -1,6 +1,7 @@
 // One full-screen pass for everything the host's mind does to the picture, so WebGL pays for a single extra blit:
 // Don't Starve's insanity wobble at the screen's edge, a chromatic split while the pills flip the controls,
-// and the boss's card burning: flames and heat haze licking up around its rectangle.
+// and the boss's card burning in cold blue flame, banded like ink, with heat haze around its rectangle.
+// Everything runs on _MindTime (unscaled), so it keeps moving while the card holds the game paused.
 Shader "Haunted/MindDistort"
 {
     SubShader
@@ -20,7 +21,7 @@ Shader "Haunted/MindDistort"
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
 
             // Set by MindFx. _CardRect is the card in uv (xMin, yMin, xMax, yMax).
-            float _MindFxTime, _MindWobble, _MindInverted, _CardFire;
+            float _MindFxTime, _MindTime, _MindWobble, _MindInverted, _CardFire;
             float4 _CardRect;
 
             half3 Sample(float2 uv) { return SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv).rgb; }
@@ -49,7 +50,7 @@ Shader "Haunted/MindDistort"
             half4 Frag(Varyings input) : SV_Target
             {
                 float2 uv = input.texcoord;
-                float t = _Time.y;
+                float t = _MindTime;
 
                 // Signed distance to the card, in screen heights.
                 float aspect = _ScreenParams.x / _ScreenParams.y;
@@ -79,14 +80,18 @@ Shader "Haunted/MindDistort"
                     col.b = Sample(uv - dir).b;
                 }
 
-                // Flames: tongues of noise rising off the card, reaching furthest above it.
+                // Flames: tongues of noise rising off the card, reaching furthest above it, cut into three hard bands
+                // (navy rim, electric blue, a near-white core) like a cartoon fire, over a soft blue glow.
                 float above = saturate((p.y - hi.y) / 0.15 + 0.5);
-                float tongues = Fbm(float2(p.x * 9, p.y * 4 - t * 2.2));
-                float reach = (0.015 + 0.16 * tongues * tongues) * (0.4 + 2.4 * above);
+                float tongues = Fbm(float2(p.x * 16, p.y * 3 - t * 2.4));
+                float reach = (0.01 + 0.13 * tongues * tongues * tongues * 2) * (0.35 + 2.2 * above);
                 float flame = saturate(1 - d / reach) * step(-0.004, d) * _CardFire;
-                flame = smoothstep(0, 1, flame);
-                half3 fire = lerp(half3(0.55, 0.06, 0.02), half3(1, 0.82, 0.35), saturate(flame * 1.5));
-                col += fire * flame * 1.6;
+                // Wobbly band edges so the layers lick at each other instead of following the outline.
+                float edge = (Noise(p * 40 + float2(0, -t * 5)) - 0.5) * 0.18;
+                col += half3(0.1, 0.3, 0.9) * saturate(1 - d / 0.12) * step(0, d) * 0.3 * _CardFire;
+                col = lerp(col, half3(0.03, 0.08, 0.35), smoothstep(0.02, 0.05, flame));
+                col = lerp(col, half3(0.15, 0.45, 1.0), smoothstep(0.45, 0.48, flame + edge));
+                col = lerp(col, half3(0.82, 0.95, 1.0), smoothstep(0.82, 0.85, flame + edge));
 
                 return half4(col, 1);
             }

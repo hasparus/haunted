@@ -10,7 +10,7 @@ namespace Demons
         static readonly string[] Columns = { "Revenue", "Haunts", "Deliveries", "Assists", "Throws", "Dashes" };
 
         VisualElement top, scores, crackPips, net, offline, joining, online, notice, cpu, cardWrap, card, reviewWrap, table, sign;
-        Label day, dayInfo, revenue, netStatus, noticeTitle, noticeBody, cardTitle, cardBody, paused, reviewTitle, reviewBody, signHint, signWait;
+        Label cardHint, day, dayInfo, revenue, netStatus, noticeTitle, noticeBody, cardTitle, cardBody, paused, reviewTitle, reviewBody, signHint, signWait;
         TextField code, signature;
         Button removeCpu;
         VisualElement footer;
@@ -32,6 +32,7 @@ namespace Demons
         VisualElement world;
         VisualElement hud;
         string lastCard;
+        int cardIn;
         readonly List<(Label label, Vector3 at, float born)> popups = new();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -56,7 +57,9 @@ namespace Demons
             if (!instance || instance.hud == null) return;
             var box = UI.Box("bubble", instance.world);
             box.Add(UI.Text("Ring ring", "bubble-title", UI.Jolly));
-            box.Add(UI.Text(line, "bubble-body"));
+            var body = UI.Text(line, "bubble-body");
+            box.Add(body);
+            UI.Balance(body, 250);
             instance.bubbles.Add((box, at, Time.time));
         }
 
@@ -123,7 +126,7 @@ namespace Demons
             var right = UI.Box("hud-right", hud);
             revenue = UI.Text("", "hud-revenue", UI.Jolly);
             right.Add(revenue);
-            crackPips = UI.Box("hud-cracks", right);
+            crackPips = UI.Box("hud-cracks", hud);
             scores = UI.Box("hud-scores", right);
 
             net = UI.Box("hud-net", hud);
@@ -169,6 +172,8 @@ namespace Demons
             cardBody = UI.Text("", "card-body");
             card.Add(cardTitle);
             card.Add(cardBody);
+            cardHint = UI.Text("Haunt or pick up to get back to work.", "card-hint");
+            card.Add(cardHint);
 
             paused = UI.Text("Paused", "paused", UI.Jolly);
             var pausedWrap = UI.Box("center", hud);
@@ -215,6 +220,7 @@ namespace Demons
 
             UI.Show(top, live && !state.IsLobby);
             UI.Show(scores.parent, live && !state.IsLobby);
+            if (!live || state.IsLobby) UI.Show(crackPips, false);
             if (live && !state.IsLobby) RefreshTop(state, progress);
 
             RefreshNet(state);
@@ -230,6 +236,7 @@ namespace Demons
             }
             if (!showCard) lastCard = null;
             if (showCard && !showReview) RefreshCard(progress.Card.Value.ToString());
+            UI.Show(cardHint, live && state.Held.Value);
             UI.Show(reviewWrap, showReview);
             if (showReview && !reviewing)
             {
@@ -337,17 +344,28 @@ namespace Demons
             {
                 lastCard = text;
                 card.RemoveFromClassList("card--in");
-                card.schedule.Execute(() => card.AddToClassList("card--in"));
+                cardIn = Time.frameCount + 1;
             }
+            // A frame later, so the pop-in transition starts from the hidden state; frames, not the panel's
+            // scheduler, because the boss's card arrives with the game paused.
+            if (Time.frameCount >= cardIn) card.AddToClassList("card--in");
             int split = text.IndexOf('\n');
             UI.Set(cardTitle, split < 0 ? text : text[..split]);
-            UI.Set(cardBody, split < 0 ? "" : text[(split + 1)..]);
+            if (cardBody.text != (split < 0 ? "" : text[(split + 1)..]))
+            {
+                UI.Set(cardBody, split < 0 ? "" : text[(split + 1)..]);
+                UI.Balance(cardBody, 560);
+            }
             UI.Show(cardBody, split >= 0);
         }
 
         void RefreshReview(GameState state, Progression progress)
         {
-            UI.Set(reviewBody, progress.Card.Value.ToString());
+            if (reviewBody.text != progress.Card.Value.ToString())
+            {
+                UI.Set(reviewBody, progress.Card.Value.ToString());
+                UI.Balance(reviewBody, 760);
+            }
 
             // Earned stars light up one by one once the review has landed.
             int lit = Mathf.Clamp(Mathf.FloorToInt((Time.unscaledTime - reviewAt - 0.8f) / 0.5f) + 1, 0, progress.Stars.Value);

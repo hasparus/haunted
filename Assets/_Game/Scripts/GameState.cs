@@ -49,25 +49,39 @@ namespace Demons
             }
         }
 
-        // Paused while anyone, on any machine, has the menu open, or while a held card is up.
+        // Paused while anyone, on any machine, has the menu open, or while the boss's card waits to be read.
         readonly HashSet<ulong> pausers = new();
-        double heldUntil;
+        public NetworkVariable<bool> Held = new();
+        double heldSince;
 
-        // Server: pause for this many real seconds, e.g. while the boss's card is read.
-        public void Hold(float seconds)
+        // A card holds the game until someone presses Haunt or Pick up; a moment's grace so a held button doesn't skip it.
+        const double HoldGrace = 0.6, BotsOnlyHold = 3;
+
+        public void Hold()
         {
-            heldUntil = NetworkManager.ServerTime.Time + seconds;
+            heldSince = NetworkManager.ServerTime.Time;
+            Held.Value = true;
             SetPaused(true);
         }
 
-        bool Holding => heldUntil > NetworkManager.ServerTime.Time;
+        [Rpc(SendTo.Server)]
+        public void LetGoRpc()
+        {
+            if (Held.Value && NetworkManager.ServerTime.Time - heldSince >= HoldGrace) LetGo();
+        }
+
+        void LetGo()
+        {
+            Held.Value = false;
+            SetPaused(pausers.Count > 0);
+        }
 
         [Rpc(SendTo.Server)]
         public void PauseRpc(bool pause, RpcParams rpc = default)
         {
             if (pause) pausers.Add(rpc.Receive.SenderClientId);
             else pausers.Remove(rpc.Receive.SenderClientId);
-            SetPaused(pausers.Count > 0 || Holding);
+            SetPaused(pausers.Count > 0 || Held.Value);
         }
 
         void SetPaused(bool pause)
@@ -83,7 +97,7 @@ namespace Demons
 
         void Dropped(ulong client)
         {
-            if (pausers.Remove(client)) SetPaused(pausers.Count > 0 || Holding);
+            if (pausers.Remove(client)) SetPaused(pausers.Count > 0 || Held.Value);
         }
 
         public override void OnNetworkDespawn()
@@ -151,11 +165,11 @@ namespace Demons
                 wasPaused = Paused;
                 Time.timeScale = Paused ? 0 : 1;
             }
-            if (IsServer && IsSpawned && heldUntil > 0 && !Holding)
-            {
-                heldUntil = 0;
-                SetPaused(pausers.Count > 0);
-            }
+            if (IsSpawned && Held.Value && !Menu.Open && LocalPlayers.All.Exists(p => !Bots.IsBot(p.Device) && (p.Use.WasPressedThisFrame() || p.Grab.WasPressedThisFrame())))
+                LetGoRpc();
+            // Nobody to press anything when only CPU demons play, e.g. the soak tests.
+            if (IsServer && IsSpawned && Held.Value && Demon.All.TrueForAll(Bots.IsBot) && NetworkManager.ServerTime.Time - heldSince >= BotsOnlyHold)
+                LetGo();
             if (!IsServer || loading || string.IsNullOrEmpty(startSceneWhenAllFall) || Demon.All.Count == 0) return;
             foreach (var d in Demon.All)
                 if (float.IsNaN(firstFallX) && d.transform.position.y < -0.5f && StartsLevel(d.transform.position)) firstFallX = d.transform.position.x;

@@ -305,14 +305,18 @@
 }
 
 .hud-cracks {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 18px;
     flex-direction: row;
-    margin: 2px 0 6px 0;
+    justify-content: center;
 }
 
 .hud-crack {
     width: 12px;
     height: 12px;
-    margin-left: 8px;
+    margin: 0 6px;
     rotate: 45deg;
     border-width: 2px;
     border-color: rgba(255, 233, 176, 0.35);
@@ -438,7 +442,7 @@
     transition-timing-function: ease-out-back, ease-out-back, ease-out-cubic;
     max-width: 620px;
     padding: 18px 30px 22px 30px;
-    background-color: rgba(11, 30, 79, 0.94);
+    background-color: var(--navy);
     border-radius: 14px;
     border-width: 1px;
     border-color: var(--hairline);
@@ -450,6 +454,14 @@
     color: var(--yellow);
     -unity-text-align: middle-center;
     margin: 0;
+    padding: 0;
+}
+
+.card-hint {
+    font-size: 15px;
+    color: var(--muted);
+    -unity-text-align: middle-center;
+    margin: 12px 0 0 0;
     padding: 0;
 }
 
@@ -535,6 +547,7 @@
 }
 
 .review-body {
+    align-self: center;
     font-size: 17px;
     color: var(--muted);
     -unity-text-align: middle-center;
