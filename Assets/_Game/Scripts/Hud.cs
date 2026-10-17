@@ -27,11 +27,20 @@ namespace Demons
         public static bool CardShown { get; private set; }
         public static Rect CardBounds { get; private set; }
         public static Vector2 PanelSize { get; private set; }
+        // 0 while a card is up; 0 to 1 as it burns away, then on to ShardsGone while its paper shards burn out.
+        public static float CardBurn { get; private set; }
+
+        static float burnTime = 0.125f;
+        const float ShardsGone = 3.2f;
+        bool cardUp;
+        float burnAt = -10;
+        VisualElement burning;
+        Rect burnRect;
         CrackLights lights;
         VisualElement world;
         VisualElement hud;
         string lastCard;
-        int cardIn;
+        int cardIn, reviewIn;
         readonly List<(Label label, Vector3 at, float born)> popups = new();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -230,18 +239,47 @@ namespace Demons
 
             bool showCard = progress && Net.Now < progress.CardUntil.Value;
             bool showReview = showCard && progress.Review.Value;
-            UI.Show(cardWrap, showCard && !showReview);
-            CardShown = showCard;
+            // A card that goes burns away over burnTime, text and all, the flames eating in from its edges;
+            // MindFx then draws its paper shards drifting up and burning out where it was.
+            if (cardUp && !showCard)
+            {
+                burnAt = Time.unscaledTime;
+                burning = reviewWrap.resolvedStyle.display == DisplayStyle.Flex ? review : card;
+                burnRect = burning.worldBound;
+            }
+            cardUp = showCard;
+            float burn = showCard ? 0 : (Time.unscaledTime - burnAt) / burnTime;
+            bool burningOut = !showCard && burning != null && burn < ShardsGone;
+            bool cardBurning = burningOut && burn < 1;
+            if (burning != null && !cardBurning)
+            {
+                burning.style.opacity = StyleKeyword.Null;
+                if (!burningOut) burning = null;
+            }
+            if (cardBurning) burning.style.opacity = 1 - burn * burn;
+            CardBurn = burningOut ? burn : 0;
+
+            if (!cardBurning)
+            {
+                UI.Show(cardWrap, showCard && !showReview);
+                UI.Show(reviewWrap, showReview);
+            }
+            CardShown = showCard || burningOut;
             if (CardShown)
             {
-                CardBounds = (showReview ? review : card).worldBound;
+                CardBounds = burningOut ? burnRect : (showReview ? review : card).worldBound;
                 PanelSize = hud.worldBound.size;
             }
-            if (!showCard) lastCard = null;
+            if (!showCard && !burningOut) lastCard = null;
             if (showCard && !showReview) RefreshCard(progress.Card.Value.ToString(), progress);
-            UI.Show(cardHint, live && state.Held.Value);
-            UI.Show(reviewWrap, showReview);
-            if (showReview && !reviewing) reviewStars.Show(progress.Stars.Value);
+            if (showCard) UI.Show(cardHint, live && state.Held.Value);
+            if (showReview && !reviewing)
+            {
+                reviewStars.Show(progress.Stars.Value);
+                review.RemoveFromClassList("review--in");
+                reviewIn = Time.frameCount + 1;
+            }
+            if (showReview && Time.frameCount >= reviewIn) review.AddToClassList("review--in");
             reviewing = showReview;
             if (showReview) RefreshReview(state, progress);
 
