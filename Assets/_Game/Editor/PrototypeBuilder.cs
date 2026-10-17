@@ -300,19 +300,13 @@ namespace Demons.Editor
             Set(pen, "look", look);
         }
 
-        // Pull the camera back so the strip in front of the office shows what the host sees.
+        // Tilt the camera up and back so the board sits low, under what the host sees across the top of the screen.
         static void BuildEyeView(Camera cam)
         {
-            cam.transform.position = new Vector3(0, 18.5f, -16.3f);
-            cam.transform.LookAt(new Vector3(0, 0, -1.2f));
-            var ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.13f, 0));
-            var at = ray.GetPoint((-7.4f - ray.origin.z) / ray.direction.z);
-            float depth = Vector3.Dot(at - cam.transform.position, cam.transform.forward);
-            float height = 2 * depth * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * 0.28f;
+            cam.transform.SetPositionAndRotation(new Vector3(0, 23.24f, -20.17f), Quaternion.Euler(43.28f, 0, 0));
             var material = Fade(Unlit("EyeView", Color.white));
             material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>($"{Root}/Resources/Eyes/day0.png"));
-            var view = Prim(PrimitiveType.Quad, "EyeView", null, at, new Vector3(height * 2.5f, height, 1), material);
-            view.transform.rotation = cam.transform.rotation;
+            var view = Prim(PrimitiveType.Quad, "EyeView", null, Vector3.zero, Vector3.one, material);
             view.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             view.AddComponent<EyeView>();
         }
