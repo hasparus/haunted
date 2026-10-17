@@ -8,6 +8,7 @@ Shader "Haunted/Card"
         _Flash("Flash", Range(0, 1)) = 0
         _Boil("Line boil", Range(0, 1)) = 1
         _Aloft("Drawn this far nearer than where it stands (m): flying things that must stay in front", Float) = 0
+        _Blur("Out of focus (uv radius)", Float) = 0
     }
 
     SubShader
@@ -34,7 +35,7 @@ Shader "Haunted/Card"
 
             CBUFFER_START(UnityPerMaterial)
                 half _Flash, _Boil;
-                float _Aloft;
+                float _Aloft, _Blur;
             CBUFFER_END
             float _MindTime;
             float4 _PoolCenter;
@@ -81,7 +82,15 @@ Shader "Haunted/Card"
             {
                 float boil = floor(_MindTime * 2.5) * 3.1;
                 float2 uv = i.uv + (float2(Noise(i.uv * 14 + boil), Noise(i.uv * 14 + 7 + boil)) - 0.5) * 0.004 * _Boil;
-                half4 c = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv) * i.color;
+                half4 c = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);
+                // Going out of focus (a head vanishing as it's put on): eight more taps on a ring around the pixel.
+                if (_Blur > 0)
+                {
+                    for (int k = 0; k < 8; k++)
+                        c += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + float2(cos(k * 0.785), sin(k * 0.785)) * _Blur);
+                    c /= 9;
+                }
+                c *= i.color;
 
                 c.rgb = lerp(c.rgb, half3(0.96, 0.92, 0.84), _Flash * smoothstep(0.15, 0.35, dot(c.rgb, half3(0.3, 0.59, 0.11))));
 
@@ -92,7 +101,7 @@ Shader "Haunted/Card"
                 // Rim light from the lamp, upper right: where the drawing ends in that direction, a thin warm edge.
                 half beyond = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + float2(0.012, 0.01)).a;
                 c.rgb += half3(1, 0.83, 0.28) * saturate(c.a - beyond) * (0.2 + 0.3 * pool);
-                clip(c.a - 0.5);
+                clip(c.a - (_Blur > 0 ? 0.02 : 0.5));
                 return c;
             }
             ENDHLSL

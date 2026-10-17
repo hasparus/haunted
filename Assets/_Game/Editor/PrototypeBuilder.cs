@@ -178,6 +178,7 @@ namespace Demons.Editor
                 var pad = Prim(PrimitiveType.Cylinder, $"ColorPad{i}", null, new Vector3(-15f + i * 1.3f, 0.01f, 7f), new Vector3(0.9f, 0.01f, 0.9f), Unlit($"Pad{i}", Demon.Palette[i]));
                 pad.AddComponent<ColorPad>().Index = i;
             }
+            BuildHeadPedestals(cam);
             FloorLabel("Learn the mechanics", null, new Vector3(0, 0, 4f), 0.14f);
             FloorArrow(new Vector3(-4.6f, 0, 4f), -1);
             FloorArrow(new Vector3(4.6f, 0, 4f), -1);
@@ -248,6 +249,41 @@ namespace Demons.Editor
             Lesson(Feature.Therapist, bays, new Vector3(12.5f, 0, c));
 
             SaveScene(HeadquartersPath);
+        }
+
+        // The wardrobe's heads: one per demon on a pedestal in front of the colours, its name on the floor below in Jolly
+        // Lodger. Grabbing beside one puts it on.
+        static void BuildHeadPedestals(Camera cam)
+        {
+            const float scale = 0.8f, z = 4.6f;
+            for (int i = 0; i < DemonRig.Heads; i++)
+            {
+                // Evenly across the colour row's span, the first under its first pad and the last under its last.
+                var at = new Vector3(-15f + i * (6 * 1.3f) / (DemonRig.Heads - 1), 0, z);
+                var root = new GameObject($"Head{i}").transform;
+                root.position = at;
+                var stand = Prim(PrimitiveType.Cylinder, "Pedestal", root, new Vector3(0, 0.3f, 0), new Vector3(0.7f, 0.3f, 0.7f), Paper("Pedestal", new Color(0.66f, 0.61f, 0.53f)), collider: true);
+                stand.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                var shown = new GameObject("Shown").transform;
+                shown.SetParent(root, false);
+                // The drawings pivot at the demon's feet, 0.63 m under the chin at full size.
+                foreach (var (name, sprite) in new[] { ("Head", DemonRig.HeadFront(i)), ("Face", DemonRig.Face(i)) })
+                {
+                    var art = Point(name, shown, Vector3.zero).gameObject.AddComponent<SpriteRenderer>();
+                    art.sprite = sprite;
+                    art.transform.rotation = cam.transform.rotation;
+                    // The drawing leans back with the camera, so its chin is put on the near edge of the pedestal's top.
+                    art.transform.position = at + new Vector3(0, 0.6f, -0.28f) - art.transform.up * 0.63f * scale;
+                    art.transform.localScale = Vector3.one * scale;
+                    art.sharedMaterial = Resources.Load<Material>("Fx/Card");
+                    if (name == "Face") art.sortingOrder = 1;
+                }
+                FloorLabel(Demon.Names[i], root, new Vector3(0, 0, -0.8f), 0.11f, Jolly);
+                var pedestal = root.gameObject.AddComponent<HeadPedestal>();
+                pedestal.Head = i;
+                Set(pedestal, "shown", shown.gameObject);
+                Set(pedestal, "label", root.GetComponentInChildren<TextMesh>());
+            }
         }
 
         // What each mechanic's workstation says on the floor, and how far in front of the workstation, in the

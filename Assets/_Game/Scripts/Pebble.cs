@@ -55,6 +55,8 @@ namespace Demons
         double SinceThrow => Now - ThrowSince.Value;
         public bool IsGrabbable => State.Value is PebbleState.OnBelt or PebbleState.Floor or PebbleState.OnStation;
         public bool Hauntable => !Shelled.Value;
+        public const float SmallRadius = 0.25f;
+        public float Radius => col.radius;
         public float Weight => Kind.Value == PebbleKind.Big ? Balance.I.bigWeight : 1;
         public float Points => Kind.Value == PebbleKind.Big ? Balance.I.bigPoints : 1;
 
@@ -361,7 +363,7 @@ namespace Demons
         {
             body.localScale = Vector3.one * (Kind.Value == PebbleKind.Big ? 1.6f : 1);
             trail.widthMultiplier = body.localScale.x;
-            col.radius = 0.25f * body.localScale.x;
+            col.radius = SmallRadius * body.localScale.x;
             shell.SetActive(Shelled.Value);
             for (int slot = 0; slot < stampDots.Length; slot++)
                 stampDots[slot].gameObject.SetActive((Stamps.Value & (1 << slot)) != 0);
