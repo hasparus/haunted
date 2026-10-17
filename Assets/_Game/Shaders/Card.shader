@@ -71,6 +71,10 @@ Shader "Haunted/Card"
                 // Lit by where the card stands, like Don't Starve's billboards: one light value for the whole drawing.
                 half pool = exp(-0.9 * pow(length(i.feet - _PoolCenter.xy) / 9, 2.6));
                 c.rgb *= 0.72 + 0.28 * pool;
+
+                // Rim light from the lamp, upper right: where the drawing ends in that direction, a thin warm edge.
+                half beyond = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + float2(0.012, 0.01)).a;
+                c.rgb += half3(1, 0.83, 0.28) * saturate(c.a - beyond) * (0.2 + 0.3 * pool);
                 return c;
             }
             ENDHLSL

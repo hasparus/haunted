@@ -91,8 +91,46 @@ namespace Demons
             frozenAt = visual.position;
         }
 
+        float ghostUntil, lastGhost;
+
+        // A dash leaves a few fading copies of the drawing behind it, like smear frames.
+        void Ghosts()
+        {
+            if (Time.unscaledTime > ghostUntil || Time.unscaledTime - lastGhost < 0.035f || !sprite.sprite) return;
+            lastGhost = Time.unscaledTime;
+            var copy = new GameObject("Ghost").AddComponent<SpriteRenderer>();
+            copy.sharedMaterial = sprite.sharedMaterial;
+            copy.sprite = sprite.sprite;
+            copy.flipX = sprite.flipX;
+            copy.color = new Color(sprite.color.r, sprite.color.g, sprite.color.b, 0.45f);
+            copy.transform.SetPositionAndRotation(sprite.transform.position, sprite.transform.rotation);
+            copy.transform.localScale = sprite.transform.lossyScale;
+            copy.gameObject.AddComponent<Ghost>();
+        }
+
+        class Ghost : MonoBehaviour
+        {
+            SpriteRenderer drawing;
+            float born, alpha;
+
+            void Start()
+            {
+                drawing = GetComponent<SpriteRenderer>();
+                born = Time.unscaledTime;
+                alpha = drawing.color.a;
+            }
+
+            void Update()
+            {
+                float a = alpha * (1 - (Time.unscaledTime - born) / 0.25f);
+                if (a <= 0) Destroy(gameObject);
+                else drawing.color = new Color(drawing.color.r, drawing.color.g, drawing.color.b, a);
+            }
+        }
+
         void Impact()
         {
+            if (Mood.Effects) Ghosts();
             if (Time.unscaledTime < frozenUntil) visual.position = frozenAt;
             else if (visual.localPosition != Vector3.zero)
                 visual.localPosition = Vector3.MoveTowards(visual.localPosition, Vector3.zero, Time.unscaledDeltaTime * 25);
@@ -181,7 +219,9 @@ namespace Demons
             Dashes.OnValueChanged += (was, now) =>
             {
                 spring.Punch(new Vector3(-0.15f, -0.08f, 0.35f));
-                if (now > was) Audio.Play(Sounds.I.dash, transform.position);
+                if (now <= was) return;
+                Audio.Play(Sounds.I.dash, transform.position);
+                ghostUntil = Time.unscaledTime + Balance.I.dashTime + 0.05f;
             };
             Throws.OnValueChanged += (was, now) =>
             {

@@ -44,7 +44,7 @@ namespace Demons
         {
             hum = Audio.Loop(hum, this, IsSpawned ? Sounds.I.conveyorLoop : null, null, Sounds.I.ambienceVolume);
             // Haunted/Paper scrolls the belt's slats by this; wrapped at a whole number of slats so it never jumps.
-            Shader.SetGlobalFloat(TravelId, (float)(Travel(Net.Now) % 1000));
+            if (IsSpawned) Shader.SetGlobalFloat(TravelId, (float)(Travel(Net.Now) % 1000));
             if (!IsServer || Demon.All.Count == 0) return;
             // Spawns are spaced by belt distance, so a faster belt brings thoughts sooner but never bunches them.
             double travel = Travel(Net.Now);
