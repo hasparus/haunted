@@ -462,4 +462,4 @@ Music/mus_mischievous_wizard.ogg
   licencja: Pixabay Content License (wg strony utworu); bez oznaczenia Content ID i bez oznaczenia AI generated (sprawdzone 18.10.2026)
   obróbka: mp3 -> ogg
 
-Pliki dźwiękowe z pól powyżej odtworzone 18.10.2026 z tych samych źródeł (Kenney, Freesound CC0; z Freesound wersje podglądowe mp3).
+Pliki dźwiękowe pól stamp, crack, hammerLoop, fall, respawn, newDay, review, pillTaken, penScribble, penMash, penEscape i spotAim odtworzone 18.10.2026 z tych samych źródeł (Kenney, Freesound CC0; z Freesound wersje podglądowe mp3).
