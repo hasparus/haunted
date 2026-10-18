@@ -4,4 +4,4 @@ plik: HandOpen.png, HandGrab.png, HandClosed.png, HandArm.png
   źródło: generated with gpt-image-2.5
   styl: grafiki projektu w Resources/Art/Demon (Head1Front, ArmFrontL, GripFrontL, OrbWingL)
   licencja: warunki OpenAI dotyczące wygenerowanych materiałów (output); grafiki przygotowane na potrzeby projektu
-  obróbka: tools/hand_frames.py — usunięcie tła, przezroczystość, płaskie kolory, wspólna skala i pozycja nadgarstka
+  obróbka: tools/hand_frames.py — przezroczystość, płaskie kolory, wspólna skala i pozycja nadgarstka; dwa paznokcie (kciuk i palec wskazujący), animacja tego samego rysunku bez pełnego zamknięcia palców
