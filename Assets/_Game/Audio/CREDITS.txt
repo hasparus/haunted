@@ -217,7 +217,7 @@ _candidates/Stations/sfx_station_chew_spit.wav
   licencja: CC0 1.0 (License.txt w paczce)
   obróbka: obcięta cisza
 
-_candidates/Stations/sfx_station_done.wav
+Stations/sfx_station_done.wav  (pola stamp w Sounds.asset)
   źródło: confirmation_003.ogg
   autor: Kenney (www.kenney.nl), paczka Interface Sounds; credit niewymagany
   URL: https://kenney.nl/media/pages/assets/interface-sounds/fa43c1dd4d-1677589452/kenney_interface-sounds.zip -> Audio/confirmation_003.ogg
@@ -307,6 +307,12 @@ Week_events/spotHunt.wav  (pole spotHunt w Sounds.asset)
   URL: https://kenney.nl/media/pages/assets/sci-fi-sounds/6b296f9ecf-1677589334/kenney_sci-fi-sounds.zip -> Audio/spaceEngineLow_000.ogg
   licencja: CC0 1.0 (License.txt w paczce)
   obróbka: obcięta cisza
+
+Demons/sfx_throw_whoosh.wav  (pole throwThought w Sounds.asset)
+Demons/sfx_dash_whoosh.wav  (pole dash w Sounds.asset)
+  źródło: wygenerowane (szum przepuszczony przez filtr pasmowy przesuwany w górę, tools: numpy/scipy)
+  autor: zespół My Demons, Inc.
+  licencja: własne
 
 Week_events/spotOn.wav  (pola spotHunt i spotStrike w Sounds.asset)
   źródło: freesound_community-spotlight-91359.mp3
