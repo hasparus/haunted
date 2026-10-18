@@ -89,6 +89,15 @@ namespace Demons
             if (element.resolvedStyle.display != display) element.style.display = display;
         }
 
+        // Hidden but keeping its place, so what's beside it never moves.
+        public static void Reserve(VisualElement element, bool visible)
+        {
+            var visibility = visible ? Visibility.Visible : Visibility.Hidden;
+            if (element.resolvedStyle.visibility != visibility) element.style.visibility = visibility;
+        }
+
+        public static string Tinted(string text, Color color) => $"<color=#{ColorUtility.ToHtmlStringRGB(color)}>{text}</color>";
+
         public static void Set(Label label, string text)
         {
             if (label.text != text) label.text = text;

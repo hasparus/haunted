@@ -9,10 +9,10 @@ namespace Demons
     {
         static readonly string[] Columns = { "Revenue", "Haunts", "Deliveries", "Assists", "Throws", "Dashes" };
 
-        VisualElement top, scores, crackPips, review, net, offline, joining, online, notice, cpu, cardWrap, reviewWrap, table, sign;
+        VisualElement top, scores, crackPips, review, net, offline, joining, online, notice, botRow, cardWrap, reviewWrap, table, sign;
         Label day, dayInfo, revenue, netStatus, noticeTitle, noticeBody, paused, reviewTitle, reviewBody, reviewStat, signHint, signWait;
         TextField code, signature;
-        Button removeCpu;
+        Button removeBot;
         VisualElement footer;
         string footerShape;
         string tableShape, reviewText;
@@ -160,9 +160,9 @@ namespace Demons
             joining.Add(code);
             UI.Button("Join", () => NetBootstrap.Instance.Join(code.value), joining).AddToClassList("button--primary");
             UI.Button("Cancel", () => NetBootstrap.Instance.CancelJoin(), joining);
-            cpu = UI.Box("hud-net-row", net);
-            removeCpu = UI.Button("Remove a bot", Bots.RemoveCpu, cpu);
-            UI.Button("Add a bot", Bots.AddCpu, cpu);
+            botRow = UI.Box("hud-net-row", net);
+            removeBot = UI.Button("Remove a bot", Bots.RemoveOne, botRow);
+            UI.Button("Add a bot", Bots.AddOne, botRow);
             online = UI.Box("hud-net-row", net);
             Button copy = null;
             copy = UI.Button("Copy code", () =>
@@ -321,10 +321,7 @@ namespace Demons
 
             bool showPaused = live && state.Paused && !Menu.Open && !showCard;
             UI.Show(paused.parent, showPaused);
-            if (showPaused)
-            {
-                UI.Set(paused, Menu.PausedTitle());
-            }
+            if (showPaused) UI.Set(paused, state.PausedTitle);
 
             var hintNow = (live ? LocalPlayers.All.Count : -1, live && state.IsLobby, Progression.Typing);
             if (hintNow != hintFor)
@@ -421,9 +418,8 @@ namespace Demons
             if (!boot) return;
             UI.Show(offline, show && boot.CanGoOnline && !NetBootstrap.TypingCode);
             UI.Show(joining, show && NetBootstrap.TypingCode);
-            UI.Show(cpu, show && lobby && boot.IsServer);
-            // Hidden but keeping its place, so "Add bot" never moves under the pointer.
-            removeCpu.style.visibility = Bots.All.Count > 0 ? Visibility.Visible : Visibility.Hidden;
+            UI.Show(botRow, show && lobby && boot.IsServer);
+            UI.Reserve(removeBot, Bots.All.Count > 0);
             UI.Show(online, show && boot.Online);
             UI.Show(notice, !string.IsNullOrEmpty(boot.Error) && !Menu.Open);
             UI.Set(noticeBody, boot.Error);
