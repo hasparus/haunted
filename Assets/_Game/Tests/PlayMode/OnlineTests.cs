@@ -2,8 +2,6 @@ using System.Collections;
 using System.IO;
 using NUnit.Framework;
 using Unity.Netcode;
-using Unity.Services.Authentication;
-using Unity.Services.Core;
 using UnityEngine;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.SceneManagement;
@@ -15,10 +13,6 @@ namespace Demons.PlayTests
     public class OnlineTests
     {
         static readonly string RoomFile = System.Environment.GetEnvironmentVariable("DEMONS_ROOM_FILE");
-
-        // Two editors on one machine also trip over the editor's own tooling; only the game's state decides these tests.
-        [SetUp]
-        public void SetUp() => LogAssert.ignoreFailingMessages = true;
 
         [UnityTearDown]
         public IEnumerator TearDown()
@@ -42,6 +36,8 @@ namespace Demons.PlayTests
 
         static IEnumerator Couch(Bot bot)
         {
+            // Two editors on one machine also trip over the editor's own tooling; only the game's state decides these tests.
+            LogAssert.ignoreFailingMessages = true;
             SceneManager.LoadScene("Headquarters");
             yield return Until(() => GameState.Instance && GameState.Instance.IsSpawned, 10, "Headquarters never came online");
             bot.Press(GamepadButton.South);
@@ -98,6 +94,24 @@ namespace Demons.PlayTests
             Assert.AreEqual(1, Demon.All.Count, "a guest's demon stayed behind");
         }
 
+        [UnityTest, Timeout(120000)]
+        public IEnumerator AWrongCodeIsNotOnTheCalendar()
+        {
+            var bot = Bots.Add();
+            yield return Couch(bot);
+            var boot = NetBootstrap.Instance;
+            foreach (var code in new[] { "ZZZZZZ", "BCDFGH" })
+            {
+                // The services limit how often one player tries to join.
+                yield return new WaitForSecondsRealtime(15);
+                boot.Join(code);
+                yield return Until(() => boot.Error != "", 60, $"joining {code} never failed");
+                StringAssert.Contains("isn't on the calendar", boot.Error);
+                boot.DismissError();
+                yield return Until(() => boot.CanGoOnline && GameState.Instance && GameState.Instance.IsSpawned && bot.Demon, 15, "the couch game never came back");
+            }
+        }
+
         [UnityTest, Timeout(300000)]
         public IEnumerator GuestJoinsTheRoom()
         {
@@ -105,9 +119,6 @@ namespace Demons.PlayTests
             var bot = Bots.Add();
             yield return Couch(bot);
             var boot = NetBootstrap.Instance;
-            // Both test editors run on one machine, which would otherwise sign them in as the same player.
-            var signIn = UnityServices.InitializeAsync(new InitializationOptions().SetProfile("guest"));
-            yield return Until(() => signIn.IsCompleted, 30, "Unity services never started");
             yield return Until(() => File.Exists(RoomFile), 180, "the host never wrote a room code");
             boot.Join(File.ReadAllText(RoomFile));
             yield return Until(() => boot.Online && NetworkManager.Singleton.IsConnectedClient, 60, $"never joined: {boot.Error}");
