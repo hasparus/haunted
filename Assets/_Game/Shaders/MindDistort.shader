@@ -115,9 +115,10 @@ Shader "Haunted/MindDistort"
 
                     // Wobbly band edges so the layers lick at each other instead of following the outline.
                     float edge = (Noise(p * 40 + float2(0, -t * 4.5)) - 0.5) * 0.18;
-                    // The glow falls off smoothly and far, like light rather than a halo.
-                    float glow = 1 - smoothstep(0, 0.3, d);
-                    col += half3(0.1, 0.3, 0.9) * glow * glow * glow * step(0, d) * 0.22 * _CardFire * dying;
+                    // The glow fades evenly as seen over a wide reach, like light rather than a halo: an even ramp on screen
+                    // is a ramp to the power 2.2 in the linear colour it's added in.
+                    float glow = pow(1 - smoothstep(0, 0.6, d), 2.2);
+                    col += half3(0.1, 0.3, 0.9) * glow * step(0, d) * 0.2 * _CardFire * dying;
                     col = lerp(col, half3(0.03, 0.08, 0.35), smoothstep(0.02, 0.05, flame));
                     col = lerp(col, half3(0.15, 0.45, 1.0), smoothstep(0.45, 0.48, flame + edge));
                     col = lerp(col, half3(0.82, 0.95, 1.0), smoothstep(0.82, 0.85, flame + edge));
