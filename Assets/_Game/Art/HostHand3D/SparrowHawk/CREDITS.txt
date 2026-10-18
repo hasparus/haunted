@@ -1,0 +1,11 @@
+Prawa dłoń – źródła
+
+plik: RightHand.fbx
+  źródło: Hands Rigged — SparrowHawk, „Hands + armature.blend” (prawa dłoń)
+  URL: https://blendswap.com/blend/22269
+  licencja: CC0 1.0 Universal — https://creativecommons.org/publicdomain/zero/1.0/
+  obróbka: wybrana prawa dłoń; zachowane wagi i 22 kości; czytelne nazwy stawów; subdivision poziom 2; zamknięty koniec przedramienia; przeliczone zewnętrzne normalne; dodatnie skale obiektów
+
+plik: Standby.anim, Holding.anim, GrabPreview.anim
+  źródło: zasoby projektu
+  licencja: CC0 1.0 (model źródłowy); zasoby projektu (pozy i animacja)
