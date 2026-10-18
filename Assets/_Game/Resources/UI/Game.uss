@@ -499,7 +499,7 @@
     align-self: stretch;
     font-size: 15px;
     color: var(--muted);
-    -unity-text-align: middle-left;
+    -unity-text-align: middle-center;
     margin: 12px 0 0 0;
     padding: 0;
 }
@@ -537,7 +537,6 @@
 }
 
 .atelier .card {
-    width: 620px;
     margin: 12px;
 }
 

@@ -95,7 +95,9 @@ namespace Demons
         }
 
         // CSS text-wrap: balance. The narrowest width that keeps the same number of lines, so no lonely last word.
-        public static void Balance(Label label, float maxWidth)
+        public static void Balance(Label label, float maxWidth) => label.style.maxWidth = BalancedWidth(label, maxWidth);
+
+        public static float BalancedWidth(Label label, float maxWidth)
         {
             const VisualElement.MeasureMode atMost = VisualElement.MeasureMode.AtMost, free = VisualElement.MeasureMode.Undefined;
             float lines = label.MeasureTextSize(label.text, maxWidth, atMost, 0, free).y;
@@ -106,7 +108,7 @@ namespace Demons
                 if (label.MeasureTextSize(label.text, mid, atMost, 0, free).y > lines + 0.5f) lo = mid;
                 else hi = mid;
             }
-            label.style.maxWidth = Mathf.Ceil(hi) + 2;
+            return Mathf.Ceil(hi) + 2;
         }
     }
 }

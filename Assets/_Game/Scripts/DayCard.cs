@@ -1,3 +1,4 @@
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Demons
@@ -7,12 +8,14 @@ namespace Demons
         const float Measure = 560;
 
         public readonly Label Title, StarsFor, Body, Task, Hint;
+        readonly VisualElement head;
         public readonly StarRow Stars;
+        bool balancing;
 
         public DayCard()
         {
             AddToClassList("card");
-            var head = UI.Box("card-head", this);
+            head = UI.Box("card-head", this);
             Title = UI.Text("", "card-title", UI.Jolly);
             head.Add(Title);
             var dayBefore = UI.Box("card-review", head);
@@ -22,6 +25,17 @@ namespace Demons
             dayBefore.Add(Stars);
             Body = UI.Text("", "card-body");
             Add(Body);
+            // Once laid out, when the story's own font and size are known to measure it with, the card takes the width of
+            // the balanced story (or of its heading, if that's wider) and the story fills it.
+            Body.RegisterCallback<GeometryChangedEvent>(_ =>
+            {
+                if (!balancing) return;
+                balancing = false;
+                float heading = 0;
+                foreach (var part in head.Children()) heading += part.layout.width;
+                style.width = Mathf.Max(UI.BalancedWidth(Body, Measure), heading + 24)
+                    + resolvedStyle.paddingLeft + resolvedStyle.paddingRight + resolvedStyle.borderLeftWidth + resolvedStyle.borderRightWidth;
+            });
             Task = UI.Text("", "card-task", UI.PlexBold);
             Add(Task);
             Hint = UI.Text("Haunt or pick up to get back to work.", "card-hint");
@@ -38,7 +52,8 @@ namespace Demons
             if (Body.text != story || Task.text != todo)
             {
                 UI.Set(Body, story);
-                UI.Balance(Body, Measure);
+                style.width = StyleKeyword.Null;
+                balancing = true;
                 UI.Set(Task, todo);
             }
             UI.Show(Body, story.Length > 0);
