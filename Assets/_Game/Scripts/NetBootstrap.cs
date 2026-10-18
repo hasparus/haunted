@@ -179,6 +179,7 @@ namespace Demons
 
         public void Join(string code)
         {
+            if (string.IsNullOrWhiteSpace(code)) return;
             joinCode = code;
             TypingCode = false;
             Error = "";
