@@ -24,7 +24,9 @@ namespace Demons
         static bool Today(Feature mechanic)
         {
             var p = Progression.Instance;
-            return p && p.IsSpawned && p.Mode.Value == GameMode.Week && !p.Review.Value && Progression.Introduces(p.Day.Value, mechanic);
+            if (!p || !p.IsSpawned || p.Mode.Value != GameMode.Week || p.Review.Value || !Progression.Introduces(p.Day.Value, mechanic)) return false;
+            // The light's day brings the pen halfway through: one window, the light's until the pen is here.
+            return mechanic == Feature.Therapist ? !Progression.Has(Feature.Pen) : Progression.Has(mechanic);
         }
 
         void Awake()
