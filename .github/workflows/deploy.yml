@@ -100,6 +100,10 @@ jobs:
           dockerShmSize: 4g
           dockerMemoryLimit: 22g
 
+      - name: Name the Mac app
+        if: ${{ matrix.target == 'StandaloneOSX' && (!inputs.targets || contains(inputs.targets, matrix.target)) }}
+        run: sudo mv "${{ matrix.path }}/haunted.app" "${{ matrix.path }}/My Demons Inc.app"
+
       - name: Drop build leftovers
         if: ${{ !inputs.targets || contains(inputs.targets, matrix.target) }}
         run: sudo find "${{ matrix.path }}" -maxdepth 2 -type d \( -name '*_BackUpThisFolder_ButDontShipItWithYourGame' -o -name '*_BurstDebugInformation_DoNotShip' \) -prune -exec rm -rf {} +
