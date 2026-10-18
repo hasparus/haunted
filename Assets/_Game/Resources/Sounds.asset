@@ -33,17 +33,17 @@ MonoBehaviour:
   grab:
   - {fileID: 8300000, guid: 154aac2b8cc920c41b7bd3db85d17ddc, type: 3}
   catchThought:
-  - {fileID: 8300000, guid: 154aac2b8cc920c41b7bd3db85d17ddc, type: 3}
+  - {fileID: 8300000, guid: e253c9c5617fc1e43b1f5572c90407d9, type: 3}
   throwThought:
-  - {fileID: 8300000, guid: 78d3a2fb71b1497cba16320f43a9edca, type: 3}
+  - {fileID: 8300000, guid: 6b7e83f20278e3a43ab1f3cc215da839, type: 3}
   dash:
-  - {fileID: 8300000, guid: 1fa8ad8626804205bf9b46866764ce7e, type: 3}
+  - {fileID: 8300000, guid: 302594346fb45b04e81347dd1c68917f, type: 3}
   join:
-  - {fileID: 8300000, guid: 7f70c32392712024d9966be8e1b87584, type: 3}
+  - {fileID: 8300000, guid: 154aac2b8cc920c41b7bd3db85d17ddc, type: 3}
   leave:
-  - {fileID: 8300000, guid: e439ca79f72346d498915549b40524fd, type: 3}
+  - {fileID: 8300000, guid: 154aac2b8cc920c41b7bd3db85d17ddc, type: 3}
   colorPick:
-  - {fileID: 8300000, guid: e607090f4af981f47b4225e4a3b05765, type: 3}
+  - {fileID: 8300000, guid: 154aac2b8cc920c41b7bd3db85d17ddc, type: 3}
   fall:
   - {fileID: 8300000, guid: d30a1c62413487e4aa4302a6d28cbf75, type: 3}
   respawn:
@@ -56,7 +56,7 @@ MonoBehaviour:
   place:
   - {fileID: 8300000, guid: 443fc328c930d634791e4e26217eb141, type: 3}
   placeOnBelt:
-  - {fileID: 8300000, guid: 443fc328c930d634791e4e26217eb141, type: 3}
+  - {fileID: 8300000, guid: b11fbeecbae32a245abc1c2aae55758b, type: 3}
   warning:
   - {fileID: 8300000, guid: 3d6d21304b9314a4ca209c0ac7d7fa69, type: 3}
   - {fileID: 8300000, guid: be3d7231006536c4c829533540e05c98, type: 3}
@@ -69,7 +69,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 43bc11579229b12439ec93f505a78ec0, type: 3}
   hauntLoop: {fileID: 8300000, guid: c97e0906d2274164c8ee7752c6ce9a13, type: 3}
   stamp:
-  - {fileID: 8300000, guid: 8b36b38051fbc694e8eb23ebaa9cebe0, type: 3}
+  - {fileID: 8300000, guid: 08024c636d854a74c8f3fb9677528183, type: 3}
   potLoop: {fileID: 8300000, guid: 8a967b01694c4ba468ea1624a100e732, type: 3}
   hammerLoop: {fileID: 8300000, guid: a821097998c6b4244bc852c2905d8116, type: 3}
   crack:
