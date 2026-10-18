@@ -31,8 +31,8 @@ namespace Demons
             "WEDNESDAY\nThe Host's boss wants to see him in his office to talk about something. Doesn't say what. We'll fill that in for him.\n214 unread emails.\n\nIT finally sent a tool: the pot. Drop a thought in and it haunts itself.",
             "THURSDAY\nThe Host has to send an introduction email, two or three sentences about himself. It's not much to work with, but we've done more with less.\nHe's getting defensive.\n\nShelled thoughts need the hammer first.",
             "FRIDAY\nTherapy at five. Watch out, team.\n\nStay out of the light.",
-            "SATURDAY\nThe Host's manager asked him to come in on Saturday for overtime. If The Host doesn't rest, he can't fight us next week, so we're rooting for the manager.\nNew meds. The waiting-room music won't stop.\n\nWhen he takes a pill, controls flip.",
-            "SUNDAY\nThe Host has found a date on a dating app. A healthy relationship would make him stronger against us, so we'd prefer it to go badly.\nMom keeps calling. He tries to pull himself together.\n\nAnswer the phone. Save thoughts from his hand.",
+            "SATURDAY\nNew meds. The waiting-room music won't stop.\n\nWhen he takes a pill, controls flip.",
+            "SUNDAY\nMom keeps calling. He tries to pull himself together.\n\nAnswer the phone. Save thoughts from his hand.",
         };
 
         // Friday, halfway to the goal.
