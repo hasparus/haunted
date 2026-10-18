@@ -143,8 +143,7 @@ namespace Demons
             if (next == Phase.Aim) GetComponent<NetworkTransform>().Teleport(StrikeAt(), transform.rotation, transform.localScale);
             phase.Value = next;
             float seconds = next switch { Phase.Rest => b.spotRest, Phase.Hunt => b.spotHunt, Phase.Aim => b.strikeAim, _ => b.strikeTime };
-            // A demo light rests and hunts in half the time, but aims and strikes like the real one.
-            phaseEnd = Time.time + seconds * (Demo && next is Phase.Rest or Phase.Hunt ? 0.5f : 1);
+            phaseEnd = Time.time + seconds;
         }
 
         Vector3 StrikeAt()
