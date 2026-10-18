@@ -28,7 +28,7 @@ namespace Demons
         Demon target;
         float retargetAt, phaseEnd, phaseAt, dark;
         int strikesLeft;
-        bool strikeNext = true;
+        bool strikeNext;
 
         bool Active => Demo || Progression.Interrupting(Feature.Therapist);
         float Scale => phase.Value switch { Phase.Rest => 0.35f, Phase.Hunt => 1, _ => Balance.I.strikeScale };
@@ -134,15 +134,17 @@ namespace Demons
             var b = Balance.I;
             var next = phase.Value switch
             {
-                Phase.Rest => (strikeNext = !strikeNext) ? Phase.Aim : Phase.Hunt,
+                Phase.Rest => strikeNext ? Phase.Aim : Phase.Hunt,
                 Phase.Aim => Phase.Strike,
                 Phase.Strike => --strikesLeft > 0 ? Phase.Aim : Phase.Rest,
                 _ => Phase.Rest,
             };
             if (phase.Value == Phase.Rest && next == Phase.Aim) strikesLeft = b.strikeCount;
+            if (next == Phase.Rest) strikeNext = !strikeNext;
             if (next == Phase.Aim) GetComponent<NetworkTransform>().Teleport(StrikeAt(), transform.rotation, transform.localScale);
             phase.Value = next;
-            float seconds = next switch { Phase.Rest => b.spotRest, Phase.Hunt => b.spotHunt, Phase.Aim => b.strikeAim, _ => b.strikeTime };
+            // A rest before a volley is only a beat, so the light never seems stuck before it aims.
+            float seconds = next switch { Phase.Rest => strikeNext ? b.spotRest * 0.25f : b.spotRest, Phase.Hunt => b.spotHunt, Phase.Aim => b.strikeAim, _ => b.strikeTime };
             phaseEnd = Time.time + seconds;
         }
 
