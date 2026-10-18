@@ -60,7 +60,7 @@ namespace Demons
         }
 
         const string Closed = "The host closed the room.";
-        const string Full = "The room is full: four demons already work there. CPU demons step aside for people, so ask the host to remove one.";
+        const string Full = "The room is full: four demons already work there. Bots step aside for people, so ask the host to remove one.";
 
         static void Approve(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
         {

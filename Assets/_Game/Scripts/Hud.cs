@@ -161,8 +161,8 @@ namespace Demons
             UI.Button("Join", () => NetBootstrap.Instance.Join(code.value), joining).AddToClassList("button--primary");
             UI.Button("Cancel", () => NetBootstrap.Instance.CancelJoin(), joining);
             cpu = UI.Box("hud-net-row", net);
-            UI.Button("+ CPU demon", Bots.AddCpu, cpu);
-            removeCpu = UI.Button("\u2212 CPU demon", Bots.RemoveCpu, cpu);
+            UI.Button("Add bot", Bots.AddCpu, cpu);
+            removeCpu = UI.Button("Remove bot", Bots.RemoveCpu, cpu);
             online = UI.Box("hud-net-row", net);
             Button copy = null;
             copy = UI.Button("Copy code", () =>
@@ -422,7 +422,8 @@ namespace Demons
             UI.Show(offline, show && boot.CanGoOnline && !NetBootstrap.TypingCode);
             UI.Show(joining, show && NetBootstrap.TypingCode);
             UI.Show(cpu, show && lobby && boot.IsServer);
-            UI.Show(removeCpu, Bots.All.Count > 0);
+            // Hidden but keeping its place, so "Add bot" never moves under the pointer.
+            removeCpu.style.visibility = Bots.All.Count > 0 ? Visibility.Visible : Visibility.Hidden;
             UI.Show(online, show && boot.Online);
             UI.Show(notice, !string.IsNullOrEmpty(boot.Error) && !Menu.Open);
             UI.Set(noticeBody, boot.Error);

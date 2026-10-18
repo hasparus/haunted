@@ -141,6 +141,7 @@ namespace Demons
         [Rpc(SendTo.Server)]
         public void RequestDemonRpc(int localIndex, RpcParams rpc = default)
         {
+            if (Demon.All.Exists(d => d && d.OwnerClientId == rpc.Receive.SenderClientId && d.LocalIndex.Value == localIndex)) return;
             int slot = 0;
             bool fromBot = rpc.Receive.SenderClientId == NetworkManager.ServerClientId && Bots.IsBot(LocalPlayers.Find(localIndex)?.Device);
             if (Demon.All.Count >= Scoring.MaxDemons && !fromBot && Bots.All.Find(b => b.Demon) is { } cpu) Bots.Remove(cpu);
@@ -167,8 +168,21 @@ namespace Demons
             pebble.Consume();
         }
 
+        float demonCheckAt;
+
+        // A local player can end up without a demon when the network restarts (hosting, joining, leaving a room) while
+        // the old demon is still being torn down; ask again until one arrives.
+        void EnsureDemons()
+        {
+            if (!IsSpawned || Time.unscaledTime < demonCheckAt) return;
+            demonCheckAt = Time.unscaledTime + 1;
+            foreach (var p in LocalPlayers.All)
+                if (!Demon.All.Exists(d => d && d.IsOwner && d.LocalIndex.Value == p.Index)) RequestDemonRpc(p.Index);
+        }
+
         void Update()
         {
+            EnsureDemons();
             if (IsSpawned && Paused != wasPaused)
             {
                 wasPaused = Paused;
@@ -176,7 +190,7 @@ namespace Demons
             }
             if (IsSpawned && Held.Value && !Menu.Open && LocalPlayers.All.Exists(p => !Bots.IsBot(p.Device) && (p.Use.WasPressedThisFrame() || p.Grab.WasPressedThisFrame())))
                 LetGoRpc();
-            // Nobody to press anything when only CPU demons play, e.g. the soak tests.
+            // Nobody to press anything when only bots play, e.g. the soak tests.
             if (IsServer && IsSpawned && Held.Value && Demon.All.TrueForAll(Bots.IsBot) && NetworkManager.ServerTime.Time - heldSince >= BotsOnlyHold)
                 LetGo();
             if (!IsServer || loading || string.IsNullOrEmpty(startSceneWhenAllFall) || Demon.All.Count == 0) return;
