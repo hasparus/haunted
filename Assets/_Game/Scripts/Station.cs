@@ -25,13 +25,13 @@ namespace Demons
         const float StampPixels = 400, StampRest = 137, StampLift = 0.4f;
         static readonly int AloftId = Shader.PropertyToID("_Aloft");
         Transform stamp, leverLeft, leverRight, helper;
+        GameObject helperHand;
         readonly Renderer[] sideRings = new Renderer[2];
         MaterialPropertyBlock ringBlock;
         static readonly int FeetId = Shader.PropertyToID("_Feet"), BaseColorId = Shader.PropertyToID("_BaseColor");
         float stampAt;
-        int helperSide = 1;
 
-        // In headquarters a grey stand-in demon (the old drawing) works the stamp's other lever, so one player can try it.
+        // In headquarters a grey stand-in demon (the old drawing) holds the stamp's left lever, so one player can try it.
         static bool HelperOn => GameState.Instance && GameState.Instance.IsLobby;
 
         // The station's drawing (desks), or null for the 3D ones.
@@ -103,15 +103,26 @@ namespace Demons
             }
             ringBlock = new MaterialPropertyBlock();
 
+            // Side on, facing the stamp from its left, a hand already on the lever's knob.
             var stand = new GameObject("Helper").AddComponent<SpriteRenderer>();
-            stand.sprite = Resources.Load<Sprite>("Art/Devil_Front");
+            stand.sprite = Resources.Load<Sprite>("Art/Devil_Side");
             stand.sharedMaterial = card;
             stand.color = new Color(0.62f, 0.62f, 0.64f);
-            stand.transform.SetParent(visual.transform, false);
-            stand.transform.rotation = root.rotation;
+            stand.transform.SetParent(root, false);
+            stand.transform.localPosition = new Vector3(-(194 + 150) / StampPixels, 0, 0);
             stand.transform.localScale = Vector3.one * 1.3f / stand.sprite.bounds.size.y;
             helper = stand.transform;
+            var knob = leverLeft.GetComponent<SpriteRenderer>().sprite.bounds;
+            var hand = new GameObject("HelperHand").AddComponent<SpriteRenderer>();
+            hand.sprite = Resources.Load<Sprite>("Art/Demon/GripSide");
+            hand.sharedMaterial = card;
+            hand.transform.SetParent(leverLeft, false);
+            hand.transform.localPosition = new Vector3(knob.min.x + knob.size.x * 0.12f, knob.max.y - knob.size.x * 0.12f, 0);
+            block.SetFloat(AloftId, 0.4f);
+            hand.SetPropertyBlock(block);
+            helperHand = hand.gameObject;
             helper.gameObject.SetActive(false);
+            helperHand.SetActive(false);
         }
 
         // The stamp hangs over a thought and comes down as the two levers are worked; each lever leans out while worked.
@@ -133,33 +144,23 @@ namespace Demons
                 }
             bool helping = HelperOn;
             helper.gameObject.SetActive(helping);
-            if (helping)
-            {
-                if (left != right) helperSide = left ? 1 : -1;
-                var at = SidePoint(helperSide);
-                at.y = transform.position.y;
-                helper.position = at;
-                if (left || right)
-                {
-                    left = true;
-                    right = true;
-                }
-            }
+            helperHand.SetActive(helping);
+            if (helping && right) left = true;
             bool waiting = held && held.Shelled.Value && !Locked;
             bool alone = Demon.All.Count < 2;
             for (int i = 0; i < 2; i++)
             {
                 bool manned = i == 0 ? left : right;
-                bool show = waiting && !manned && !(alone && (left || right));
+                bool show = waiting && !manned && !(alone && (left || right)) && !(helping && i == 0);
                 var r = sideRings[i];
                 r.gameObject.SetActive(show);
                 if (!show) continue;
                 var at = SidePoint(i == 0 ? -1 : 1);
                 at.y = transform.position.y + 0.03f;
                 r.transform.position = at;
-                r.transform.localScale = new Vector3(0.45f, 1, 0.45f) * (1 + 0.08f * Mathf.Sin(Time.time * 6));
+                r.transform.localScale = new Vector3(0.3f, 1, 0.3f) * (1 + 0.04f * Mathf.Sin(Time.time * 4));
                 ringBlock.SetVector(FeetId, at);
-                ringBlock.SetColor(BaseColorId, new Color(1, 0.88f, 0.6f, 1));
+                ringBlock.SetColor(BaseColorId, new Color(0.62f, 0.6f, 0.55f, 1));
                 r.SetPropertyBlock(ringBlock);
             }
             float wiggle = 6 * Mathf.Sin(Time.time * 14);
@@ -209,7 +210,7 @@ namespace Demons
         }
 
         // The hammer takes two: a demon on each side of it (left and right as the room is built), unless there's only one.
-        const float SideReach = 0.75f;
+        const float SideReach = 1.05f;
 
         public int SideOf(Vector3 at) => Vector3.Dot(at - Slot.position, transform.right) < 0 ? -1 : 1;
 
@@ -259,6 +260,13 @@ namespace Demons
             return workers;
         }
 
+        bool RightWorked(byte hands)
+        {
+            foreach (var d in Demon.All)
+                if ((hands & d.SlotBit) != 0 && SideOf(d.transform.position) > 0) return true;
+            return false;
+        }
+
         bool BothSides(byte hands)
         {
             bool left = false, right = false;
@@ -305,7 +313,7 @@ namespace Demons
                     break;
                 case StationKind.Hammer:
                     useful = pebble.Shelled.Value ? Hands() : (byte)0;
-                    n = useful != 0 && (Demon.All.Count < 2 || HelperOn || BothSides(useful)) ? 1 : 0;
+                    n = useful != 0 && (HelperOn ? RightWorked(useful) : Demon.All.Count < 2 || BothSides(useful)) ? 1 : 0;
                     duration = Balance.I.hammerTime;
                     break;
                 default:
