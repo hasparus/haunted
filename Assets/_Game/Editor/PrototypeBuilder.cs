@@ -551,7 +551,6 @@ namespace Demons.Editor
             Set(spot, "beam", beam.transform);
             Set(spot, "lamp", lamp);
             Set(spot, "glow", glow);
-            Set(spot, "ringMaterial", Unlit("SpotRing", warm));
             return go;
         }
 

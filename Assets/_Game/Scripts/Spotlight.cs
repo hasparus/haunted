@@ -12,23 +12,21 @@ namespace Demons
         [SerializeField] GameObject look;
         [SerializeField] Transform beam;
         [SerializeField] Light lamp, glow;
-        [SerializeField] Material ringMaterial;
 
         // Where the therapist's lamp hangs, relative to the light's home: above and behind, off screen.
         static readonly Vector3 LampOffset = new(0, 9, 7);
-        static readonly int StyleId = Shader.PropertyToID("_Style"), PhaseId = Shader.PropertyToID("_Phase"), AimId = Shader.PropertyToID("_Aim");
+        static readonly int AimId = Shader.PropertyToID("_Aim"), DarkId = Shader.PropertyToID("_Dark");
 
         readonly NetworkVariable<Phase> phase = new();
 
         Vector3 home;
         Phase heard;
-        LineRenderer ring;
         GameObject glowDisc;
         Renderer ink;
         MaterialPropertyBlock block;
         AudioSource sweep;
         Demon target;
-        float retargetAt, phaseEnd, phaseAt;
+        float retargetAt, phaseEnd, phaseAt, dark;
         int strikesLeft;
         bool strikeNext = true;
 
@@ -47,13 +45,12 @@ namespace Demons
             // A demo light (the headquarters' lesson, an Office exhibit) is never the one bots dodge in the Office.
             if (!Demo || !Instance) Instance = this;
             home = transform.position;
-            ring = BuildRing();
             glowDisc = look.transform.Find("Glow").gameObject;
             ink = BuildInk();
             block = new MaterialPropertyBlock();
         }
 
-        // The light drawn in ink on the floor (Balance.spotStyle 1-4), four of its radii across each way.
+        // The aim and the strike drawn in ink on the floor, sixteen of the light's radii across each way.
         Renderer BuildInk()
         {
             var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
@@ -61,7 +58,7 @@ namespace Demons
             quad.name = "Ink";
             quad.transform.SetParent(look.transform, false);
             quad.transform.SetLocalPositionAndRotation(new Vector3(0, 0.02f, 0), Quaternion.Euler(90, 0, 0));
-            quad.transform.localScale = Vector3.one * Balance.I.spotRadius * 2 * 4;
+            quad.transform.localScale = Vector3.one * Balance.I.spotRadius * 2 * 16;
             var r = quad.GetComponent<Renderer>();
             r.sharedMaterial = Resources.Load<Material>("Fx/SpotInk");
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -69,48 +66,21 @@ namespace Demons
             return r;
         }
 
-        // Strike telegraph: a hollow ring the size of the strike, filled in when it lands.
-        LineRenderer BuildRing()
-        {
-            var line = new GameObject("Ring").AddComponent<LineRenderer>();
-            line.transform.SetParent(transform, false);
-            line.useWorldSpace = false;
-            line.loop = true;
-            line.positionCount = 48;
-            line.widthMultiplier = 0.12f;
-            line.sharedMaterial = ringMaterial;
-            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            float radius = Balance.I.spotRadius * Balance.I.strikeScale;
-            for (int i = 0; i < line.positionCount; i++)
-            {
-                float a = i * Mathf.PI * 2 / line.positionCount;
-                line.SetPosition(i, new Vector3(Mathf.Cos(a) * radius, 0.03f, Mathf.Sin(a) * radius));
-            }
-            line.enabled = false;
-            return line;
-        }
-
         void Update()
         {
             bool active = Active;
             bool aiming = active && phase.Value == Phase.Aim;
-            int style = Balance.I.spotStyle;
-            ring.enabled = aiming && style == 0;
-            if (aiming) ring.transform.localScale = new Vector3(1, 0, 1) * (1 + 0.06f * Mathf.Sin(Time.time * 20)) + Vector3.up;
-            // The ink styles draw their own aim on the floor; the lamp stays dark until it strikes.
-            look.SetActive(active && (!aiming || style > 0));
-            glowDisc.SetActive(style == 0);
-            ink.gameObject.SetActive(style > 0);
+            look.SetActive(active);
+            glowDisc.SetActive(!aiming);
             if (phase.Value != heard) phaseAt = Time.time;
             if (phase.Value == Phase.Strike && heard != Phase.Strike) look.transform.localScale = Vector3.one * Scale * 0.55f;
             look.transform.localScale = Vector3.Lerp(look.transform.localScale, Vector3.one * Scale, Time.deltaTime * (phase.Value == Phase.Strike ? 20 : 8));
-            if (style > 0)
-            {
-                block.SetFloat(StyleId, style);
-                block.SetFloat(PhaseId, (float)phase.Value);
-                block.SetFloat(AimId, Mathf.Clamp01((Time.time - phaseAt) / (Balance.I.strikeAim * (Demo ? 0.5f : 1))));
-                ink.SetPropertyBlock(block);
-            }
+            bool striking = active && phase.Value == Phase.Strike;
+            dark = striking ? Mathf.Min(1, dark + Time.deltaTime * 12) : Mathf.Max(0, dark - Time.deltaTime * 4);
+            ink.gameObject.SetActive(aiming || dark > 0);
+            block.SetFloat(AimId, aiming ? Mathf.Clamp((Time.time - phaseAt) / (Balance.I.strikeAim * (Demo ? 0.5f : 1)), 0.001f, 1) : 0);
+            block.SetFloat(DarkId, dark);
+            ink.SetPropertyBlock(block);
             Shine(look.activeSelf && !aiming);
             if (phase.Value != heard && active && !Demo) Audio.Play(Sounds.I.For(phase.Value), transform.position);
             heard = phase.Value;
