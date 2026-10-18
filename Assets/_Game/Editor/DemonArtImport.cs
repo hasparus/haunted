@@ -11,6 +11,7 @@ namespace Demons.Editor
         const string Art = "Assets/_Game/Resources/Art/Demon";
         const float PixelsPerUnit = 320;
 
+
         [MenuItem("Demons/Import Demon Art...")]
         static void Pick()
         {
@@ -18,19 +19,20 @@ namespace Demons.Editor
             if (!string.IsNullOrEmpty(folder)) Import(folder);
         }
 
-        public static void Import(string folder)
+        public static void Import(string folder, string into = Art, float pixelsPerUnit = PixelsPerUnit)
         {
+            Directory.CreateDirectory(into);
             var json = File.ReadAllText(Path.Combine(folder, "pivots.json"));
             var pivots = Regex.Match(json, "\"pivots\":\\s*\\{([^}]*)\\}").Groups[1].Value;
             foreach (Match m in Regex.Matches(pivots, "\"(\\w+)\":\\s*\\[\\s*([-\\d.e]+),\\s*([-\\d.e]+)\\s*\\]"))
             {
-                string name = m.Groups[1].Value, path = $"{Art}/{name}.png";
+                string name = m.Groups[1].Value, path = $"{into}/{name}.png";
                 File.Copy(Path.Combine(folder, name + ".png"), path, true);
                 AssetDatabase.ImportAsset(path);
                 var importer = (TextureImporter)AssetImporter.GetAtPath(path);
                 importer.textureType = TextureImporterType.Sprite;
                 importer.spriteImportMode = SpriteImportMode.Single;
-                importer.spritePixelsPerUnit = PixelsPerUnit;
+                importer.spritePixelsPerUnit = pixelsPerUnit;
                 importer.alphaIsTransparency = true;
                 var settings = new TextureImporterSettings();
                 importer.ReadTextureSettings(settings);

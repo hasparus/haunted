@@ -21,12 +21,18 @@ namespace Demons
         Transform art;
         bool artFound;
 
+        // The office stamp (the shell cracker): drawn at 400 px a metre, its parts placed in the drawing's pixels.
+        const float StampPixels = 400, StampRest = 137, StampLift = 0.4f;
+        static readonly int AloftId = Shader.PropertyToID("_Aloft");
+        Transform stamp, leverLeft, leverRight;
+        float stampAt;
+
         // The station's drawing (desks), or null for the 3D ones.
         public Transform Art
         {
             get
             {
-                if (!artFound) art = GetComponentInChildren<SpriteRenderer>() is { } sprite ? sprite.transform : null;
+                if (!artFound) art = GetComponentInChildren<SpriteRenderer>(true) is { } sprite ? sprite.transform : null;
                 artFound = true;
                 return art;
             }
@@ -43,6 +49,59 @@ namespace Demons
         public bool Locked => !Progression.Has(Requires);
         public bool CanTake => !Locked && !Ringing.Value && Item.Value == Net.None;
         public bool HasWork => !Locked && (Ringing.Value || (Item.Value != Net.None && Kind != StationKind.Pot));
+
+        void Awake()
+        {
+            if (Kind == StationKind.Hammer) BuildStamp();
+        }
+
+        // The thought sits in the stamp's dish, in the drawing's plane like a desk's; a lever either side for two demons.
+        void BuildStamp()
+        {
+            foreach (var r in visual.GetComponentsInChildren<Renderer>()) r.enabled = false;
+            var card = Resources.Load<Material>("Fx/Card");
+            var root = new GameObject("Stamp").transform;
+            root.SetParent(visual.transform, false);
+            root.localPosition = new Vector3(0, 0, -0.5f);
+            root.rotation = Camera.main ? Camera.main.transform.rotation : Quaternion.Euler(48, 0, 0);
+            var block = new MaterialPropertyBlock();
+            Transform Part(string name, Vector2 at, float aloft)
+            {
+                var r = new GameObject(name).AddComponent<SpriteRenderer>();
+                r.sprite = Resources.Load<Sprite>($"Art/Stamp/{name}");
+                r.sharedMaterial = card;
+                r.transform.SetParent(root, false);
+                r.transform.localPosition = at / StampPixels;
+                block.SetFloat(AloftId, aloft);
+                r.SetPropertyBlock(block);
+                return r.transform;
+            }
+            Part("StampDish", Vector2.zero, 0);
+            leverLeft = Part("StampLeverL", new Vector2(-194, 207), 0.01f);
+            leverRight = Part("StampLeverR", new Vector2(193, 207), 0.01f);
+            stamp = Part("StampHead", new Vector2(0, StampRest), 0.6f);
+            Slot.position = root.TransformPoint(new Vector3(0, StampRest / StampPixels, 0)) + root.up * Pebble.SmallRadius;
+        }
+
+        // The stamp hangs over a thought and comes down as the two levers are worked; each lever leans out while worked.
+        void LateUpdate()
+        {
+            if (!stamp) return;
+            var held = Net.Find<Pebble>(Item.Value);
+            float target = held ? 2 * held.LooksRadius + StampLift * (1 - Progress.Value) : 0;
+            stampAt = Mathf.Lerp(stampAt, target, 1 - Mathf.Exp(-Time.deltaTime * (target < stampAt ? 30 : 8)));
+            stamp.localPosition = new Vector3(0, StampRest / StampPixels + stampAt, 0);
+            bool left = false, right = false;
+            foreach (var d in Demon.All)
+                if ((Workers.Value & d.SlotBit) != 0)
+                {
+                    if (SideOf(d.transform.position) < 0) left = true;
+                    else right = true;
+                }
+            float wiggle = 6 * Mathf.Sin(Time.time * 14);
+            leverLeft.localRotation = Quaternion.Euler(0, 0, left ? 22 + wiggle : 0);
+            leverRight.localRotation = Quaternion.Euler(0, 0, right ? -22 - wiggle : 0);
+        }
 
         public override void OnNetworkSpawn()
         {
