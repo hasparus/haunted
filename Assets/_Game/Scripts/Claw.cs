@@ -30,13 +30,77 @@ namespace Demons
 
         bool Active => Demo || (Progression.Instance && Progression.Has(Feature.Claw));
 
-        void Awake() => home = transform.position;
+        // The drawn hand (Art/Hand): open as it reaches, curling on the grab, a fist while it carries; a sleeved arm up
+        // off screen. Without the drawings the old blocky hand stays.
+        const float HandHeight = 1.3f, ArmLength = 7f, GrabTime = 0.15f;
+        static readonly int AloftId = Shader.PropertyToID("_Aloft");
+        Transform drawing;
+        SpriteRenderer handArt;
+        Sprite open, grab, closed;
+        float grabbedAt = -10;
+
+        void Awake()
+        {
+            home = transform.position;
+            BuildDrawing();
+        }
+
+        void BuildDrawing()
+        {
+            open = Resources.Load<Sprite>("Art/Hand/HandOpen");
+            grab = Resources.Load<Sprite>("Art/Hand/HandGrab");
+            closed = Resources.Load<Sprite>("Art/Hand/HandClosed");
+            var arm = Resources.Load<Sprite>("Art/Hand/HandArm");
+            if (!open || !grab || !closed || !arm) return;
+            foreach (var r in look.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
+            var card = Resources.Load<Material>("Fx/Card");
+            var block = new MaterialPropertyBlock();
+            drawing = new GameObject("Drawing").transform;
+            drawing.SetParent(look.transform, false);
+            drawing.position = Hand.position;
+            SpriteRenderer Part(string name, Sprite sprite, float aloft)
+            {
+                var r = new GameObject(name).AddComponent<SpriteRenderer>();
+                r.sprite = sprite;
+                r.sharedMaterial = card;
+                r.transform.SetParent(drawing, false);
+                block.SetFloat(AloftId, aloft);
+                r.SetPropertyBlock(block);
+                return r;
+            }
+            float scale = HandHeight / open.bounds.size.y;
+            handArt = Part("Hand", open, 0.3f);
+            handArt.transform.localScale = Vector3.one * scale;
+            // The arm rises from the wrist, the hand frames' top edge, and stretches up off screen.
+            var armArt = Part("Arm", arm, 0.25f);
+            armArt.transform.localPosition = new Vector3(0, open.bounds.max.y * scale * 0.95f, 0);
+            armArt.transform.localScale = new Vector3(scale, ArmLength / arm.bounds.size.y, 1);
+        }
+
+        void LateUpdate()
+        {
+            if (!drawing || !look.activeSelf) return;
+            if (Camera.main) drawing.rotation = Camera.main.transform.rotation;
+            var now = phase.Value;
+            float since = Time.time - grabbedAt;
+            handArt.sprite = now switch
+            {
+                Phase.Carrying => since < GrabTime ? grab : closed,
+                _ => open,
+            };
+            // A slow sway on the way down, a quick squash as it grabs.
+            float sway = now is Phase.Warning or Phase.Descending ? 4 * Mathf.Sin(Time.time * 5) : 0;
+            drawing.Rotate(0, 0, sway, Space.Self);
+            float squash = now == Phase.Carrying ? Mathf.Clamp01(1 - since / 0.2f) * 0.12f : 0;
+            drawing.localScale = new Vector3(1 + squash, 1 - squash, 1);
+        }
 
         public override void OnNetworkSpawn()
         {
             if (IsServer) phase.Value = Phase.Idle;
             phase.OnValueChanged += (_, now) =>
             {
+                if (now == Phase.Carrying) grabbedAt = Time.time;
                 if (now == Phase.Carrying && !Demo) CameraRig.Shake(0.4f);
                 if (!Demo) Audio.Play(now switch { Phase.Warning => Sounds.I.clawWarning, Phase.Carrying => Sounds.I.clawGrab, _ => null });
             };
