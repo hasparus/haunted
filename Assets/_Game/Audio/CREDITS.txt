@@ -393,11 +393,11 @@ Demons/throwThought.wav  (pole throwThought w Sounds.asset)
   obróbka: obcięta cisza
 
 Demons/dash.wav  (pole dash w Sounds.asset)
-  źródło: 419341__wizardoz__swoosh.ogg
-  autor: WizardOZ (Freesound)
-  URL: https://freesound.org/people/WizardOZ/sounds/419341/
-  licencja: CC0 1.0 (sprawdzone na stronie pliku 17.10.2026)
-  obróbka: fragment 0–1,0 s, wyciszenie 0,05 s na końcu
+  źródło: 521999 "Whoosh / Dash" (podgląd mp3)
+  autor: Kastenfrosch (Freesound)
+  URL: https://freesound.org/people/Kastenfrosch/sounds/521999/
+  licencja: CC0 1.0 (sprawdzone na stronie pliku 18.10.2026)
+  obróbka: obcięta cisza z obu stron, mono 44,1 kHz
 
 Thoughts/placeOnBelt.wav  (pole placeOnBelt w Sounds.asset)
   źródło: impactPlate_light_002.ogg
