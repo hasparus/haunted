@@ -1,5 +1,4 @@
 using Unity.Netcode;
-using Unity.Netcode.Components;
 using UnityEngine;
 
 namespace Demons
@@ -19,7 +18,7 @@ namespace Demons
 
         readonly NetworkVariable<Phase> phase = new();
 
-        Vector3 home;
+        Vector3 home, aimFrom, aimTo;
         Phase heard;
         GameObject glowDisc;
         Renderer ink;
@@ -141,7 +140,11 @@ namespace Demons
             };
             if (phase.Value == Phase.Rest && next == Phase.Aim) strikesLeft = b.strikeCount;
             if (next == Phase.Rest) strikeNext = !strikeNext;
-            if (next == Phase.Aim) GetComponent<NetworkTransform>().Teleport(StrikeAt(), transform.rotation, transform.localScale);
+            if (next == Phase.Aim)
+            {
+                aimFrom = transform.position;
+                aimTo = StrikeAt();
+            }
             phase.Value = next;
             // A rest before a volley is only a beat, so the light never seems stuck before it aims.
             float seconds = next switch { Phase.Rest => strikeNext ? b.spotRest * 0.25f : b.spotRest, Phase.Hunt => b.spotHunt, Phase.Aim => b.strikeAim, _ => b.strikeTime };
@@ -160,7 +163,14 @@ namespace Demons
         void Move()
         {
             float speed = Balance.I.moveSpeed * Balance.I.spotSpeed * Time.deltaTime;
-            if (phase.Value is Phase.Aim or Phase.Strike) return;
+            // Aiming, the light glides onto where it will strike and comes to rest there just as it lands.
+            if (phase.Value == Phase.Aim)
+            {
+                float k = 1 - (phaseEnd - Time.time) / Balance.I.strikeAim;
+                transform.position = Vector3.Lerp(aimFrom, aimTo, Mathf.SmoothStep(0, 1, k));
+                return;
+            }
+            if (phase.Value == Phase.Strike) return;
             if (phase.Value == Phase.Rest)
             {
                 transform.position = Vector3.MoveTowards(transform.position, home, speed);

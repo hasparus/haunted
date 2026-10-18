@@ -71,7 +71,7 @@ namespace Demons
         public float spotHunt = 10f;
         public float spotRest = 6f;
         public int strikeCount = 3;
-        public float strikeAim = 1.3f;
+        public float strikeAim = 1.5f;
         public float strikeTime = 0.7f;
         public float strikeScale = 1.7f;
         public float penSpeed = 0.6f;
