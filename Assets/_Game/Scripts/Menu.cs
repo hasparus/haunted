@@ -19,6 +19,7 @@ namespace Demons
             public VisualElement Element;
             public Action<int> Step;
             public Action Press;
+            public bool Repeat;
         }
 
         static Menu instance;
@@ -68,6 +69,8 @@ namespace Demons
         static void SetOpen(bool open)
         {
             Open = open;
+            pointerHeld = 0;
+            if (!open) PlayerPrefs.Save();
             Audio.Ui(open ? Sounds.I.menuOpen : Sounds.I.menuClose);
             LocalPlayers.SetEnabled(!open);
             if (GameState.Instance && GameState.Instance.IsSpawned) GameState.Instance.PauseRpc(open, PauserSlot);
@@ -132,12 +135,15 @@ namespace Demons
             if (!Open || scrim == null) return;
 
             Rebuild();
-            int move = 0, step = 0;
+            // Polled: the held arrow is rebuilt away as its value changes, so it never sees the release.
+            if (Pointer.current == null || !Pointer.current.press.isPressed) pointerHeld = 0;
+            int move = 0, step = 0, held = pointerHeld;
             bool press = false, back = false;
             if (kb != null)
             {
                 move += Pressed(kb.downArrowKey, kb.sKey) - Pressed(kb.upArrowKey, kb.wKey);
                 step += Pressed(kb.rightArrowKey, kb.dKey) - Pressed(kb.leftArrowKey, kb.aKey);
+                held += Held(kb.rightArrowKey, kb.dKey) - Held(kb.leftArrowKey, kb.aKey);
                 press |= kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame;
             }
             foreach (var pad in Gamepad.all)
@@ -145,6 +151,7 @@ namespace Demons
                 if (Bots.IsBot(pad) || !LocalPlayers.All.Exists(p => p.Device == pad)) continue;
                 move += Pressed(pad.dpad.down, pad.leftStick.down) - Pressed(pad.dpad.up, pad.leftStick.up);
                 step += Pressed(pad.dpad.right, pad.leftStick.right) - Pressed(pad.dpad.left, pad.leftStick.left);
+                held += Held(pad.dpad.right, pad.leftStick.right) - Held(pad.dpad.left, pad.leftStick.left);
                 press |= pad.buttonSouth.wasPressedThisFrame;
                 back |= pad.buttonEast.wasPressedThisFrame;
             }
@@ -166,11 +173,42 @@ namespace Demons
                 row.Step(step);
                 Audio.Ui(Sounds.I.menuChange);
             }
+            Repeat(row, Math.Sign(held));
             if (press)
             {
                 Audio.Ui(Sounds.I.menuSelect);
                 (row.Press ?? (() => row.Step?.Invoke(1)))();
             }
+        }
+
+        static int pointerHeld;
+        float heldFor, repeats, tickAt;
+
+        // Holding a fine setting's arrow steps it, slowly at first and then quickly, so every percent is in reach.
+        void Repeat(Row row, int direction)
+        {
+            if (!row.Repeat || direction == 0)
+            {
+                heldFor = repeats = 0;
+                return;
+            }
+            heldFor += Time.unscaledDeltaTime;
+            if (heldFor < 0.35f) return;
+            repeats += Mathf.Lerp(12, 90, (heldFor - 0.35f) / 2) * Time.unscaledDeltaTime;
+            int n = (int)repeats;
+            if (n == 0) return;
+            repeats -= n;
+            row.Step(direction * n);
+            if (Time.unscaledTime < tickAt) return;
+            tickAt = Time.unscaledTime + 0.08f;
+            Audio.Ui(Sounds.I.menuChange);
+        }
+
+        static int Held(params ButtonControl[] buttons)
+        {
+            foreach (var b in buttons)
+                if (b.isPressed) return 1;
+            return 0;
         }
 
         static int Pressed(params ButtonControl[] buttons)
@@ -224,10 +262,10 @@ namespace Demons
             Action<int> toggleShake = _ => CameraRig.ShakeEnabled = !CameraRig.ShakeEnabled;
             AddRow(display, "Screen shake", toggleShake, null).Add(Value(CameraRig.ShakeEnabled ? "On" : "Off", toggleShake));
             var audio = UI.Box("group", panel);
-            Action<int> music = step => Audio.MusicLevel = StepLevel(Audio.MusicLevel, step);
-            AddRow(audio, "Music", music, null).Add(Value($"{Audio.MusicLevel * 100:0}%", music));
-            Action<int> sound = step => Audio.SoundLevel = StepLevel(Audio.SoundLevel, step);
-            AddRow(audio, "Sounds", sound, null).Add(Value($"{Audio.SoundLevel * 100:0}%", sound));
+            Action<int> music = step => Audio.MusicSetting = StepLevel(Audio.MusicSetting, step, Audio.MaxMusic);
+            AddRow(audio, "Music", music, null, true).Add(Value($"{Audio.MusicSetting * 100:0}%", music, true));
+            Action<int> sound = step => Audio.SoundSetting = StepLevel(Audio.SoundSetting, step, Audio.MaxSound);
+            AddRow(audio, "Sounds", sound, null, true).Add(Value($"{Audio.SoundSetting * 100:0}%", sound, true));
             var actions = UI.Box("group", panel);
             AddRow(actions, "Resume", null, Hide).AddToClassList("row--primary");
             if (Progression.Instance is { IsSpawned: true, IsServer: true } run)
@@ -263,8 +301,7 @@ namespace Demons
             }
         }
 
-        // Tenths, wrapping from 100% back to 0% when cycled with Enter.
-        static float StepLevel(float level, int step) => (Mathf.RoundToInt(level * 10) + step + 11) % 11 / 10f;
+        static float StepLevel(float level, int step, float max) => Mathf.Clamp(Mathf.Round(level * 100) + step, 0, max * 100) / 100f;
 
         static int ScaleIndex => Mathf.Clamp(PlayerPrefs.GetInt(ScaleKey, 0), 0, Scales.Length - 1);
 
@@ -331,13 +368,13 @@ namespace Demons
             AddRow(block, "Leave", null, () => LocalPlayers.Leave(player));
         }
 
-        VisualElement AddRow(VisualElement parent, string label, Action<int> step, Action press)
+        VisualElement AddRow(VisualElement parent, string label, Action<int> step, Action press, bool repeat = false)
         {
             var row = new VisualElement();
             row.AddToClassList("row");
             row.Add(Text(label, "row-label"));
             int index = rows.Count;
-            rows.Add(new Row { Element = row, Step = step, Press = press });
+            rows.Add(new Row { Element = row, Step = step, Press = press, Repeat = repeat });
             // On movement, not enter: a rebuild (say, after a colour change) puts a fresh row under a resting pointer.
             row.RegisterCallback<PointerMoveEvent>(_ =>
             {
@@ -354,17 +391,17 @@ namespace Demons
             return row;
         }
 
-        static VisualElement Value(string text, Action<int> step)
+        static VisualElement Value(string text, Action<int> step, bool repeat = false)
         {
             var value = new VisualElement();
             value.AddToClassList("value");
-            if (step != null) value.Add(Arrow(step, -1));
+            if (step != null) value.Add(Arrow(step, -1, repeat));
             value.Add(Text(text, "value-text"));
-            if (step != null) value.Add(Arrow(step, 1));
+            if (step != null) value.Add(Arrow(step, 1, repeat));
             return value;
         }
 
-        static VisualElement Arrow(Action<int> step, int direction)
+        static VisualElement Arrow(Action<int> step, int direction, bool repeat)
         {
             var arrow = new VisualElement();
             arrow.AddToClassList("arrow");
@@ -372,6 +409,7 @@ namespace Demons
             var chevron = new VisualElement();
             chevron.AddToClassList("chevron");
             arrow.Add(chevron);
+            if (repeat) arrow.RegisterCallback<PointerDownEvent>(_ => pointerHeld = direction);
             arrow.RegisterCallback<ClickEvent>(e =>
             {
                 step(direction);
