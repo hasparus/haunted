@@ -26,7 +26,7 @@ namespace Demons
 
         static readonly string[] DayCards =
         {
-            "MONDAY\nThe Host is standing in front of the skyscraper with his new office in it, checking the address on his phone again. Good. We want him doubting it all the way to the door.\nFirst day at the new job. Everyone smiles a little too much.\n\nGrab the thoughts, haunt them on the desks, bring them back to the conveyor belt.",
+            "MONDAY\nThe Host is standing in front of the skyscraper with his new office in it, checking the address on his phone again. Good. We want him doubting it all the way to the door.\n\nGrab the thoughts, haunt them on the desks, bring them back to the conveyor belt.",
             "TUESDAY\nThe Host opened the office fridge and his yogurt is gone, the one with his name on it. It's only a yogurt, so we'll have to work to make it matter.\n\nBig thoughts take long. Haunt them together.",
             "WEDNESDAY\nThe Host's boss wants to see him in his office to talk about something. Doesn't say what. We'll fill that in for him.\n214 unread emails.\n\nIT finally sent a tool: the pot. Drop a thought in and it haunts itself.",
             "THURSDAY\nThe Host has to send an introduction email, two or three sentences about himself. It's not much to work with, but we've done more with less.\nHe's getting defensive.\n\nShelled thoughts need the hammer first.",
