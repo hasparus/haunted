@@ -28,7 +28,6 @@ namespace Demons
 
         readonly List<Row> rows = new();
         int cursor;
-        Label title;
         string shape;
         VisualElement scrim, panel;
 
@@ -133,7 +132,6 @@ namespace Demons
             if (!Open || scrim == null) return;
 
             Rebuild();
-            if (GameState.Instance) UI.Set(title, GameState.Instance.PausedTitle);
             int move = 0, step = 0;
             bool press = false, back = false;
             if (kb != null)
@@ -204,8 +202,7 @@ namespace Demons
             panel.Clear();
             rows.Clear();
             var head = UI.Box("menu-head", panel);
-            title = UI.Text(GameState.Instance ? GameState.Instance.PausedTitle : "Paused", "title", UI.Jolly);
-            head.Add(title);
+            head.Add(UI.Text("Paused", "title", UI.Jolly));
             head.Add(Text(Version, "version"));
 
             if (players.Count == 0) panel.Add(Text("Nobody has joined yet.", "empty"));

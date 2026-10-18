@@ -93,6 +93,32 @@ namespace Demons
             StartCouch();
         }
 
+        readonly RoomHandoff handoff = new();
+
+        // Starts Netcode for a booked room only once it exists, so the couch game (and everyone's demons) keeps running
+        // through signing in and booking instead of vanishing for those seconds.
+        class RoomHandoff : INetworkHandler
+        {
+            public async Task StartAsync(NetworkConfiguration configuration)
+            {
+                var net = NetworkManager.Singleton;
+                if (net.IsListening) net.Shutdown();
+                while (net.ShutdownInProgress) await Task.Yield();
+                var transport = net.GetComponent<UnityTransport>();
+                net.NetworkConfig.NetworkTransport = transport;
+                transport.SetRelayServerData(configuration.RelayServerData);
+                bool started = configuration.Role == NetworkRole.Client ? net.StartClient() : net.StartHost();
+                if (!started) throw new InvalidOperationException("Netcode didn't start for the room.");
+            }
+
+            public Task StopAsync()
+            {
+                var net = NetworkManager.Singleton;
+                if (net && net.IsListening) net.Shutdown();
+                return Task.CompletedTask;
+            }
+        }
+
         public async Task GoOnline(bool host)
         {
             busy = true;
@@ -102,23 +128,19 @@ namespace Demons
                 if (UnityServices.State != ServicesInitializationState.Initialized) await UnityServices.InitializeAsync();
                 if (!AuthenticationService.Instance.IsSignedIn) await AuthenticationService.Instance.SignInAnonymouslyAsync();
 
-                if (net.IsListening) net.Shutdown();
-                while (net.ShutdownInProgress) await Task.Yield();
-                net.NetworkConfig.NetworkTransport = GetComponent<UnityTransport>();
-
                 var network = new NetworkOptions { RelayProtocol = RelayProtocol.WSS };
                 if (host)
                 {
                     status = "Creating session...";
                     session = await MultiplayerService.Instance.CreateSessionAsync(
-                        new SessionOptions { MaxPlayers = Scoring.MaxDemons }.WithRelayNetwork().WithNetworkOptions(network));
+                        new SessionOptions { MaxPlayers = Scoring.MaxDemons }.WithRelayNetwork().WithNetworkOptions(network).WithNetworkHandler(handoff));
                     status = $"Online. Join code: {session.Code}";
                 }
                 else
                 {
                     status = "Joining...";
                     session = await MultiplayerService.Instance.JoinSessionByCodeAsync(
-                        joinCode.Trim().ToUpperInvariant(), new JoinSessionOptions().WithNetworkOptions(network));
+                        joinCode.Trim().ToUpperInvariant(), new JoinSessionOptions().WithNetworkOptions(network).WithNetworkHandler(handoff));
                     status = $"Online. Joined {session.Code}";
                 }
             }
