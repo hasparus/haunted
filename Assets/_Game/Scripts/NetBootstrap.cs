@@ -179,14 +179,25 @@ namespace Demons
             {
                 Debug.LogException(e);
                 if (refusal != "") await BackToCouch("", refusal, "Couldn't join");
-                else await BackToCouch("", host
-                    ? "Couldn't book a room. Check your connection and try again."
-                    : $"Room {joinCode.Trim().ToUpperInvariant()} isn't on the calendar. Double-check the code with your host.");
+                else await BackToCouch("", host ? "Couldn't book a room. Check your connection and try again." : JoinFailure(e, joinCode.Trim().ToUpperInvariant()));
             }
             busy = false;
             // The room can close between connecting and the booking going through.
             if (session != null && !host && !net.IsConnectedClient) Dropped(net.DisconnectReason);
         }
+
+        static string JoinFailure(Exception e, string code) => e switch
+        {
+            SessionException { Error: SessionError.SessionNotFound or SessionError.InvalidParameter } =>
+                $"Room {code} isn't on the calendar. Double-check the code with your host.",
+            SessionException { Error: SessionError.RateLimitExceeded } => "Too many attempts. Give it a minute, then try again.",
+            // ponytail: a mistyped code and a full room both come back as unknown errors, told apart only by the message
+            SessionException typo when typo.Message.Contains("invalid character") =>
+                $"Room {code} isn't on the calendar. Double-check the code with your host.",
+            SessionException full when full.Message.Contains("full") => Full,
+            SessionException => $"Couldn't get into room {code}. Ask your host to check it's still open, then try again.",
+            _ => "Couldn't reach the room. Check your connection and try again.",
+        };
 
         public static NetBootstrap Instance { get; private set; }
 

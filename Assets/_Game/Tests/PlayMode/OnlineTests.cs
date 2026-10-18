@@ -14,10 +14,6 @@ namespace Demons.PlayTests
     {
         static readonly string RoomFile = System.Environment.GetEnvironmentVariable("DEMONS_ROOM_FILE");
 
-        // Two editors on one machine also trip over the editor's own tooling; only the game's state decides these tests.
-        [SetUp]
-        public void SetUp() => LogAssert.ignoreFailingMessages = true;
-
         [UnityTearDown]
         public IEnumerator TearDown()
         {
@@ -40,6 +36,8 @@ namespace Demons.PlayTests
 
         static IEnumerator Couch(Bot bot)
         {
+            // Two editors on one machine also trip over the editor's own tooling; only the game's state decides these tests.
+            LogAssert.ignoreFailingMessages = true;
             SceneManager.LoadScene("Headquarters");
             yield return Until(() => GameState.Instance && GameState.Instance.IsSpawned, 10, "Headquarters never came online");
             bot.Press(GamepadButton.South);
@@ -94,6 +92,24 @@ namespace Demons.PlayTests
                 yield return null;
             }
             Assert.AreEqual(1, Demon.All.Count, "a guest's demon stayed behind");
+        }
+
+        [UnityTest, Timeout(120000)]
+        public IEnumerator AWrongCodeIsNotOnTheCalendar()
+        {
+            var bot = Bots.Add();
+            yield return Couch(bot);
+            var boot = NetBootstrap.Instance;
+            foreach (var code in new[] { "ZZZZZZ", "BCDFGH" })
+            {
+                // The services limit how often one player tries to join.
+                yield return new WaitForSecondsRealtime(15);
+                boot.Join(code);
+                yield return Until(() => boot.Error != "", 60, $"joining {code} never failed");
+                StringAssert.Contains("isn't on the calendar", boot.Error);
+                boot.DismissError();
+                yield return Until(() => boot.CanGoOnline && GameState.Instance && GameState.Instance.IsSpawned && bot.Demon, 15, "the couch game never came back");
+            }
         }
 
         [UnityTest, Timeout(300000)]
