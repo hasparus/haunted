@@ -78,6 +78,7 @@ namespace Demons
                 orb.SetPropertyBlock(block);
                 state.HeldAt = at;
                 state.HeldSortedAt = sorted;
+                state.HeldRadius = orb.transform.lossyScale.x / 2;
             }
             rig.Pose(state, Facing, ahead.normalized);
         }

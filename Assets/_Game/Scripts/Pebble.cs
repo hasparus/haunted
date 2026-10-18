@@ -57,6 +57,8 @@ namespace Demons
         public bool Hauntable => !Shelled.Value;
         public const float SmallRadius = 0.25f;
         public float Radius => col.radius;
+        // How big it looks: a shell sits a quarter outside the stone.
+        public float LooksRadius => Radius * (Shelled.Value ? 1.24f : 1);
         public float Weight => Kind.Value == PebbleKind.Big ? Balance.I.bigWeight : 1;
         public float Points => Kind.Value == PebbleKind.Big ? Balance.I.bigPoints : 1;
 
@@ -306,7 +308,8 @@ namespace Demons
                     transform.position = Belt.Instance.PointAt(BeltDistance);
                     break;
                 case PebbleState.Held when Net.Find<Demon>(Anchor.Value) is { } demon:
-                    transform.position = demon.HoldAt;
+                    // A bigger thought is held further out, so it doesn't sink into the holder.
+                    transform.position = demon.HoldAt + demon.transform.forward * (LooksRadius - SmallRadius);
                     break;
                 case PebbleState.Held when Net.Find<Claw>(Anchor.Value) is { } claw:
                     transform.position = claw.Hand.position;

@@ -7,6 +7,7 @@ namespace Demons
         public int Head;
         public bool Lit, Haunting, Dashing, Holding;
         public Vector3 HeldAt, HeldSortedAt;
+        public float HeldRadius;
     }
 
     public class DemonRig : MonoBehaviour
@@ -140,6 +141,7 @@ namespace Demons
                 Holding = held,
                 HeldAt = held ? held.transform.position : default,
                 HeldSortedAt = held ? held.SortedAt : default,
+                HeldRadius = held ? held.LooksRadius : Pebble.SmallRadius,
             }, facing, ahead);
         }
 
@@ -235,8 +237,8 @@ namespace Demons
                 grip.sprite = sideways ? gripSide : facingAway ? gripBack[i] : gripFront[i];
                 grip.flipX = sideways && facingLeft;
                 grip.transform.SetPositionAndRotation(
-                    state.HeldAt + transform.TransformVector(sideways ? new Vector3(facingLeft ? 0.25f : -0.25f, 0.1f, 0)
-                        : new Vector3(side * (facingAway ? 0.165f : Grip), 0.09f, 0)), transform.rotation);
+                    state.HeldAt + transform.TransformVector(Vector3.Scale(sideways ? new Vector3(facingLeft ? 0.25f : -0.25f, 0.1f, 0)
+                        : new Vector3(side * (facingAway ? 0.165f : Grip), 0.09f, 0), new Vector3(state.HeldRadius / Pebble.SmallRadius, 1, 1))), transform.rotation);
             }
         }
 
