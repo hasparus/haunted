@@ -85,10 +85,20 @@ namespace Demons
             foreach (var t in copy.GetComponentsInChildren<TrailRenderer>()) Destroy(t);
             // Sorted as scenery like the pipe, at its real depth, so the rim hides it as it sinks.
             foreach (var r in copy.GetComponentsInChildren<Renderer>())
-                foreach (var m in r.materials)
-                    if (m.HasProperty("_Scenery")) m.EnableKeyword("_SCENERY");
+                if (r is not TrailRenderer)
+                    foreach (var m in r.materials)
+                        if (m.HasProperty("_Scenery")) m.EnableKeyword("_SCENERY");
             swallowing.Add((copy, copy.position, copy.lossyScale, Time.time));
             spring.Punch(new Vector3(0.12f, -0.1f, 0.12f));
+        }
+
+        // The copy's materials are its own (Swallow made them scenery), so they go with it.
+        static void Gone(Transform thought)
+        {
+            foreach (var r in thought.GetComponentsInChildren<Renderer>())
+                foreach (var m in r.sharedMaterials)
+                    Destroy(m);
+            Destroy(thought.gameObject);
         }
 
         void Update()
@@ -99,7 +109,7 @@ namespace Demons
                 float age = Time.time - born;
                 if (!thought || age > SlideTime + GulpTime)
                 {
-                    if (thought) Destroy(thought.gameObject);
+                    if (thought) Gone(thought);
                     swallowing.RemoveAt(i);
                     continue;
                 }

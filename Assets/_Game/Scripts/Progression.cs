@@ -30,10 +30,13 @@ namespace Demons
             "TUESDAY\nBig thoughts take long. Haunt them together.",
             "WEDNESDAY\n214 unread emails. IT finally sent a tool: the pot.\nDrop a thought in and it haunts itself.",
             "THURSDAY\nHe's getting defensive.\nShelled thoughts need the hammer first.",
-            "FRIDAY\nTherapy at five. Homework: write it all down.\nStay out of the light. Mash or wiggle off the pen.",
+            "FRIDAY\nTherapy at five.\nStay out of the light.",
             "SATURDAY\nNew meds. The waiting-room music won't stop.\nWhen he takes a pill, controls flip.",
             "SUNDAY\nMom keeps calling. He tries to pull himself together.\nAnswer the phone. Save thoughts from his hand.",
         };
+
+        // Friday, halfway to the goal.
+        const string PenCard = "HOMEWORK\nWrite it all down. Mash or wiggle off the pen.";
 
         static readonly (Feature feature, string card)[] SurvivalCards =
         {
@@ -90,6 +93,7 @@ namespace Demons
         public NetworkVariable<int> Cracks = new();
         public NetworkVariable<float> Sealing = new();
         public NetworkVariable<bool> Signing = new();
+        public NetworkVariable<bool> PenArrived = new();
 
         // True while the host types a name for the leaderboard; game input and menus stay out of the way.
         public static bool Typing { get; private set; }
@@ -129,7 +133,8 @@ namespace Demons
 
         public static bool Has(Feature f) => f == Feature.None || !Instance || Instance.Unlocked(f);
 
-        bool Unlocked(Feature f) => Day.Value >= UnlockDay(f);
+        // In the week the pen comes halfway through its day (PenArrived); in Survival with its stage.
+        bool Unlocked(Feature f) => Day.Value > UnlockDay(f) || Day.Value == UnlockDay(f) && (f != Feature.Pen || Mode.Value != GameMode.Week || PenArrived.Value);
 
         public static bool Interrupting(Feature f) => Instance && Instance.IsSpawned && Instance.Interrupt.Value == f;
 
@@ -216,6 +221,7 @@ namespace Demons
             InvertedUntil.Value = 0;
             PillAt.Value = 0;
             Interrupt.Value = Feature.None;
+            PenArrived.Value = false;
             Best.Value = PlayerPrefs.GetFloat(BestKey, 0);
             startTime = Now;
             StartedAt.Value = startTime;
@@ -299,6 +305,7 @@ namespace Demons
             for (int i = 0; i < dayStartPrestige.Length && i < state.Prestige.Count; i++) state.Prestige[i] = dayStartPrestige[i];
             Cracks.Value = 0;
             Sealing.Value = 0;
+            PenArrived.Value = false;
             foreach (var pebble in Pebble.All.ToArray()) pebble.Consume();
         }
 
@@ -370,6 +377,13 @@ namespace Demons
                         ShowCard(DayCards[Day.Value], hold: true, stars: stars);
                         if (Day.Value == UnlockDay(Feature.Pill)) nextPill = Now + 12;
                     }
+                }
+                else if (Day.Value == UnlockDay(Feature.Pen) && !PenArrived.Value && influence >= (dayStartInfluence + DayGoal.Value) / 2)
+                {
+                    PenArrived.Value = true;
+                    // The next session is the pen's, so it's met while the card is still fresh.
+                    lastInterrupt = Feature.Therapist;
+                    ShowCard(PenCard, 3, hold: true);
                 }
             }
             else

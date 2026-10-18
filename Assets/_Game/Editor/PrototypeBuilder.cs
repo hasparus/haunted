@@ -306,7 +306,7 @@ namespace Demons.Editor
 
         // The headquarters' workstations again, far out of the Office's sight and reach, each on its own patch of
         // headquarters floor and filmed by its own camera onto a window in the dark past the Office's left wall. Two
-        // arriving on one day hang one above the other.
+        // arriving on one day hang one above the other, but for the light and the pen: one window, one after the other.
         static void BuildExhibits(Camera cam)
         {
             int i = 0;
@@ -316,7 +316,8 @@ namespace Demons.Editor
                 for (var f = Feature.None; f <= Feature.Claw; f++)
                     if (Progression.Introduces(day, f)) mechanics.Add(f);
                 for (int m = 0; m < mechanics.Count; m++)
-                    BuildExhibit(mechanics[m], new Vector3(-300 + i++ * 40, 0, -300), cam, mechanics.Count == 1 ? 0.5f : m == 0 ? 0.7f : 0.28f);
+                    BuildExhibit(mechanics[m], new Vector3(-300 + i++ * 40, 0, -300), cam,
+                        mechanics.Count == 1 || mechanics[m] is Feature.Therapist or Feature.Pen ? 0.5f : m == 0 ? 0.7f : 0.28f);
             }
         }
 
