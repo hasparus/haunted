@@ -141,7 +141,7 @@ namespace Demons
             Sort();
         }
 
-        const float FallTime = 1.1f, FallFrom = 3f, BounceTime = 0.6f, BounceHeight = 0.22f, BigLift = 0.08f;
+        const float FallTime = 1.1f, FallFrom = 3f, BounceTime = 0.6f, BounceHeight = 0.22f, BigLift = 0.115f;
 
         // Seconds since it appeared at the start of the belt, or infinity for any other thought.
         float Fresh => State.Value == PebbleState.OnBelt && BeltFrom.Value == 0 ? (float)(Now - BeltSince.Value) : float.PositiveInfinity;
