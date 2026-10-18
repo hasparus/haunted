@@ -319,7 +319,8 @@ namespace Demons
             reviewing = showReview;
             if (showReview) RefreshReview(state, progress);
 
-            bool showPaused = live && state.Paused && !Menu.Open && !showCard;
+            // Never for our own pause: the server's word that it's over arrives a moment after our menu closes.
+            bool showPaused = live && state.Paused && !Menu.Open && !showCard && state.Pauser is not { IsOwner: true };
             UI.Show(paused.parent, showPaused);
             if (showPaused) UI.Set(paused, state.PausedTitle);
 

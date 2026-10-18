@@ -31,7 +31,9 @@ namespace Demons
         // The slot of a demon whose player has the game paused, or -1 (a card holding it, or nobody's demon).
         public NetworkVariable<int> PausedBy = new(-1);
 
-        public string PausedTitle => Demon.All.Find(d => d.Slot.Value == PausedBy.Value) is { } by ? $"Paused by {UI.Tinted(by.Name, by.Tint)}" : "Paused";
+        public Demon Pauser => Demon.All.Find(d => d.Slot.Value == PausedBy.Value);
+
+        public string PausedTitle => Pauser is { } by ? UI.Tinted($"Paused by {by.Name}", by.Tint) : "Paused";
 
         static bool wasPaused;
 
