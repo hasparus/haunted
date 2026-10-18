@@ -80,7 +80,8 @@ namespace Demons.PlayTests
                 File.WriteAllText(RoomFile, boot.Code);
                 yield return Until(() => Demon.All.Exists(d => d.OwnerClientId != NetworkManager.ServerClientId), 180, "no guest's demon walked in",
                     () => Steady("while a guest joins"));
-                for (int i = 0; i < 120; i++)
+                float until = Time.realtimeSinceStartup + 10;
+                while (Time.realtimeSinceStartup < until)
                 {
                     Steady("with a guest");
                     yield return null;

@@ -12,6 +12,8 @@ namespace Demons
     {
         UnityTransport room;
 
+        public event Action Lost;
+
         public bool OpenRoom(RelayServerData relay)
         {
             room = GetComponent<UnityTransport>();
@@ -37,8 +39,17 @@ namespace Demons
             room = null;
         }
 
-        void Forward(NetworkEvent kind, ulong clientId, ArraySegment<byte> payload, float receiveTime) =>
-            InvokeOnTransportEvent(kind, clientId, payload, receiveTime);
+        // A failed relay takes down only the room, not the couch game it runs under.
+        void Forward(NetworkEvent kind, ulong clientId, ArraySegment<byte> payload, float receiveTime)
+        {
+            if (kind != NetworkEvent.TransportFailure)
+            {
+                InvokeOnTransportEvent(kind, clientId, payload, receiveTime);
+                return;
+            }
+            CloseRoom();
+            Lost?.Invoke();
+        }
 
         protected override void OnEarlyUpdate()
         {
