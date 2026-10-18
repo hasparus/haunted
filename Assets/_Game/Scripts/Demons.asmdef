@@ -5,6 +5,7 @@
     "Unity.Netcode.Runtime",
     "Unity.InputSystem",
     "Unity.Collections",
+    "Unity.Networking.Transport",
     "Unity.Services.Core",
     "Unity.Services.Authentication",
     "Unity.Services.Multiplayer",
