@@ -20,7 +20,7 @@ namespace Demons
 
         NetworkManager net;
         ISession session;
-        string status = "", joinCode = "";
+        string status = "", joinCode = "", refusal = "";
         bool busy;
 
         void Start()
@@ -35,13 +35,11 @@ namespace Demons
             net.NetworkConfig.ConnectionApproval = true;
             net.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(Application.version);
             net.ConnectionApprovalCallback = Approve;
-            net.OnClientStopped += wasHost =>
+            net.OnClientStopped += _ =>
             {
-                if (session == null || busy) return;
-                string reason = net.DisconnectReason;
-                string title = reason == Closed ? "Room closed" : reason == Full || reason.StartsWith("Different builds") ? "Couldn't join" : "Disconnected";
-                _ = BackToCouch("", string.IsNullOrEmpty(reason) ? "Lost connection to the room." : reason, title);
+                if (session != null && !busy) Dropped(net.DisconnectReason);
             };
+            GetComponent<CouchTransport>().Lost += RoomLost;
 
             var args = Environment.GetCommandLineArgs();
             int i = Array.IndexOf(args, "-join");
@@ -55,12 +53,24 @@ namespace Demons
 
         void StartCouch()
         {
-            net.NetworkConfig.NetworkTransport = GetComponent<OfflineTransport>();
+            net.NetworkConfig.NetworkTransport = GetComponent<CouchTransport>();
             net.StartHost();
         }
 
+        void Dropped(string reason)
+        {
+            string title = reason == Closed ? "Room closed" : reason == Full || reason.StartsWith("Different builds") ? "Couldn't join" : "Disconnected";
+            _ = BackToCouch("", string.IsNullOrEmpty(reason) ? "Lost connection to the room." : reason, title);
+        }
+
+        // The host's room went away under the couch game (relay failure, or the services dropped it); the game plays on.
+        void RoomLost()
+        {
+            if (session != null && !busy) Dropped("");
+        }
+
         const string Closed = "The host closed the room.";
-        const string Full = "The room is full: four demons already work there. CPU demons step aside for people, so ask the host to remove one.";
+        const string Full = "The room is full: four demons already work there. Bots step aside for people, so ask the host to remove one.";
 
         static void Approve(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
         {
@@ -87,49 +97,92 @@ namespace Demons
                 try { await leaving.LeaveAsync(); }
                 catch (Exception e) { Debug.LogException(e); }
             }
-            if (net.IsListening && net.NetworkConfig.NetworkTransport is OfflineTransport) return;
+            if (net.IsListening && net.NetworkConfig.NetworkTransport is CouchTransport couch)
+            {
+                couch.CloseRoom();
+                return;
+            }
             if (net.IsListening) net.Shutdown();
             while (net.ShutdownInProgress) await Task.Yield();
             StartCouch();
         }
 
+        readonly RoomHandoff handoff = new();
+
+        // A host opens its booked room under the running couch game. A guest has to swap the couch game for the host's,
+        // but only once the room exists, so everyone keeps playing through signing in and booking.
+        class RoomHandoff : INetworkHandler
+        {
+            public async Task StartAsync(NetworkConfiguration configuration)
+            {
+                var net = NetworkManager.Singleton;
+                if (configuration.Role != NetworkRole.Client)
+                {
+                    if (!net.GetComponent<CouchTransport>().OpenRoom(configuration.RelayServerData)) throw new InvalidOperationException("The room's relay didn't start.");
+                    return;
+                }
+                if (net.IsListening) net.Shutdown();
+                while (net.ShutdownInProgress) await Task.Yield();
+                var transport = net.GetComponent<UnityTransport>();
+                net.NetworkConfig.NetworkTransport = transport;
+                transport.SetRelayServerData(configuration.RelayServerData);
+                if (net.StartClient())
+                    while (net.IsListening && !net.IsConnectedClient) await Task.Yield();
+                if (net.IsConnectedClient) return;
+                Instance.refusal = string.IsNullOrEmpty(net.DisconnectReason) ? "Couldn't reach the room. Check your connection and try again." : net.DisconnectReason;
+                throw new InvalidOperationException(Instance.refusal);
+            }
+
+            public Task StopAsync()
+            {
+                var net = NetworkManager.Singleton;
+                if (net && net.NetworkConfig.NetworkTransport is CouchTransport couch)
+                {
+                    couch.CloseRoom();
+                    Instance.RoomLost();
+                }
+                else if (net && net.IsListening) net.Shutdown();
+                return Task.CompletedTask;
+            }
+        }
+
         public async Task GoOnline(bool host)
         {
             busy = true;
+            refusal = "";
             try
             {
                 status = "Signing in...";
                 if (UnityServices.State != ServicesInitializationState.Initialized) await UnityServices.InitializeAsync();
                 if (!AuthenticationService.Instance.IsSignedIn) await AuthenticationService.Instance.SignInAnonymouslyAsync();
 
-                if (net.IsListening) net.Shutdown();
-                while (net.ShutdownInProgress) await Task.Yield();
-                net.NetworkConfig.NetworkTransport = GetComponent<UnityTransport>();
-
                 var network = new NetworkOptions { RelayProtocol = RelayProtocol.WSS };
                 if (host)
                 {
                     status = "Creating session...";
                     session = await MultiplayerService.Instance.CreateSessionAsync(
-                        new SessionOptions { MaxPlayers = Scoring.MaxDemons }.WithRelayNetwork().WithNetworkOptions(network));
+                        new SessionOptions { MaxPlayers = Scoring.MaxDemons }.WithRelayNetwork().WithNetworkOptions(network).WithNetworkHandler(handoff));
                     status = $"Online. Join code: {session.Code}";
                 }
                 else
                 {
                     status = "Joining...";
                     session = await MultiplayerService.Instance.JoinSessionByCodeAsync(
-                        joinCode.Trim().ToUpperInvariant(), new JoinSessionOptions().WithNetworkOptions(network));
+                        joinCode.Trim().ToUpperInvariant(), new JoinSessionOptions().WithNetworkOptions(network).WithNetworkHandler(handoff));
                     status = $"Online. Joined {session.Code}";
                 }
             }
             catch (Exception e)
             {
                 Debug.LogException(e);
-                await BackToCouch("", host
+                if (refusal != "") await BackToCouch("", refusal, "Couldn't join");
+                else await BackToCouch("", host
                     ? "Couldn't book a room. Check your connection and try again."
                     : $"Room {joinCode.Trim().ToUpperInvariant()} isn't on the calendar. Double-check the code with your host.");
             }
             busy = false;
+            // The room can close between connecting and the booking going through.
+            if (session != null && !host && !net.IsConnectedClient) Dropped(net.DisconnectReason);
         }
 
         public static NetBootstrap Instance { get; private set; }

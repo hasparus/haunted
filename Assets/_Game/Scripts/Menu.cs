@@ -47,7 +47,7 @@ namespace Demons
             scrim.style.display = DisplayStyle.None;
             scrim.RegisterCallback<ClickEvent>(e =>
             {
-                if (e.target == scrim) Show(false);
+                if (e.target == scrim) Hide();
             });
             panel = new VisualElement();
             panel.AddToClassList("panel");
@@ -55,13 +55,33 @@ namespace Demons
             root.Add(scrim);
         }
 
-        static void Show(bool open)
+        static InputDevice opener;
+
+        static void ShowFor(InputDevice by)
+        {
+            opener = by;
+            SetOpen(true);
+        }
+
+        static void Hide() => SetOpen(false);
+
+        static void SetOpen(bool open)
         {
             Open = open;
             Audio.Ui(open ? Sounds.I.menuOpen : Sounds.I.menuClose);
             LocalPlayers.SetEnabled(!open);
-            if (GameState.Instance && GameState.Instance.IsSpawned) GameState.Instance.PauseRpc(open);
+            if (GameState.Instance && GameState.Instance.IsSpawned) GameState.Instance.PauseRpc(open, PauserSlot);
             if (instance) instance.Present(open);
+        }
+
+        // The demon of the local player whose device opened the menu (the first local one if none), for "Paused by".
+        public static int PauserSlot
+        {
+            get
+            {
+                var player = LocalPlayers.All.Find(p => p.Device == opener) ?? LocalPlayers.All.Find(p => !Bots.IsBot(p.Device));
+                return player != null && LocalPlayers.DemonOf(player) is { } demon ? demon.Slot.Value : -1;
+            }
         }
 
         void Present(bool open)
@@ -101,10 +121,14 @@ namespace Demons
             if (scrim != null) Fade();
             if (NetBootstrap.TypingCode || Progression.Typing) return;
             var kb = Keyboard.current;
-            bool toggle = kb != null && kb.escapeKey.wasPressedThisFrame;
+            InputDevice by = kb != null && kb.escapeKey.wasPressedThisFrame ? kb : null;
             foreach (var pad in Gamepad.all)
-                if (!Bots.IsBot(pad) && pad.startButton.wasPressedThisFrame) toggle = true;
-            if (toggle) Show(!Open);
+                if (!Bots.IsBot(pad) && pad.startButton.wasPressedThisFrame) by = pad;
+            if (by != null)
+            {
+                if (Open) Hide();
+                else ShowFor(by);
+            }
             if (!Open || scrim == null) return;
 
             Rebuild();
@@ -126,11 +150,16 @@ namespace Demons
             }
             if (back)
             {
-                Show(false);
+                Hide();
                 return;
             }
             if (rows.Count == 0) return;
-            if (move != 0) Focus((cursor + move + rows.Count) % rows.Count);
+            int moved = (cursor + move + rows.Count) % rows.Count;
+            if (moved != cursor)
+            {
+                Audio.Ui(Sounds.I.menuMove);
+                Focus(moved);
+            }
             var row = rows[cursor];
             if (step != 0 && row.Step != null)
             {
@@ -151,9 +180,9 @@ namespace Demons
             return 0;
         }
 
+        // Moving with keys or a stick clicks (where the move happens); a pointer just hovering is silent.
         void Focus(int index)
         {
-            if (index != cursor) Audio.Ui(Sounds.I.menuMove);
             cursor = index;
             for (int i = 0; i < rows.Count; i++) rows[i].Element.EnableInClassList("row--focus", i == cursor);
         }
@@ -200,17 +229,17 @@ namespace Demons
             Action<int> sound = step => Audio.SoundLevel = StepLevel(Audio.SoundLevel, step);
             AddRow(audio, "Sounds", sound, null).Add(Value($"{Audio.SoundLevel * 100:0}%", sound));
             var actions = UI.Box("group", panel);
-            AddRow(actions, "Resume", null, () => Show(false)).AddToClassList("row--primary");
+            AddRow(actions, "Resume", null, Hide).AddToClassList("row--primary");
             if (Progression.Instance is { IsSpawned: true, IsServer: true } run)
                 AddRow(actions, "Back to the HQ", null, () =>
                 {
-                    Show(false);
+                    Hide();
                     run.BackToHq();
                 });
             if (NetBootstrap.Instance is { Online: true } boot)
                 AddRow(actions, boot.IsServer ? "Close online room" : "Leave online room", null, () =>
                 {
-                    Show(false);
+                    Hide();
                     boot.Leave();
                 });
             if (!LocalPlayers.InBrowser && !Application.isEditor) AddRow(actions, "Quit", null, Application.Quit);

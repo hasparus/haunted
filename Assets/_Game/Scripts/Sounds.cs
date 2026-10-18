@@ -91,7 +91,7 @@ namespace Demons
         [Tooltip("Cursor moves between rows")] public AudioClip[] menuMove;
         [Tooltip("Left/right on a row")] public AudioClip[] menuChange;
         public AudioClip[] menuSelect;
-        [Tooltip("HUD buttons: host, join, CPU demons")] public AudioClip[] button;
+        [Tooltip("HUD buttons: host, join, bots")] public AudioClip[] button;
 
         public AudioClip[] For(Spotlight.Phase phase) => phase switch
         {

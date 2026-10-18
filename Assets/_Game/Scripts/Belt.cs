@@ -1,5 +1,6 @@
 using Unity.Netcode;
 using UnityEngine;
+using static Demons.Navigator;
 
 namespace Demons
 {
@@ -47,9 +48,28 @@ namespace Demons
 
         static readonly int TravelId = Shader.PropertyToID("_BeltTravel");
 
+        // The hum comes from the stretch of belt nearest a local player's demon, panned with it and fading as they walk
+        // away, down to a faint floor; with nobody local it stays centred at that floor.
+        const float HumReach = 7, HumFloor = 0.2f;
+
+        (Vector3? at, float near) Hum()
+        {
+            Vector3? at = null;
+            float best = float.MaxValue;
+            foreach (var d in Demon.All)
+            {
+                if (!d.IsOwner || Bots.IsBot(d)) continue;
+                var p = ClosestPoint(d.transform.position);
+                float dist = Flat(p - d.transform.position);
+                if (dist < best) (best, at) = (dist, p);
+            }
+            return (at, at == null ? HumFloor : Mathf.Lerp(1, HumFloor, Mathf.Clamp01(best / HumReach)));
+        }
+
         void Update()
         {
-            hum = Audio.Loop(hum, this, IsSpawned ? Sounds.I.conveyorLoop : null, null, Sounds.I.ambienceVolume);
+            var (at, near) = Hum();
+            hum = Audio.Loop(hum, this, IsSpawned ? Sounds.I.conveyorLoop : null, at, Sounds.I.ambienceVolume * near);
             // Haunted/Paper scrolls the belt's slats by this; wrapped at a whole number of slats so it never jumps.
             if (IsSpawned) Shader.SetGlobalFloat(TravelId, (float)(Travel(Net.Now) % 1000));
             if (!IsServer || Demon.All.Count == 0) return;

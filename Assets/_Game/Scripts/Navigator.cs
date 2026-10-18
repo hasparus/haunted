@@ -7,6 +7,9 @@ namespace Demons
     {
         const float Cell = 0.5f;
 
+        // Distance across the floor, ignoring height.
+        public static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
+
         static bool[,] blocked;
         static int width, height;
         static Vector2 half;

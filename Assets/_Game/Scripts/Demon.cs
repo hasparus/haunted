@@ -280,8 +280,8 @@ namespace Demons
             if (!IsOwner) rb.interpolation = RigidbodyInterpolation.None;
             if (!IsOwner) return;
             input = LocalPlayers.Find(LocalIndex.Value);
-            // The player left before this demon arrived, or the index was reused: nobody drives it.
-            if (input == null || All.Exists(d => d != this && d.IsOwner && d.LocalIndex.Value == LocalIndex.Value))
+            // The player left before this demon arrived: nobody drives it.
+            if (input == null)
             {
                 input = null;
                 LeaveRpc();

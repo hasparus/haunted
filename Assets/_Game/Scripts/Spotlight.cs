@@ -1,5 +1,6 @@
 using Unity.Netcode;
 using UnityEngine;
+using static Demons.Navigator;
 
 namespace Demons
 {
@@ -195,6 +196,5 @@ namespace Demons
             transform.position = Vector3.MoveTowards(transform.position, goal, speed);
         }
 
-        static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
     }
 }

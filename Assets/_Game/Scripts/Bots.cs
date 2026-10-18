@@ -135,12 +135,12 @@ namespace Demons
             return bot;
         }
 
-        public static void AddCpu()
+        public static void AddOne()
         {
             if (Demon.All.Count + All.FindAll(b => !b.Demon).Count < Scoring.MaxDemons) Add().Auto = true;
         }
 
-        public static void RemoveCpu()
+        public static void RemoveOne()
         {
             if (All.Count > 0) Remove(All[^1]);
         }

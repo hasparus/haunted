@@ -27,18 +27,22 @@ jobs:
           - name: WebGL
             target: WebGL
             channel: html5
+            build: haunted
             path: build/WebGL/haunted
           - name: Windows
             target: StandaloneWindows64
             channel: windows
+            build: My Demons Inc
             path: build/StandaloneWindows64
           - name: macOS
             target: StandaloneOSX
             channel: mac
+            build: My Demons Inc
             path: build/StandaloneOSX
           - name: Linux
             target: StandaloneLinux64
             channel: linux
+            build: My Demons Inc
             path: build/StandaloneLinux64
     steps:
       - name: Add swap (Unity import can OOM on hosted runners)
@@ -78,7 +82,7 @@ jobs:
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           targetPlatform: ${{ matrix.target }}
-          buildName: haunted
+          buildName: ${{ matrix.build }}
           versioning: Custom
           version: ${{ steps.version.outputs.value }}
           dockerShmSize: 4g
@@ -94,22 +98,26 @@ jobs:
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           targetPlatform: ${{ matrix.target }}
-          buildName: haunted
+          buildName: ${{ matrix.build }}
           versioning: Custom
           version: ${{ steps.version.outputs.value }}
           dockerShmSize: 4g
           dockerMemoryLimit: 22g
 
+      - name: Drop build leftovers
+        if: ${{ !inputs.targets || contains(inputs.targets, matrix.target) }}
+        run: sudo find "${{ matrix.path }}" -maxdepth 2 -type d \( -name '*_BackUpThisFolder_ButDontShipItWithYourGame' -o -name '*_BurstDebugInformation_DoNotShip' \) -prune -exec rm -rf {} +
+
       # Zipped here because upload-artifact drops executable bits.
       - name: Zip build
         if: startsWith(github.ref, 'refs/tags/')
-        run: cd "${{ matrix.path }}" && zip -qry "$GITHUB_WORKSPACE/haunted-${{ matrix.channel }}.zip" .
+        run: cd "${{ matrix.path }}" && zip -qry "$GITHUB_WORKSPACE/my-demons-inc-${{ matrix.channel }}.zip" .
 
       - uses: actions/upload-artifact@v4
         if: startsWith(github.ref, 'refs/tags/')
         with:
           name: ${{ matrix.channel }}
-          path: haunted-${{ matrix.channel }}.zip
+          path: my-demons-inc-${{ matrix.channel }}.zip
           retention-days: 3
 
       - name: Push to itch.io

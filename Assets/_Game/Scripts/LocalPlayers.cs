@@ -111,7 +111,7 @@ namespace Demons
                 if (pad.buttonSouth.wasPressedThisFrame) TryJoin("Gamepad", pad);
         }
 
-        public static Demon DemonOf(LocalPlayer player) => Demon.All.Find(d => d.IsOwner && d.LocalIndex.Value == player.Index);
+        public static Demon DemonOf(LocalPlayer player) => Demon.All.Find(d => d.IsOwner && d.IsSpawned && d.LocalIndex.Value == player.Index);
 
         public static void Leave(LocalPlayer player)
         {

@@ -28,6 +28,10 @@ namespace Demons
 
         public NetworkVariable<float> Influence = new();
         public NetworkVariable<double> PausedFor = new(), PausedAt = new(-1);
+        // The slot of a demon whose player has the game paused, or -1 (a card holding it, or nobody's demon).
+        public NetworkVariable<int> PausedBy = new(-1);
+
+        public string PausedTitle => Demon.All.Find(d => d.Slot.Value == PausedBy.Value) is { } by ? $"Paused by {UI.Tinted(by.Name, by.Tint)}" : "Paused";
 
         static bool wasPaused;
 
@@ -50,7 +54,8 @@ namespace Demons
         }
 
         // Paused while anyone, on any machine, has the menu open, or while the boss's card waits to be read.
-        readonly HashSet<ulong> pausers = new();
+        // Each machine with its menu open, and the slot of the demon whose player opened it.
+        readonly Dictionary<ulong, int> pausers = new();
         public NetworkVariable<bool> Held = new();
         double heldSince;
 
@@ -73,16 +78,24 @@ namespace Demons
         void LetGo()
         {
             Held.Value = false;
-            SetPaused(pausers.Count > 0);
+            Repause();
             // The held card goes the moment someone gets back to work; Hud burns it out.
             if (Progression.Instance) Progression.Instance.CardUntil.Value = Now;
         }
 
         [Rpc(SendTo.Server)]
-        public void PauseRpc(bool pause, RpcParams rpc = default)
+        public void PauseRpc(bool pause, int by = -1, RpcParams rpc = default)
         {
-            if (pause) pausers.Add(rpc.Receive.SenderClientId);
+            if (pause) pausers[rpc.Receive.SenderClientId] = by;
             else pausers.Remove(rpc.Receive.SenderClientId);
+            Repause();
+        }
+
+        void Repause()
+        {
+            int by = -1;
+            foreach (var slot in pausers.Values) by = slot;
+            PausedBy.Value = by;
             SetPaused(pausers.Count > 0 || Held.Value);
         }
 
@@ -99,7 +112,7 @@ namespace Demons
 
         void Dropped(ulong client)
         {
-            if (pausers.Remove(client)) SetPaused(pausers.Count > 0 || Held.Value);
+            if (pausers.Remove(client)) Repause();
         }
 
         public override void OnNetworkDespawn()
@@ -118,11 +131,10 @@ namespace Demons
         {
             Navigator.Invalidate();
             BotBrain.ClearClaims();
-            if (Menu.Open) PauseRpc(true);
+            if (Menu.Open) PauseRpc(true, Menu.PauserSlot);
             foreach (var d in Demon.All)
                 if (d.IsOwner) d.Respawn();
-            foreach (var p in LocalPlayers.All)
-                if (!Demon.All.Exists(d => d.IsOwner && d.LocalIndex.Value == p.Index)) RequestDemonRpc(p.Index);
+            demonCheckAt = 0;
             if (!IsServer) return;
             NetworkManager.OnClientDisconnectCallback += Dropped;
             Influence.Value = 0;
@@ -134,9 +146,10 @@ namespace Demons
         [Rpc(SendTo.Server)]
         public void RequestDemonRpc(int localIndex, RpcParams rpc = default)
         {
+            if (Demon.All.Exists(d => d.OwnerClientId == rpc.Receive.SenderClientId && d.LocalIndex.Value == localIndex)) return;
             int slot = 0;
             bool fromBot = rpc.Receive.SenderClientId == NetworkManager.ServerClientId && Bots.IsBot(LocalPlayers.Find(localIndex)?.Device);
-            if (Demon.All.Count >= Scoring.MaxDemons && !fromBot && Bots.All.Find(b => b.Demon) is { } cpu) Bots.Remove(cpu);
+            if (Demon.All.Count >= Scoring.MaxDemons && !fromBot && Bots.All.Find(b => b.Demon) is { } bot) Bots.Remove(bot);
             while (slot < Scoring.MaxDemons && Demon.All.Exists(d => d.Slot.Value == slot)) slot++;
             if (slot == Scoring.MaxDemons) return;
 
@@ -160,8 +173,21 @@ namespace Demons
             pebble.Consume();
         }
 
+        float demonCheckAt;
+
+        // A local player can end up without a demon when the network restarts (hosting, joining, leaving a room) while
+        // the old demon is still being torn down; ask again until one arrives.
+        void EnsureDemons()
+        {
+            if (!IsSpawned || Time.unscaledTime < demonCheckAt) return;
+            demonCheckAt = Time.unscaledTime + 1;
+            foreach (var p in LocalPlayers.All)
+                if (LocalPlayers.DemonOf(p) == null) RequestDemonRpc(p.Index);
+        }
+
         void Update()
         {
+            EnsureDemons();
             if (IsSpawned && Paused != wasPaused)
             {
                 wasPaused = Paused;
@@ -169,7 +195,7 @@ namespace Demons
             }
             if (IsSpawned && Held.Value && !Menu.Open && LocalPlayers.All.Exists(p => !Bots.IsBot(p.Device) && (p.Use.WasPressedThisFrame() || p.Grab.WasPressedThisFrame())))
                 LetGoRpc();
-            // Nobody to press anything when only CPU demons play, e.g. the soak tests.
+            // Nobody to press anything when only bots play, e.g. the soak tests.
             if (IsServer && IsSpawned && Held.Value && Demon.All.TrueForAll(Bots.IsBot) && NetworkManager.ServerTime.Time - heldSince >= BotsOnlyHold)
                 LetGo();
             if (!IsServer || loading || string.IsNullOrEmpty(startSceneWhenAllFall) || Demon.All.Count == 0) return;

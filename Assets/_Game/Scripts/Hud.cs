@@ -9,10 +9,10 @@ namespace Demons
     {
         static readonly string[] Columns = { "Revenue", "Haunts", "Deliveries", "Assists", "Throws", "Dashes" };
 
-        VisualElement top, scores, crackPips, review, net, offline, joining, online, notice, cpu, cardWrap, reviewWrap, table, sign;
+        VisualElement top, scores, crackPips, review, net, offline, joining, online, notice, botRow, cardWrap, reviewWrap, table, sign;
         Label day, dayInfo, revenue, netStatus, noticeTitle, noticeBody, paused, reviewTitle, reviewBody, reviewStat, signHint, signWait;
         TextField code, signature;
-        Button removeCpu;
+        Button removeBot;
         VisualElement footer;
         string footerShape;
         string tableShape, reviewText;
@@ -160,9 +160,9 @@ namespace Demons
             joining.Add(code);
             UI.Button("Join", () => NetBootstrap.Instance.Join(code.value), joining).AddToClassList("button--primary");
             UI.Button("Cancel", () => NetBootstrap.Instance.CancelJoin(), joining);
-            cpu = UI.Box("hud-net-row", net);
-            UI.Button("+ CPU demon", Bots.AddCpu, cpu);
-            removeCpu = UI.Button("\u2212 CPU demon", Bots.RemoveCpu, cpu);
+            botRow = UI.Box("hud-net-row", net);
+            removeBot = UI.Button("Remove a bot", Bots.RemoveOne, botRow);
+            UI.Button("Add a bot", Bots.AddOne, botRow);
             online = UI.Box("hud-net-row", net);
             Button copy = null;
             copy = UI.Button("Copy code", () =>
@@ -319,7 +319,9 @@ namespace Demons
             reviewing = showReview;
             if (showReview) RefreshReview(state, progress);
 
-            UI.Show(paused.parent, live && state.Paused && !Menu.Open && !showCard);
+            bool showPaused = live && state.Paused && !Menu.Open && !showCard;
+            UI.Show(paused.parent, showPaused);
+            if (showPaused) UI.Set(paused, state.PausedTitle);
 
             var hintNow = (live ? LocalPlayers.All.Count : -1, live && state.IsLobby, Progression.Typing);
             if (hintNow != hintFor)
@@ -416,8 +418,8 @@ namespace Demons
             if (!boot) return;
             UI.Show(offline, show && boot.CanGoOnline && !NetBootstrap.TypingCode);
             UI.Show(joining, show && NetBootstrap.TypingCode);
-            UI.Show(cpu, show && lobby && boot.IsServer);
-            UI.Show(removeCpu, Bots.All.Count > 0);
+            UI.Show(botRow, show && lobby && boot.IsServer);
+            UI.Reserve(removeBot, Bots.All.Count > 0);
             UI.Show(online, show && boot.Online);
             UI.Show(notice, !string.IsNullOrEmpty(boot.Error) && !Menu.Open);
             UI.Set(noticeBody, boot.Error);

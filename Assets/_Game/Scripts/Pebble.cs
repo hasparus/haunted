@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
+using static Demons.Navigator;
 
 namespace Demons
 {
@@ -447,8 +448,6 @@ namespace Demons
         }
 
         bool Grounded(Vector3 at) => Physics.Raycast(at, Vector3.down, col.radius + 0.08f, ~0, QueryTriggerInteraction.Ignore);
-
-        static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
 
         public void Grip(Claw claw)
         {
