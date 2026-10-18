@@ -28,7 +28,7 @@ namespace Demons
         readonly SpriteRenderer[] arms = new SpriteRenderer[2], grips = new SpriteRenderer[2];
         readonly float[] angle = new float[2], reach = { 1, 1 };
         MaterialPropertyBlock block;
-        float flash, walked, throwAt = -10, throwSide;
+        float flash, walked, throwAt = -10, throwSide, noiseSeed;
         Vector3 lastPosition;
         bool sideways, facingLeft, facingAway;
         RigState state;
@@ -97,6 +97,7 @@ namespace Demons
         {
             Load();
             block = new MaterialPropertyBlock();
+            noiseSeed = Random.value * 100;
             legs = Part("Legs");
             body = Part("Body");
             body.transform.localScale = new Vector3(BodyWidth, 1, 1);
@@ -194,7 +195,16 @@ namespace Demons
                     length = k < 0.3f ? 1 : 1.3f;
                 }
                 else if (state.Haunting)
-                    target = (sideways ? 135 : 150) + 22 * Mathf.Sin(t * 9 + i * Mathf.PI);
+                {
+                    // Dancing with the arms out to the sides, one up as the other goes down, each on its own noise and
+                    // flung straight now and then; in profile, waving wildly in front.
+                    float k = noiseSeed + i * 17.3f;
+                    float wild = (Mathf.PerlinNoise(t * 2.7f, k) - 0.5f) * 2, jitter = Mathf.PerlinNoise(t * 11, k + 40) - 0.5f;
+                    target = sideways
+                        ? Mathf.Min(110 + 50 * wild + 30 * jitter, 160)
+                        : 85 + 35 * Mathf.Sin(t * 7 + i * Mathf.PI) + 12 * wild + 20 * jitter;
+                    length = 1 + 0.35f * Mathf.Clamp01(Mathf.PerlinNoise(t * 4.1f, k + 80) * 2 - 0.6f);
+                }
                 else if (state.Dashing)
                 {
                     target = sideways ? -80 : 65;
