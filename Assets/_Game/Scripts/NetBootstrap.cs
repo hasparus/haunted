@@ -153,7 +153,10 @@ namespace Demons
             try
             {
                 status = "Signing in...";
-                if (UnityServices.State != ServicesInitializationState.Initialized) await UnityServices.InitializeAsync();
+                // A fresh anonymous player per launch: two tabs or windows on one machine would otherwise be one player,
+                // and the services refuse a player joining a room they're already in.
+                if (UnityServices.State != ServicesInitializationState.Initialized)
+                    await UnityServices.InitializeAsync(new InitializationOptions().SetProfile($"p{Guid.NewGuid():N}"[..30]));
                 if (!AuthenticationService.Instance.IsSignedIn) await AuthenticationService.Instance.SignInAnonymouslyAsync();
 
                 var network = new NetworkOptions { RelayProtocol = RelayProtocol.WSS };

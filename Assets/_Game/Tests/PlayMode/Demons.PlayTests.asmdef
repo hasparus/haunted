@@ -1,6 +1,6 @@
 {
   "name": "Demons.PlayTests",
-  "references": ["Demons", "Unity.Netcode.Runtime", "Unity.InputSystem", "Unity.Services.Core", "Unity.Services.Authentication", "UnityEngine.TestRunner", "Unity.RenderPipelines.Universal.Runtime"],
+  "references": ["Demons", "Unity.Netcode.Runtime", "Unity.InputSystem", "UnityEngine.TestRunner", "Unity.RenderPipelines.Universal.Runtime"],
   "overrideReferences": true,
   "precompiledReferences": ["nunit.framework.dll"],
   "autoReferenced": false,

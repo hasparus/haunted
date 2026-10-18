@@ -2,8 +2,6 @@ using System.Collections;
 using System.IO;
 using NUnit.Framework;
 using Unity.Netcode;
-using Unity.Services.Authentication;
-using Unity.Services.Core;
 using UnityEngine;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.SceneManagement;
@@ -105,9 +103,6 @@ namespace Demons.PlayTests
             var bot = Bots.Add();
             yield return Couch(bot);
             var boot = NetBootstrap.Instance;
-            // Both test editors run on one machine, which would otherwise sign them in as the same player.
-            var signIn = UnityServices.InitializeAsync(new InitializationOptions().SetProfile("guest"));
-            yield return Until(() => signIn.IsCompleted, 30, "Unity services never started");
             yield return Until(() => File.Exists(RoomFile), 180, "the host never wrote a room code");
             boot.Join(File.ReadAllText(RoomFile));
             yield return Until(() => boot.Online && NetworkManager.Singleton.IsConnectedClient, 60, $"never joined: {boot.Error}");
