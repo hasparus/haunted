@@ -24,8 +24,12 @@ namespace Demons
         // The office stamp (the shell cracker): drawn at 400 px a metre, its parts placed in the drawing's pixels.
         const float StampPixels = 400, StampRest = 137, StampLift = 0.4f;
         static readonly int AloftId = Shader.PropertyToID("_Aloft");
-        Transform stamp, leverLeft, leverRight;
+        Transform stamp, leverLeft, leverRight, helper;
         float stampAt;
+        int helperSide = 1;
+
+        // In headquarters a grey stand-in demon (the old drawing) works the stamp's other lever, so one player can try it.
+        static bool HelperOn => GameState.Instance && GameState.Instance.IsLobby;
 
         // The station's drawing (desks), or null for the 3D ones.
         public Transform Art
@@ -77,10 +81,20 @@ namespace Demons
                 return r.transform;
             }
             Part("StampDish", Vector2.zero, 0);
-            leverLeft = Part("StampLeverL", new Vector2(-194, 207), 0.01f);
-            leverRight = Part("StampLeverR", new Vector2(193, 207), 0.01f);
+            leverLeft = Part("StampLeverL", new Vector2(-194, 207), 0.3f);
+            leverRight = Part("StampLeverR", new Vector2(193, 207), 0.3f);
             stamp = Part("StampHead", new Vector2(0, StampRest), 0.6f);
             Slot.position = root.TransformPoint(new Vector3(0, StampRest / StampPixels, 0)) + root.up * Pebble.SmallRadius;
+
+            var stand = new GameObject("Helper").AddComponent<SpriteRenderer>();
+            stand.sprite = Resources.Load<Sprite>("Art/Devil_Front");
+            stand.sharedMaterial = card;
+            stand.color = new Color(0.62f, 0.62f, 0.64f);
+            stand.transform.SetParent(visual.transform, false);
+            stand.transform.rotation = root.rotation;
+            stand.transform.localScale = Vector3.one * 1.3f / stand.sprite.bounds.size.y;
+            helper = stand.transform;
+            helper.gameObject.SetActive(false);
         }
 
         // The stamp hangs over a thought and comes down as the two levers are worked; each lever leans out while worked.
@@ -98,6 +112,20 @@ namespace Demons
                     if (SideOf(d.transform.position) < 0) left = true;
                     else right = true;
                 }
+            bool helping = HelperOn;
+            helper.gameObject.SetActive(helping);
+            if (helping)
+            {
+                if (left != right) helperSide = left ? 1 : -1;
+                var at = SidePoint(helperSide);
+                at.y = transform.position.y;
+                helper.position = at;
+                if (left || right)
+                {
+                    left = true;
+                    right = true;
+                }
+            }
             float wiggle = 6 * Mathf.Sin(Time.time * 14);
             leverLeft.localRotation = Quaternion.Euler(0, 0, left ? 22 + wiggle : 0);
             leverRight.localRotation = Quaternion.Euler(0, 0, right ? -22 - wiggle : 0);
@@ -233,7 +261,7 @@ namespace Demons
                     break;
                 case StationKind.Hammer:
                     useful = pebble.Shelled.Value ? Hands() : (byte)0;
-                    n = useful != 0 && (Demon.All.Count < 2 || BothSides(useful)) ? 1 : 0;
+                    n = useful != 0 && (Demon.All.Count < 2 || HelperOn || BothSides(useful)) ? 1 : 0;
                     duration = Balance.I.hammerTime;
                     break;
                 default:
