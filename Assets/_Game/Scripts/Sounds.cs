@@ -11,6 +11,7 @@ namespace Demons
         [Tooltip("Infinite Survival")] public AudioClip survivalMusic;
         [Tooltip("Waiting-room music while the meds flip controls. Falls back to the mode's music")] public AudioClip pillMusic;
         [Tooltip("Performance Review at the end of a run. Falls back to the mode's music")] public AudioClip reviewMusic;
+        [Tooltip("Extra tracks rotated in with the headquarters, week and survival music: each picks at random from its own track plus these")] public AudioClip[] extraMusic;
         [Tooltip("Layered on the week music while the spotlight hunts. Same tempo, length and sample rate as weekMusic: it starts with it and only fades")] public AudioClip tensionLayer;
 
         [Header("Ambience (looped)")]
@@ -21,6 +22,7 @@ namespace Demons
         [Range(0, 1)] public float musicVolume = 0.54f;
         [Range(0, 1), Tooltip("Music volume multiplier while paused")] public float pausedMusic = 0.4f;
         [Tooltip("Crossfade seconds between tracks")] public float musicFade = 1f;
+        [Tooltip("Seconds a rotated track plays at least: after that it changes to another random one when it reaches its end")] public float musicRotate = 90f;
         [Range(0, 1)] public float sfxVolume = 1f;
         [Range(0, 1)] public float uiVolume = 0.8f;
         [Range(0, 1), Tooltip("Belt hum and room tone, on top of sfxVolume")] public float ambienceVolume = 0.4f;

@@ -54,6 +54,10 @@ namespace Demons
         int next;
         AudioSource music, fading, tension, room;
         float tense;
+        // Rotation between a mode's own track and Sounds.extraMusic.
+        AudioClip mode, chosen;
+        float chosenAt;
+        int lastSample;
 
         static bool Paused => GameState.Instance && GameState.Instance.IsSpawned && GameState.Instance.Paused;
 
@@ -155,7 +159,7 @@ namespace Demons
         void Update()
         {
             var s = Sounds.I;
-            var want = Wanted(s);
+            var want = Rotated(s, Wanted(s));
             if (want != music.clip)
             {
                 (music, fading) = (fading, music);
@@ -203,6 +207,47 @@ namespace Demons
             // While silent, snap back onto the week music if a pause or a loop seam let it slip.
             if (week && clip && week.isPlaying && tension.volume == 0 && week.timeSamples < clip.samples && Mathf.Abs(tension.timeSamples - week.timeSamples) > 2048)
                 tension.timeSamples = week.timeSamples;
+        }
+
+        // Headquarters, week and survival music share their slot with the extra tracks: a random one plays,
+        // and once it has played musicRotate seconds it gives way to another at the end of its loop.
+        AudioClip Rotated(Sounds s, AudioClip want)
+        {
+            bool rotates = want && s.extraMusic is { Length: > 0 } && (want == s.headquartersMusic || want == s.weekMusic || want == s.survivalMusic);
+            if (!rotates)
+            {
+                mode = chosen = want;
+                return want;
+            }
+            if (want != mode)
+            {
+                mode = want;
+                chosen = Pick(s, want, null);
+                chosenAt = Time.unscaledTime;
+                lastSample = 0;
+                return chosen;
+            }
+            if (!Paused && music.clip == chosen && music.isPlaying)
+            {
+                bool wrapped = music.timeSamples < lastSample;
+                lastSample = music.timeSamples;
+                if (wrapped && Time.unscaledTime - chosenAt >= s.musicRotate)
+                {
+                    chosen = Pick(s, mode, chosen);
+                    chosenAt = Time.unscaledTime;
+                    lastSample = 0;
+                }
+            }
+            return chosen;
+        }
+
+        static AudioClip Pick(Sounds s, AudioClip own, AudioClip not)
+        {
+            var pool = new List<AudioClip> { own };
+            foreach (var clip in s.extraMusic)
+                if (clip && !pool.Contains(clip)) pool.Add(clip);
+            if (pool.Count > 1 && not) pool.Remove(not);
+            return pool[Random.Range(0, pool.Count)];
         }
 
         static AudioClip Wanted(Sounds s)

@@ -440,3 +440,24 @@ Stations/hammerLoop.wav  (pole hammerLoop w Sounds.asset)
   URL: https://freesound.org/people/Tallis0410/sounds/707511/
   licencja: CC0 1.0 (sprawdzone na stronie pliku 17.10.2026)
   obróbka: pętla 8 s z fragmentu 11.5–19.5 s, przejście 1 s
+
+Music/mus_cute_ghost_story.ogg
+  źródło: mmaudio-a-cute-ghost-story-512522.mp3 ("A Cute Ghost Story")
+  autor: MMAudio (Pixabay)
+  URL: https://pixabay.com/music/eccentric-quirky-a-cute-ghost-story-512522/
+  licencja: Pixabay Content License (wg strony utworu); bez oznaczenia Content ID i bez oznaczenia AI generated (sprawdzone 18.10.2026)
+  obróbka: mp3 -> ogg
+
+Music/mus_silly_little_mischief.ogg
+  źródło: jorisvermeer-silly-little-mischief-604330.mp3 ("Silly Little Mischief")
+  autor: JorisVermeer (Pixabay)
+  URL: https://pixabay.com/music/cartoons-silly-little-mischief-604330/
+  licencja: Pixabay Content License (wg strony utworu); bez oznaczenia Content ID i bez oznaczenia AI generated (sprawdzone 18.10.2026)
+  obróbka: mp3 -> ogg
+
+Music/mus_mischievous_wizard.ogg
+  źródło: luis_humanoide-the-mischievous-wizard-311524.mp3 ("The Mischievous Wizard")
+  autor: Luis_Humanoide (Pixabay)
+  URL: https://pixabay.com/music/fantasy-dreamy-childrens-the-mischievous-wizard-311524/
+  licencja: Pixabay Content License (wg strony utworu); bez oznaczenia Content ID i bez oznaczenia AI generated (sprawdzone 18.10.2026)
+  obróbka: mp3 -> ogg

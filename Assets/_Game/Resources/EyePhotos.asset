@@ -14,23 +14,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Demons::Demons.EyePhotos
   days:
   - photo: {fileID: 2800000, guid: 2bdc0a854442f480380f457037193378, type: 3}
-    offset: {x: 0, y: 0}
-    zoom: 1
+    offset: {x: 0, y: 0.31499988}
+    zoom: 0.64822686
   - photo: {fileID: 2800000, guid: 2d0a9b4f773ba4e13b62dc7e078494ac, type: 3}
-    offset: {x: 0, y: 0}
-    zoom: 1
+    offset: {x: 0.02, y: 0.1}
+    zoom: 0.4093112
   - photo: {fileID: 2800000, guid: 51f1f36d04e214fdeaa2715a39b5718d, type: 3}
-    offset: {x: 0, y: 0}
-    zoom: 1
+    offset: {x: 0, y: 0.16999997}
+    zoom: 0.3477799
   - photo: {fileID: 2800000, guid: 97362af290b6d4a3087bd4a8b18317fc, type: 3}
-    offset: {x: 0, y: 0}
-    zoom: 1
+    offset: {x: 0, y: 0.135}
+    zoom: 0.40335804
   - photo: {fileID: 2800000, guid: b1ebadfdace0a471a8b428b1c174d8b4, type: 3}
-    offset: {x: 0, y: 0}
-    zoom: 1
+    offset: {x: 0, y: 0.089999996}
+    zoom: 0.46739748
   - photo: {fileID: 2800000, guid: 6667d938bc3754fd9be1a8eb647d8b3b, type: 3}
-    offset: {x: 0, y: 0}
-    zoom: 1
+    offset: {x: -0.000000007450581, y: 0.14999999}
+    zoom: 0.38305295
   - photo: {fileID: 2800000, guid: ef9441702c67c4138a4c0dd158add7b4, type: 3}
     offset: {x: 0, y: 0}
-    zoom: 1
+    zoom: 0.45658693
