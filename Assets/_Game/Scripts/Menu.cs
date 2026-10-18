@@ -130,7 +130,7 @@ namespace Demons
                 return;
             }
             if (rows.Count == 0) return;
-            if (move != 0) Focus((cursor + move + rows.Count) % rows.Count);
+            if (move != 0) Focus((cursor + move + rows.Count) % rows.Count, sound: true);
             var row = rows[cursor];
             if (step != 0 && row.Step != null)
             {
@@ -151,9 +151,10 @@ namespace Demons
             return 0;
         }
 
-        void Focus(int index)
+        // Moving with keys or a stick clicks; a pointer just hovering is silent.
+        void Focus(int index, bool sound = false)
         {
-            if (index != cursor) Audio.Ui(Sounds.I.menuMove);
+            if (sound && index != cursor) Audio.Ui(Sounds.I.menuMove);
             cursor = index;
             for (int i = 0; i < rows.Count; i++) rows[i].Element.EnableInClassList("row--focus", i == cursor);
         }
