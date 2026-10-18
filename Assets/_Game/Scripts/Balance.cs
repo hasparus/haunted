@@ -44,7 +44,7 @@ namespace Demons
         [Header("Stations")]
         public float stampTime = 1f;
         public float bigWeight = 3f;
-        public float bigPoints = 5f;
+        public float bigPoints = 3.5f;
         public float potTime = 4f;
         public float hammerTime = 1.2f;
         public float answerTime = 3f;
