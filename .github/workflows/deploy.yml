@@ -100,6 +100,10 @@ jobs:
           dockerShmSize: 4g
           dockerMemoryLimit: 22g
 
+      - name: Drop build leftovers
+        if: ${{ !inputs.targets || contains(inputs.targets, matrix.target) }}
+        run: sudo find "${{ matrix.path }}" -maxdepth 2 -type d \( -name '*_BackUpThisFolder_ButDontShipItWithYourGame' -o -name '*_BurstDebugInformation_DoNotShip' \) -prune -exec rm -rf {} +
+
       # Zipped here because upload-artifact drops executable bits.
       - name: Zip build
         if: startsWith(github.ref, 'refs/tags/')
