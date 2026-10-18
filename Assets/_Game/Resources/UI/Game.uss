@@ -350,6 +350,7 @@
 .hud-chip-dot {
     width: 10px;
     height: 10px;
+    flex-shrink: 0;
     border-radius: 5px;
     margin-right: 6px;
 }
@@ -573,7 +574,7 @@
     width: 44px;
     height: 44px;
     margin: 0 6px;
-    color: var(--navy-raised);
+    color: rgba(185, 198, 234, 0.45);
     transition-property: scale;
     transition-duration: 0.25s;
     transition-timing-function: ease-out-back;
@@ -590,7 +591,15 @@
     color: var(--muted);
     -unity-text-align: middle-center;
     white-space: normal;
-    margin: 2px 0 10px 0;
+    margin: 2px 0 0 0;
+    padding: 0;
+}
+
+.review-stat {
+    font-size: 17px;
+    color: var(--ink);
+    -unity-text-align: middle-center;
+    margin: 4px 0 12px 0;
     padding: 0;
 }
 

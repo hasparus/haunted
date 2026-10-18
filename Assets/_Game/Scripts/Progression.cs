@@ -314,7 +314,7 @@ namespace Demons
             PlayerPrefs.Save();
             signers = Demon.All.FindAll(d => !Bots.IsBot(d)).Count;
             bool assisted = Bots.All.Count > 0;
-            End($"YOU HAVE BEEN DOWNSIZED\n{Roast}\nPlease return your badge at reception.\nPeak revenue {Peak.Value:0} zł  ·  best {Best.Value:0} zł", System.Array.FindAll(Balance.I.survivalStarSeconds, s => Elapsed >= s).Length);
+            End($"Peak revenue {Peak.Value:0} zł  ·  best {Best.Value:0} zł", System.Array.FindAll(Balance.I.survivalStarSeconds, s => Elapsed >= s).Length);
             if (Peak.Value > 0 && signers > 0 && !assisted)
             {
                 Signing.Value = true;
@@ -362,7 +362,7 @@ namespace Demons
                 if (DayGoal.Value > 0 && influence >= DayGoal.Value)
                 {
                     weekStars += DayStars;
-                    if (Day.Value == Days.Length - 1) End($"THE WEEKEND IS OVER\nYou haunted him through his whole first week.\nDays: {weekStars} of {Days.Length * 3} stars", System.Array.FindAll(Balance.I.weekStarSeconds, s => Elapsed <= s).Length);
+                    if (Day.Value == Days.Length - 1) End($"You haunted him through his whole first week.\nDays: {weekStars} of {Days.Length * 3} stars", System.Array.FindAll(Balance.I.weekStarSeconds, s => Elapsed <= s).Length);
                     else
                     {
                         int stars = DayStars;

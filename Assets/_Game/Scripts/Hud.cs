@@ -10,12 +10,12 @@ namespace Demons
         static readonly string[] Columns = { "Revenue", "Haunts", "Deliveries", "Assists", "Throws", "Dashes" };
 
         VisualElement top, scores, crackPips, review, net, offline, joining, online, notice, cpu, cardWrap, card, reviewWrap, table, sign;
-        Label cardHint, day, dayInfo, revenue, netStatus, noticeTitle, noticeBody, cardTitle, cardBody, paused, reviewTitle, reviewBody, signHint, signWait;
+        Label cardHint, day, dayInfo, revenue, netStatus, noticeTitle, noticeBody, cardTitle, cardBody, paused, reviewTitle, reviewBody, reviewStat, signHint, signWait;
         TextField code, signature;
         Button removeCpu;
         VisualElement footer;
         string footerShape;
-        string tableShape;
+        string tableShape, reviewText;
         int chipShape = -1;
         readonly float[] scoreSeen = new float[Scoring.MaxDemons];
         readonly List<Demon> chips = new();
@@ -206,6 +206,8 @@ namespace Demons
             review.Add(reviewStars);
             reviewBody = UI.Text("", "review-body");
             review.Add(reviewBody);
+            reviewStat = UI.Text("", "review-stat");
+            review.Add(reviewStat);
             table = UI.Box("table", review);
             sign = UI.Box("sign", review);
             sign.Add(UI.Text("Sign the leaderboard", "sign-label"));
@@ -465,10 +467,16 @@ namespace Demons
 
         void RefreshReview(GameState state, Progression progress)
         {
-            if (reviewBody.text != progress.Card.Value.ToString())
+            // The review's last line is its numbers; anything above it is a word from the boss.
+            var text = progress.Card.Value.ToString();
+            if (text != reviewText)
             {
-                UI.Set(reviewBody, progress.Card.Value.ToString());
+                reviewText = text;
+                int split = text.LastIndexOf('\n');
+                UI.Set(reviewBody, split < 0 ? "" : text[..split]);
                 UI.Balance(reviewBody, 760);
+                UI.Show(reviewBody, split >= 0);
+                UI.Set(reviewStat, text[(split + 1)..]);
             }
 
             reviewStars.Tick();

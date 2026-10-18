@@ -57,8 +57,13 @@ namespace Demons
             {
                 var r = star.contentRect;
                 float outer = Mathf.Min(r.width, r.height) / 2, inner = outer * 0.45f;
+                // An unearned star is drawn as an outline, so the row always reads out of three.
+                bool lit = star.ClassListContains("star--lit");
+                if (!lit) outer -= 1;
                 var p = ctx.painter2D;
-                p.fillColor = star.resolvedStyle.color;
+                p.fillColor = p.strokeColor = star.resolvedStyle.color;
+                p.lineWidth = 2;
+                p.lineJoin = LineJoin.Round;
                 p.BeginPath();
                 for (int i = 0; i < 10; i++)
                 {
@@ -68,7 +73,8 @@ namespace Demons
                     else p.LineTo(point);
                 }
                 p.ClosePath();
-                p.Fill();
+                if (lit) p.Fill();
+                else p.Stroke();
             };
             return star;
         }
