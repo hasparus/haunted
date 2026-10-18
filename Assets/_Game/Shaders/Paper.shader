@@ -16,6 +16,8 @@ Shader "Haunted/Paper"
         _Anchor("Where it stands (xyz), when w is 1", Vector) = (0, 0, 0, 0)
         _AnchorFrom("The point of it that stands there", Vector) = (0, 0, 0, 0)
         _Fade("Shown (dithered, stays opaque)", Range(0, 1)) = 1
+        [NoScaleOffset] _Swirl("Swirl ink, drawn on a round thing facing the camera (a)", 2D) = "white" {}
+        _SwirlInk("Swirl ink amount", Range(0, 1)) = 0
     }
 
     SubShader
@@ -29,7 +31,7 @@ Shader "Haunted/Paper"
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
                 half _Hatch, _Tiles;
-                float _TileSize, _Outline, _PoolRadius, _Slats, _Silhouette, _Scenery, _Fade;
+                float _TileSize, _Outline, _PoolRadius, _Slats, _Silhouette, _Scenery, _Fade, _SwirlInk;
                 float4 _Anchor, _AnchorFrom;
             CBUFFER_END
         ENDHLSL
@@ -66,6 +68,7 @@ Shader "Haunted/Paper"
                 return half3(1, 0.91, 0.69) * sum;
             }
 
+            TEXTURE2D(_Swirl); SAMPLER(sampler_Swirl);
             TEXTURE2D(_Stains); SAMPLER(sampler_Stains); // coloured ink stains on the floor (rgb ink, a coverage), stamped by Fx
             float4 _StainRect; // xz min, 1 / size
 
@@ -193,6 +196,16 @@ Shader "Haunted/Paper"
                 half wobble = 0.7 + 0.6 * Noise(plane * 6 + boil);
                 half ink = 1 - smoothstep(_Outline * wobble - 0.75, _Outline * wobble + 0.75, min(edge.x, edge.y));
                 col = lerp(col, half3(0.06, 0.05, 0.08), ink * 0.85);
+
+                // A thought's swirl, inked on as the camera sees the ball (so it never rolls away), turning slowly.
+                if (_SwirlInk > 0)
+                {
+                    float2 seen = mul((float3x3)UNITY_MATRIX_V, n).xy;
+                    float turn = _Time.y * 0.35;
+                    float2 spun = float2(seen.x * cos(turn) - seen.y * sin(turn), seen.x * sin(turn) + seen.y * cos(turn));
+                    half swirl = SAMPLE_TEXTURE2D(_Swirl, sampler_Swirl, spun * 0.5 + 0.5).a;
+                    col = lerp(col, half3(0.06, 0.05, 0.08), swirl * _SwirlInk);
+                }
 
                 // Round things have no face edges to ink, so outline where the surface turns away from the camera.
                 half facing = dot(n, normalize(GetWorldSpaceViewDir(i.positionWS)));

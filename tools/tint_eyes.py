@@ -15,8 +15,7 @@ from PIL import Image
 
 # File stem prefix -> (hues to take in degrees, turn by degrees, saturation scale, lift toward white 0..1).
 TINTS = {
-    "Head3": ((150, 230), 32, 1.5, 0.45),  # Anxiety: cyan leans blue and brighter, or it reads green
-    "Head2": ((280, 360), -20, 0.9, 0.35),  # Self-doubt: pink leans purple and lighter, or it reads red
+    "Head3": ((150, 250), 8, 1.0, 0.25),  # Anxiety: her blue at 209° still leans green in the game; 217° doesn't
 }
 
 

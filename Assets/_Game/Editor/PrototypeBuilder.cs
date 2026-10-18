@@ -72,21 +72,32 @@ namespace Demons.Editor
                 dots[i] = dot.GetComponent<Renderer>();
             }
 
-            var wings = new GameObject("Wings");
-            wings.transform.SetParent(root.transform, false);
-            Prim(PrimitiveType.Cube, "WingL", wings.transform, new Vector3(-0.35f, 0.1f, 0), new Vector3(0.45f, 0.03f, 0.25f), Ink("Wing", Color.white));
-            Prim(PrimitiveType.Cube, "WingR", wings.transform, new Vector3(0.35f, 0.1f, 0), new Vector3(0.45f, 0.03f, 0.25f), Ink("Wing", Color.white));
-            wings.SetActive(false);
+            BuildWings(body).SetActive(false);
 
             var shell = Prim(PrimitiveType.Sphere, "Shell", body, Vector3.zero, Vector3.one * 0.62f, Ink("Shell", Gray(0.28f)));
             shell.SetActive(false);
 
             Set(p, "body", body);
             Set(p, "stone", stone.GetComponent<Renderer>());
-            Set(p, "wings", wings);
+            Set(p, "wings", body.Find("Wings").gameObject);
             Set(p, "shell", shell);
             SetArray(p, "stampDots", dots);
             return SavePrefab(root).GetComponent<Pebble>();
+        }
+
+        // Her orb's wings, rooted where they meet the ball (as drawn: a little off centre), facing the camera (Pebble.Flap).
+        public static GameObject BuildWings(Transform body)
+        {
+            var wings = new GameObject("Wings");
+            wings.transform.SetParent(body, false);
+            foreach (var (side, x) in new[] { ("L", -0.113f), ("R", 0.092f) })
+            {
+                var wing = Point($"Wing{side}", wings.transform, new Vector3(x, 0.038f, 0)).gameObject.AddComponent<SpriteRenderer>();
+                wing.sprite = Resources.Load<Sprite>($"Art/Demon/OrbWing{side}");
+                wing.sharedMaterial = Resources.Load<Material>("Fx/Card");
+                wing.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+            return wings;
         }
 
         static Demon BuildDemon()
@@ -482,6 +493,42 @@ namespace Demons.Editor
             BuildEyeView(cam);
             new GameObject("EyePhotoTool").AddComponent<EyePhotoTool>();
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), $"{Root}/Scenes/EyePhotos.unity");
+        }
+
+        // Every head in every act, side by side, no game around them: to tune the drawing's animation.
+        [MenuItem("Demons/Build Demon Animation Scene")]
+        public static void BuildDemonAnimationScene()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            var cam = Camera.main;
+            cam.fieldOfView = 34;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = Color.black;
+            cam.transform.SetPositionAndRotation(new Vector3(0, 21, -19.5f), Quaternion.Euler(48, 0, 0));
+            var acts = (RigPuppet.Act[])System.Enum.GetValues(typeof(RigPuppet.Act));
+            var facings = new[] { ("Down", Vector3.back), ("Right", Vector3.right), ("Up", Vector3.forward), ("Left", Vector3.left) };
+            const float across = 3.3f, deep = 3.4f;
+            var size = new Vector2(acts.Length * across + 1, facings.Length * deep + 2);
+            Prim(PrimitiveType.Cube, "Floor", null, new Vector3(0, -0.1f, 0), new Vector3(size.x, 0.2f, size.y), Paper("Floor", new Color(0.3f, 0.35f, 0.37f), tiles: true, scenery: true));
+            var thought = AssetDatabase.LoadAssetAtPath<Material>($"{Root}/Materials/Pebble.mat");
+            var root = new GameObject("Puppets").transform;
+            for (int row = 0; row < facings.Length; row++)
+            for (int col = 0; col < acts.Length; col++)
+            {
+                var at = new Vector3((col - (acts.Length - 1) / 2f) * across - 0.6f, 0, ((facings.Length - 1) / 2f - row) * deep);
+                var puppet = new GameObject($"{acts[col]} {facings[row].Item1}").AddComponent<RigPuppet>();
+                puppet.transform.SetParent(root, false);
+                puppet.transform.position = at;
+                puppet.Doing = acts[col];
+                puppet.Facing = facings[row].Item2;
+                puppet.Head = (col + row) % DemonRig.Heads;
+                puppet.Tint = Demon.Palette[(col + row) % Demon.Palette.Length];
+                puppet.Thought = thought;
+                if (row == facings.Length - 1) FloorLabel(acts[col].ToString(), root, at + new Vector3(0.6f, 0, -1.1f), 0.14f, Jolly);
+            }
+            for (int row = 0; row < facings.Length; row++)
+                FloorLabel(facings[row].Item1, root, new Vector3(-size.x / 2 + 0.6f, 0, ((facings.Length - 1) / 2f - row) * deep), 0.14f, Jolly);
+            EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), $"{Root}/Scenes/DemonAnimation.unity");
         }
 
         static GameObject BuildMeds(Vector3 pos, bool demo, float size = 1)

@@ -161,13 +161,13 @@ namespace Demons
             }
         }
 
-        static readonly int AnchorId = Shader.PropertyToID("_Anchor"), AnchorFromId = Shader.PropertyToID("_AnchorFrom"), FadeId = Shader.PropertyToID("_Fade");
+        static readonly int AnchorId = Shader.PropertyToID("_Anchor"), AnchorFromId = Shader.PropertyToID("_AnchorFrom"), FadeId = Shader.PropertyToID("_Fade"), AloftId = Shader.PropertyToID("_Aloft");
         const float SortStep = 0.05f, HeldAhead = 1.2f;
         MaterialPropertyBlock sortBlock;
         Renderer[] parts;
         Vector3 sortedAt = Vector3.positiveInfinity, sortedFrom;
         // The floor point the thought is drawn at the depth of (Sort).
-        public Vector3 SortedAt => sortedAt;
+        public Vector3 SortedAt => float.IsFinite(sortedAt.x) ? sortedAt : new Vector3(transform.position.x, 0, transform.position.z);
         float sortedFade;
 
         // Where the thought stands for sorting (plans/sorting.md), handed to Haunted/Paper: a step in front of the desk
@@ -204,6 +204,8 @@ namespace Demons
             sortBlock.SetVector(AnchorId, new Vector4(at.x, at.y, at.z, 1));
             sortBlock.SetVector(AnchorFromId, p);
             sortBlock.SetFloat(FadeId, fade);
+            // The wings (drawings) a little behind the ball.
+            sortBlock.SetFloat(AloftId, -0.05f);
             foreach (var r in parts)
                 if (r is not TrailRenderer) r.SetPropertyBlock(sortBlock);
         }
@@ -304,7 +306,7 @@ namespace Demons
                     transform.position = Belt.Instance.PointAt(BeltDistance);
                     break;
                 case PebbleState.Held when Net.Find<Demon>(Anchor.Value) is { } demon:
-                    transform.position = demon.Hand.position;
+                    transform.position = demon.HoldAt;
                     break;
                 case PebbleState.Held when Net.Find<Claw>(Anchor.Value) is { } claw:
                     transform.position = claw.Hand.position;
@@ -332,11 +334,20 @@ namespace Demons
             }
         }
 
+        // Her wings face the camera and beat from where they meet the ball (Wings: left, right).
+        public static void Flap(Transform wings)
+        {
+            if (Camera.main) wings.rotation = Camera.main.transform.rotation;
+            float beat = Mathf.Sin(Time.time * 22) * 32;
+            wings.GetChild(0).localRotation = Quaternion.Euler(0, 0, -beat);
+            wings.GetChild(1).localRotation = Quaternion.Euler(0, 0, beat);
+        }
+
         void Animate()
         {
             bool flying = State.Value == PebbleState.Flying;
             wings.SetActive(flying);
-            if (flying) wings.transform.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(Time.time * 30) * 35);
+            if (flying) Flap(wings.transform);
 
             var color = Mix(Stamps.Value);
             if (State.Value == PebbleState.OnStation && Net.Find<Station>(Anchor.Value) is { } station && station.Workers.Value != 0 && station.Kind != StationKind.Hammer)

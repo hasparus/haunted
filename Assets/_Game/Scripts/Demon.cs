@@ -67,6 +67,9 @@ namespace Demons
         [NonSerialized] public int SpawnSlot, SpawnLocalIndex;
 
         public Transform Hand;
+        // Where a carried thought is drawn, in front of the belly as she draws it (Hand, higher up, is where catches reach).
+        public static readonly Vector3 HoldPoint = new(0, 0.5f, 0.32f);
+        public Vector3 HoldAt => transform.TransformPoint(HoldPoint);
         [SerializeField] Renderer body, head;
         [SerializeField] Transform marker;
         Vector3 markerAt;
