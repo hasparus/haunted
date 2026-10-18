@@ -4,6 +4,8 @@ using UnityEngine;
 
 namespace Demons
 {
+    // Hammer: the demons crack shelled thoughts with an office stamp they use as a hammer. That's the joke: the code
+    // and the cards say "hammer", the drawing is a stamp.
     public enum StationKind : byte { Desk, Pot, Hammer }
 
     public class Station : NetworkBehaviour
