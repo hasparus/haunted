@@ -48,9 +48,30 @@ namespace Demons
 
         static readonly int TravelId = Shader.PropertyToID("_BeltTravel");
 
-        // The hum comes from the stretch of belt nearest a local player's demon, panned with it and fading as they walk
-        // away, down to a faint floor; with nobody local it stays centred at that floor.
+        // The hum comes from the stretch of belt on screen nearest a local player's demon, panned with it and fading as
+        // they walk away, down to a faint floor; with nobody local it stays centred at that floor.
         const float HumReach = 7, HumFloor = 0.2f;
+
+        static bool OnScreen(Camera cam, Vector3 p)
+        {
+            var v = cam.WorldToViewportPoint(p);
+            return v.z > 0 && v.x is >= 0 and <= 1 && v.y is >= 0 and <= 1;
+        }
+
+        // ponytail: samples the belt, so the hum can sit up to a sample short of the screen's edge
+        float OnScreen(float distance)
+        {
+            var cam = Camera.main;
+            if (!cam || OnScreen(cam, PointAt(distance))) return distance;
+            const int Samples = 32;
+            float best = distance, gap = float.MaxValue;
+            for (int i = 0; i <= Samples; i++)
+            {
+                float d = Length * i / Samples;
+                if (Mathf.Abs(d - distance) < gap && OnScreen(cam, PointAt(d))) (gap, best) = (Mathf.Abs(d - distance), d);
+            }
+            return best;
+        }
 
         (Vector3? at, float near) Hum()
         {
@@ -59,7 +80,7 @@ namespace Demons
             foreach (var d in Demon.All)
             {
                 if (!d.IsOwner || Bots.IsBot(d)) continue;
-                var p = ClosestPoint(d.transform.position);
+                var p = PointAt(OnScreen(DistanceAt(d.transform.position)));
                 float dist = Flat(p - d.transform.position);
                 if (dist < best) (best, at) = (dist, p);
             }
