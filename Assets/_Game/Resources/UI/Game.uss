@@ -469,7 +469,7 @@
 }
 
 .card-title {
-    font-size: 48px;
+    font-size: 66px;
     color: var(--yellow);
     -unity-text-align: middle-left;
     margin: 0;
