@@ -6,6 +6,8 @@ namespace Demons
     public class DayCard : VisualElement
     {
         const float Measure = 560;
+        // A balanced story never squeezes its card narrower than this share of the measure, so short ones still breathe.
+        const float Roomy = 0.85f;
 
         public readonly Label Title, StarsFor, Body, Task, Hint;
         readonly VisualElement head;
@@ -33,7 +35,7 @@ namespace Demons
                 balancing = false;
                 float heading = 0;
                 foreach (var part in head.Children()) heading += part.layout.width;
-                style.width = Mathf.Max(UI.BalancedWidth(Body, Measure), heading + 24)
+                style.width = Mathf.Max(UI.BalancedWidth(Body, Measure), Measure * Roomy, heading + 24)
                     + resolvedStyle.paddingLeft + resolvedStyle.paddingRight + resolvedStyle.borderLeftWidth + resolvedStyle.borderRightWidth;
             });
             Task = UI.Text("", "card-task", UI.PlexBold);

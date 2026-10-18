@@ -28,7 +28,7 @@ namespace Demons
         {
             "MONDAY\nThe Host is standing in front of the skyscraper with his new office in it, checking the address again. Good. Let him doubt all the way to the door.\n\nGrab the thoughts, haunt them on the desks, bring them back to the conveyor belt.",
             "TUESDAY\nHis yogurt is gone from the office fridge. The one with his name on it. Small thing, but we'll make it matter.\n\nBig thoughts take long. Haunt them together.",
-            "WEDNESDAY\nThe Host's boss wants to see him in his office to talk about something. Doesn't say what. We'll fill that in for him.\n\nIT finally sent a tool: the pot. Drop a thought in and it haunts itself.",
+            "WEDNESDAY\nThe Host's boss wants to see him in his office to talk about something. Doesn't say what. Let it simmer.\n\nIT finally sent a tool: the pot. Drop a thought in and it haunts itself.",
             "THURSDAY\nThe Host has to send an introduction email, two or three sentences about himself. It's not much to work with, but we've done more with less.\nHe's getting defensive.\n\nShelled thoughts need the hammer first.",
             "FRIDAY\nTherapy at five. Watch out, team.\n\nStay out of the light.",
             "SATURDAY\nNew meds. The waiting-room music won't stop.\n\nWhen he takes a pill, controls flip.",
