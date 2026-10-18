@@ -98,6 +98,7 @@ Material:
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
+    - _Fade: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
@@ -109,6 +110,7 @@ Material:
     - _PoolRadius: 9
     - _QueueOffset: 0
     - _ReceiveShadows: 1
+    - _Scenery: 0
     - _ScreenSpaceReflections: 1
     - _ScreenSpaceReflectionsContributeTransparent: 1
     - _Silhouette: 1
@@ -125,7 +127,9 @@ Material:
     - _XRMotionVectorsPass: 1
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 0.27999997, g: 0.27999997, b: 0.27999997, a: 1}
+    - _Anchor: {r: 0, g: 0, b: 0, a: 0}
+    - _AnchorFrom: {r: 0, g: 0, b: 0, a: 0}
+    - _BaseColor: {r: 0.28, g: 0.28, b: 0.28, a: 1}
     - _Color: {r: 0.27999997, g: 0.27999997, b: 0.27999997, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}

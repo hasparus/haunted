@@ -92,22 +92,29 @@ Material:
     - _ClearCoatSmoothness: 0
     - _Cull: 2
     - _Cutoff: 0.5
+    - _DepthPull: 0
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
+    - _Fade: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
     - _Hatch: 0.7
     - _Metallic: 0
     - _OcclusionStrength: 1
+    - _Outline: 1
     - _Parallax: 0.005
+    - _PoolRadius: 9
     - _QueueOffset: 0
     - _ReceiveShadows: 1
+    - _Scenery: 0
     - _ScreenSpaceReflections: 1
     - _ScreenSpaceReflectionsContributeTransparent: 1
+    - _Silhouette: 0
+    - _Slats: 0
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
@@ -120,6 +127,8 @@ Material:
     - _XRMotionVectorsPass: 1
     - _ZWrite: 1
     m_Colors:
+    - _Anchor: {r: 0, g: 0, b: 0, a: 0}
+    - _AnchorFrom: {r: 0, g: 0, b: 0, a: 0}
     - _BaseColor: {r: 0.45, g: 0.43, b: 0.46, a: 1}
     - _Color: {r: 0.45, g: 0.45, b: 0.45, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
