@@ -278,8 +278,6 @@ namespace Demons
                 if (heardShell && !Shelled.Value) Audio.Play(s.crack, at);
                 if (warning && !heardWarning) Audio.Play(s.warning, All.FindAll(p => p.Shaking).Count - 1, at);
             }
-            // Fresh off the start of the belt; late joiners don't hear the thoughts already riding it.
-            else if (State.Value == PebbleState.OnBelt && BeltFrom.Value == 0 && Now - BeltSince.Value < 1) Audio.Play(s.orbSpawn, transform.position);
             heard = true;
             heardState = State.Value;
             heardStamps = Stamps.Value;

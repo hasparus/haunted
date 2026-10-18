@@ -51,8 +51,6 @@ MonoBehaviour:
   step:
   - {fileID: 8300000, guid: 1c37aabce4e97f342b669632c2c3f948, type: 3}
   stepLength: 1.5
-  orbSpawn:
-  - {fileID: 8300000, guid: 9bbbe1f8fd069954fac5f14f6a64fb12, type: 3}
   drop:
   - {fileID: 8300000, guid: fd887eccb9e65964babc18f4c4944a2b, type: 3}
   place:

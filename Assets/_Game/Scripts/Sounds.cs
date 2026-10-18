@@ -45,7 +45,6 @@ namespace Demons
         [Tooltip("Floor distance between footsteps")] public float stepLength = 1.5f;
 
         [Header("Thoughts")]
-        [Tooltip("A new thought enters the belt")] public AudioClip[] orbSpawn;
         [Tooltip("Lands on the floor")] public AudioClip[] drop;
         [Tooltip("Put on a desk, pot or hammer")] public AudioClip[] place;
         [Tooltip("Put back on the belt")] public AudioClip[] placeOnBelt;
