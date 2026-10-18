@@ -55,7 +55,7 @@ namespace Demons
 
         void StartCouch()
         {
-            net.NetworkConfig.NetworkTransport = GetComponent<OfflineTransport>();
+            net.NetworkConfig.NetworkTransport = GetComponent<CouchTransport>();
             net.StartHost();
         }
 
@@ -87,7 +87,11 @@ namespace Demons
                 try { await leaving.LeaveAsync(); }
                 catch (Exception e) { Debug.LogException(e); }
             }
-            if (net.IsListening && net.NetworkConfig.NetworkTransport is OfflineTransport) return;
+            if (net.IsListening && net.NetworkConfig.NetworkTransport is CouchTransport couch)
+            {
+                couch.CloseRoom();
+                return;
+            }
             if (net.IsListening) net.Shutdown();
             while (net.ShutdownInProgress) await Task.Yield();
             StartCouch();
@@ -95,26 +99,32 @@ namespace Demons
 
         readonly RoomHandoff handoff = new();
 
-        // Starts Netcode for a booked room only once it exists, so the couch game (and everyone's demons) keeps running
-        // through signing in and booking instead of vanishing for those seconds.
+        // A host opens its booked room under the running couch game. A guest has to swap the couch game for the host's,
+        // but only once the room exists, so everyone keeps playing through signing in and booking.
         class RoomHandoff : INetworkHandler
         {
             public async Task StartAsync(NetworkConfiguration configuration)
             {
                 var net = NetworkManager.Singleton;
-                if (net.IsListening) net.Shutdown();
-                while (net.ShutdownInProgress) await Task.Yield();
-                var transport = net.GetComponent<UnityTransport>();
-                net.NetworkConfig.NetworkTransport = transport;
-                transport.SetRelayServerData(configuration.RelayServerData);
-                bool started = configuration.Role == NetworkRole.Client ? net.StartClient() : net.StartHost();
+                bool started;
+                if (configuration.Role != NetworkRole.Client) started = net.GetComponent<CouchTransport>().OpenRoom(configuration.RelayServerData);
+                else
+                {
+                    if (net.IsListening) net.Shutdown();
+                    while (net.ShutdownInProgress) await Task.Yield();
+                    var transport = net.GetComponent<UnityTransport>();
+                    net.NetworkConfig.NetworkTransport = transport;
+                    transport.SetRelayServerData(configuration.RelayServerData);
+                    started = net.StartClient();
+                }
                 if (!started) throw new InvalidOperationException("Netcode didn't start for the room.");
             }
 
             public Task StopAsync()
             {
                 var net = NetworkManager.Singleton;
-                if (net && net.IsListening) net.Shutdown();
+                if (net && net.NetworkConfig.NetworkTransport is CouchTransport couch) couch.CloseRoom();
+                else if (net && net.IsListening) net.Shutdown();
                 return Task.CompletedTask;
             }
         }
