@@ -1,8 +1,65 @@
-Public domain images via the Public Domain Image Archive (pdimagearchive.org), cropped, desaturated and masked.
-day0 Monday: John Jacob Astor Leaning from a Train Window, Bain News Service, 1909. Library of Congress. https://pdimagearchive.org/images/c5961d1a-89c0-4506-89a2-8c458935710b/
-day1 Tuesday: Editorial Rooms of the Phonographic Journal of the Future, Albert Robida, 1894. Internet Archive / University of Toronto. https://pdimagearchive.org/images/7e93b9b1-f771-4bc8-acf5-47da07ae64ca/
-day2 Wednesday: Seven Men in Suits, Portrayed from Behind, Uppsala, 1902. Upplandsmuseet. https://pdimagearchive.org/images/df27a1d8-4a9c-4ac3-9098-48f6dbe7d0e7/
-day3 Thursday: Tesla in his Colorado Springs laboratory (double exposure), Dickinson Alley, ca. 1899. Wellcome Collection. https://pdimagearchive.org/images/ca841429-7ef1-450e-b8fa-397f4fc1367a/
-day4 Friday: The Gin Shop Displayed, ca. 1765. Wellcome Collection. https://pdimagearchive.org/images/47202acc-d658-42b2-bb5a-c613bf3c8476/
-day5 Saturday: A sand man in Atlantic City, ca. 1890-1910. Library of Congress. https://pdimagearchive.org/images/cbd46e21-c9e4-4db2-acce-e1c7f68fcbf2/
-day6 Sunday: Spa Fields Playground, London, 1896. Internet Archive / Wellcome Collection. https://pdimagearchive.org/images/d8b69578-cbcc-4ce3-99b8-33fdaa69461d/
+Widok gospodarza – zainstalowane obrazy i maska, 18.10.2026
+
+Eyes/day0.png
+  ścieżka: Assets/_Game/Resources/Eyes/day0.png
+  źródło: OpenAI gpt-image-2.5; prompt: tools/eye_photo_prompts.json, photos[0]
+  autor: obraz wygenerowany przez AI na zamówienie projektu
+  URL: https://openai.com/policies/terms-of-use/
+  licencja: wynik generowania według warunków OpenAI; nie fotografia CC0 ani licencja stockowa; bez deklaracji wyłączności praw (wygenerowano 18.10.2026)
+  obróbka: kadr 0,205,1536,819 z 1536×1024, rozmiar 2560×1024; styl filmu 35 mm z lat 90., obiektyw 50 mm, f/2.8
+
+Eyes/day1.png
+  ścieżka: Assets/_Game/Resources/Eyes/day1.png
+  źródło: OpenAI gpt-image-2.5; prompt: tools/eye_photo_prompts.json, photos[1]
+  autor: obraz wygenerowany przez AI na zamówienie projektu
+  URL: https://openai.com/policies/terms-of-use/
+  licencja: wynik generowania według warunków OpenAI; nie fotografia CC0 ani licencja stockowa; bez deklaracji wyłączności praw (wygenerowano 18.10.2026)
+  obróbka: kadr 0,205,1536,819 z 1536×1024, rozmiar 2560×1024; styl filmu 35 mm z lat 90., obiektyw 50 mm, f/2.8
+
+Eyes/day2.png
+  ścieżka: Assets/_Game/Resources/Eyes/day2.png
+  źródło: OpenAI gpt-image-2.5; prompt: tools/eye_photo_prompts.json, photos[2]
+  autor: obraz wygenerowany przez AI na zamówienie projektu
+  URL: https://openai.com/policies/terms-of-use/
+  licencja: wynik generowania według warunków OpenAI; nie fotografia CC0 ani licencja stockowa; bez deklaracji wyłączności praw (wygenerowano 18.10.2026)
+  obróbka: kadr 0,205,1536,819 z 1536×1024, rozmiar 2560×1024; styl filmu 35 mm z lat 90., obiektyw 50 mm, f/2.8
+
+Eyes/day3.png
+  ścieżka: Assets/_Game/Resources/Eyes/day3.png
+  źródło: OpenAI gpt-image-2.5; prompt: tools/eye_photo_prompts.json, photos[3]
+  autor: obraz wygenerowany przez AI na zamówienie projektu
+  URL: https://openai.com/policies/terms-of-use/
+  licencja: wynik generowania według warunków OpenAI; nie fotografia CC0 ani licencja stockowa; bez deklaracji wyłączności praw (wygenerowano 18.10.2026)
+  obróbka: kadr 0,205,1536,819 z 1536×1024, rozmiar 2560×1024; styl filmu 35 mm z lat 90., obiektyw 50 mm, f/2.8
+
+Eyes/day4.png
+  ścieżka: Assets/_Game/Resources/Eyes/day4.png
+  źródło: OpenAI gpt-image-2.5; prompt: tools/eye_photo_prompts.json, photos[4] (filmPrompt i revisionBrief, końcowy terapeuta V6)
+  autor: obraz wygenerowany przez AI na zamówienie projektu
+  URL: https://openai.com/policies/terms-of-use/
+  licencja: wynik generowania według warunków OpenAI; nie fotografia CC0 ani licencja stockowa; bez deklaracji wyłączności praw (wygenerowano 18.10.2026)
+  obróbka: kadr 0,205,1536,819 z 1536×1024, rozmiar 2560×1024; styl filmu 35 mm z lat 90., obiektyw 50 mm, f/2.8; wersja wieczorna, skrzyżowane nogi, wzrok na notatnik
+
+Eyes/day5.png
+  ścieżka: Assets/_Game/Resources/Eyes/day5.png
+  źródło: OpenAI gpt-image-2.5; prompt: tools/eye_photo_prompts.json, photos[5]
+  autor: obraz wygenerowany przez AI na zamówienie projektu
+  URL: https://openai.com/policies/terms-of-use/
+  licencja: wynik generowania według warunków OpenAI; nie fotografia CC0 ani licencja stockowa; bez deklaracji wyłączności praw (wygenerowano 18.10.2026)
+  obróbka: kadr 0,205,1536,819 z 1536×1024, rozmiar 2560×1024; styl filmu 35 mm z lat 90., obiektyw 50 mm, f/2.8
+
+Eyes/day6.png
+  ścieżka: Assets/_Game/Resources/Eyes/day6.png
+  źródło: OpenAI gpt-image-2.5; prompt: tools/eye_photo_prompts.json, photos[6]
+  autor: obraz wygenerowany przez AI na zamówienie projektu
+  URL: https://openai.com/policies/terms-of-use/
+  licencja: wynik generowania według warunków OpenAI; nie fotografia CC0 ani licencja stockowa; bez deklaracji wyłączności praw (wygenerowano 18.10.2026)
+  obróbka: kadr 0,205,1536,819 z 1536×1024, rozmiar 2560×1024; styl filmu 35 mm z lat 90., obiektyw 50 mm, f/2.8
+
+Eyes/Mask.png
+  ścieżka: Assets/_Game/Resources/Eyes/Mask.png
+  źródło: OpenAI gpt-image-2.5; wariant natural.png; prompt: tools/eye_photo_prompts.json, mask.prompt
+  autor: maska wygenerowana przez AI na zamówienie projektu
+  URL: https://openai.com/policies/terms-of-use/
+  licencja: wynik generowania według warunków OpenAI; nie CC0 (wygenerowano 18.10.2026)
+  obróbka: kadr 0,205,1536,819; 1600×640; obraz biały z alfą z maski szarości, wartości <=5 -> 0, >=250 -> 255; zachowano GUID oryginalnej maski

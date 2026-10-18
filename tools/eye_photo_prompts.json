@@ -1,0 +1,190 @@
+{
+  "installed": "2026-10-18",
+  "selection": "1990s 35mm / 50mm f2.8 set with V6 evening therapist and natural alpha mask",
+  "photos": [
+    {
+      "day": 0,
+      "dayName": "monday",
+      "asset": "Assets/_Game/Resources/Eyes/day0.png",
+      "model": "gpt-image-2.5",
+      "selected": "90s-50mm-f2.8/photos/day0-monday-v2-90s.png",
+      "filmPrompt": "Create a NEW photographic version of the approved scene in reference 1, as if exposed on a 1990s 35mm film SLR using a normal 50mm prime lens at f/2.8. This is a CAMERA / FILM LOOK change, not a change to the date of the depicted story: retain the existing objects, modern smartphones, rooms, clothing, people and actions.\nReference 1 is the approved panoramic photograph letterboxed in a 1536x1024 canvas. Its actual scene is precisely the strip x0..1536 y205..819. Keep that strip's framing and positions as faithfully as possible: key left-eye subject near x390 and right-eye subject near x1130. Output 1536x1024, with the new version of the same panoramic scene inside y205..819. The top and bottom letterbox areas may stay neutral grey. They will be discarded. Do not move a subject above the panoramic strip. Reference 2 is ONLY the game's eye-mask visibility guide: the white areas show where important subject details must remain readable; never render that guide, black eye shapes, actual eyes, borders, or vignette inside the photograph. Keep unimportant background at central seam x768.\nLOOK: believable unretouched 1990s consumer color-negative ISO400 still photograph, developed and scanned with restraint. Normal 50mm perspective and gentle optical compression, no ultrawide look, no computer-rendered architectural perfection. At f/2.8 use physically plausible selective focus and natural soft out-of-focus falloff with simple rounded bokeh, NOT fake Gaussian blur or ultra-shallow portrait-mode cutout. Fine irregular silver/colour grain, modest scanner softness, slightly muted greens and blues, skin tones that remain natural rather than orange, gently rolled-off highlights, mildly lifted shadow detail but real blacks. Tiny subtle halation at the brightest practical light only. Ordinary available light and candid snapshot feel, not advertising, not cinematic teal/orange. No added flash unless already motivated by scene. No oversharpening, clarity/HDR, dreamy bloom, gloss, plastic skin, dramatic grading, scratches, dust specks, film borders, timestamps, date stamps or artificial aging. It should look like a real photograph, not a retro filter demonstration.\nLuminance contrast and simple silhouettes must still read under the eye mask in grayscale. Keep key subjects in focus and retain enough defocused context to identify each place. No new words, digits, brands, logos or watermarks, EXCEPT the exact pre-existing name \"Mom\" on Sunday's phone. For people retain believable individual faces, gestures and matte natural skin with restrained pores, lines and incidental asymmetry; do not beautify or turn them into polished AI-stock models. Preserve anatomy and hand count.\n\nMONDAY: keep the glass office tower in the LEFT eye and right hand holding the map phone in the RIGHT eye. Focus on the phone/map, with the glass facade's grid and upward scale still recognizable behind in a slightly defocused more compressed 50mm perspective. Phone's screen remains a simple wordless map with one location pin. Same outdoor overcast daylight and hands.",
+      "crop": [
+        0,
+        205,
+        1536,
+        819
+      ],
+      "outputSize": [
+        2560,
+        1024
+      ],
+      "offset": [
+        0,
+        0
+      ],
+      "zoom": 1
+    },
+    {
+      "day": 1,
+      "dayName": "tuesday",
+      "asset": "Assets/_Game/Resources/Eyes/day1.png",
+      "model": "gpt-image-2.5",
+      "selected": "90s-50mm-f2.8/photos/day1-tuesday-v2-90s.png",
+      "filmPrompt": "Create a NEW photographic version of the approved scene in reference 1, as if exposed on a 1990s 35mm film SLR using a normal 50mm prime lens at f/2.8. This is a CAMERA / FILM LOOK change, not a change to the date of the depicted story: retain the existing objects, modern smartphones, rooms, clothing, people and actions.\nReference 1 is the approved panoramic photograph letterboxed in a 1536x1024 canvas. Its actual scene is precisely the strip x0..1536 y205..819. Keep that strip's framing and positions as faithfully as possible: key left-eye subject near x390 and right-eye subject near x1130. Output 1536x1024, with the new version of the same panoramic scene inside y205..819. The top and bottom letterbox areas may stay neutral grey. They will be discarded. Do not move a subject above the panoramic strip. Reference 2 is ONLY the game's eye-mask visibility guide: the white areas show where important subject details must remain readable; never render that guide, black eye shapes, actual eyes, borders, or vignette inside the photograph. Keep unimportant background at central seam x768.\nLOOK: believable unretouched 1990s consumer color-negative ISO400 still photograph, developed and scanned with restraint. Normal 50mm perspective and gentle optical compression, no ultrawide look, no computer-rendered architectural perfection. At f/2.8 use physically plausible selective focus and natural soft out-of-focus falloff with simple rounded bokeh, NOT fake Gaussian blur or ultra-shallow portrait-mode cutout. Fine irregular silver/colour grain, modest scanner softness, slightly muted greens and blues, skin tones that remain natural rather than orange, gently rolled-off highlights, mildly lifted shadow detail but real blacks. Tiny subtle halation at the brightest practical light only. Ordinary available light and candid snapshot feel, not advertising, not cinematic teal/orange. No added flash unless already motivated by scene. No oversharpening, clarity/HDR, dreamy bloom, gloss, plastic skin, dramatic grading, scratches, dust specks, film borders, timestamps, date stamps or artificial aging. It should look like a real photograph, not a retro filter demonstration.\nLuminance contrast and simple silhouettes must still read under the eye mask in grayscale. Keep key subjects in focus and retain enough defocused context to identify each place. No new words, digits, brands, logos or watermarks, EXCEPT the exact pre-existing name \"Mom\" on Sunday's phone. For people retain believable individual faces, gestures and matte natural skin with restrained pores, lines and incidental asymmetry; do not beautify or turn them into polished AI-stock models. Preserve anatomy and hand count.\n\nTUESDAY: keep the open shared office fridge, conspicuous empty food-container-sized space on the LEFT shelf, other people's generic food containers with blank white tape labels on the RIGHT. The shelf and absent-yogurt gap are the plane of focus; rear fridge wall falls away softly. Same sparse shelf contents, no hands added, cool practical fridge light without glossy product-photo finish.",
+      "crop": [
+        0,
+        205,
+        1536,
+        819
+      ],
+      "outputSize": [
+        2560,
+        1024
+      ],
+      "offset": [
+        0,
+        0
+      ],
+      "zoom": 1
+    },
+    {
+      "day": 2,
+      "dayName": "wednesday",
+      "asset": "Assets/_Game/Resources/Eyes/day2.png",
+      "model": "gpt-image-2.5",
+      "selected": "90s-50mm-f2.8/photos/day2-wednesday-v2-90s.png",
+      "filmPrompt": "Create a NEW photographic version of the approved scene in reference 1, as if exposed on a 1990s 35mm film SLR using a normal 50mm prime lens at f/2.8. This is a CAMERA / FILM LOOK change, not a change to the date of the depicted story: retain the existing objects, modern smartphones, rooms, clothing, people and actions.\nReference 1 is the approved panoramic photograph letterboxed in a 1536x1024 canvas. Its actual scene is precisely the strip x0..1536 y205..819. Keep that strip's framing and positions as faithfully as possible: key left-eye subject near x390 and right-eye subject near x1130. Output 1536x1024, with the new version of the same panoramic scene inside y205..819. The top and bottom letterbox areas may stay neutral grey. They will be discarded. Do not move a subject above the panoramic strip. Reference 2 is ONLY the game's eye-mask visibility guide: the white areas show where important subject details must remain readable; never render that guide, black eye shapes, actual eyes, borders, or vignette inside the photograph. Keep unimportant background at central seam x768.\nLOOK: believable unretouched 1990s consumer color-negative ISO400 still photograph, developed and scanned with restraint. Normal 50mm perspective and gentle optical compression, no ultrawide look, no computer-rendered architectural perfection. At f/2.8 use physically plausible selective focus and natural soft out-of-focus falloff with simple rounded bokeh, NOT fake Gaussian blur or ultra-shallow portrait-mode cutout. Fine irregular silver/colour grain, modest scanner softness, slightly muted greens and blues, skin tones that remain natural rather than orange, gently rolled-off highlights, mildly lifted shadow detail but real blacks. Tiny subtle halation at the brightest practical light only. Ordinary available light and candid snapshot feel, not advertising, not cinematic teal/orange. No added flash unless already motivated by scene. No oversharpening, clarity/HDR, dreamy bloom, gloss, plastic skin, dramatic grading, scratches, dust specks, film borders, timestamps, date stamps or artificial aging. It should look like a real photograph, not a retro filter demonstration.\nLuminance contrast and simple silhouettes must still read under the eye mask in grayscale. Keep key subjects in focus and retain enough defocused context to identify each place. No new words, digits, brands, logos or watermarks, EXCEPT the exact pre-existing name \"Mom\" on Sunday's phone. For people retain believable individual faces, gestures and matte natural skin with restrained pores, lines and incidental asymmetry; do not beautify or turn them into polished AI-stock models. Preserve anatomy and hand count.\n\nWEDNESDAY: keep the CLOSED plain wooden office door and dark lever handle in the LEFT eye, glass partitions/frosted stripes and empty chair context in the RIGHT eye. Door/handle are in focus, corridor beyond slightly softened. Retain unimportant blank central wall. Ordinary drab office daylight and practical fluorescent fixtures, no sign or door number.",
+      "crop": [
+        0,
+        205,
+        1536,
+        819
+      ],
+      "outputSize": [
+        2560,
+        1024
+      ],
+      "offset": [
+        0,
+        0
+      ],
+      "zoom": 1
+    },
+    {
+      "day": 3,
+      "dayName": "thursday",
+      "asset": "Assets/_Game/Resources/Eyes/day3.png",
+      "model": "gpt-image-2.5",
+      "selected": "90s-50mm-f2.8/photos/day3-thursday-v2-90s.png",
+      "filmPrompt": "Create a NEW photographic version of the approved scene in reference 1, as if exposed on a 1990s 35mm film SLR using a normal 50mm prime lens at f/2.8. This is a CAMERA / FILM LOOK change, not a change to the date of the depicted story: retain the existing objects, modern smartphones, rooms, clothing, people and actions.\nReference 1 is the approved panoramic photograph letterboxed in a 1536x1024 canvas. Its actual scene is precisely the strip x0..1536 y205..819. Keep that strip's framing and positions as faithfully as possible: key left-eye subject near x390 and right-eye subject near x1130. Output 1536x1024, with the new version of the same panoramic scene inside y205..819. The top and bottom letterbox areas may stay neutral grey. They will be discarded. Do not move a subject above the panoramic strip. Reference 2 is ONLY the game's eye-mask visibility guide: the white areas show where important subject details must remain readable; never render that guide, black eye shapes, actual eyes, borders, or vignette inside the photograph. Keep unimportant background at central seam x768.\nLOOK: believable unretouched 1990s consumer color-negative ISO400 still photograph, developed and scanned with restraint. Normal 50mm perspective and gentle optical compression, no ultrawide look, no computer-rendered architectural perfection. At f/2.8 use physically plausible selective focus and natural soft out-of-focus falloff with simple rounded bokeh, NOT fake Gaussian blur or ultra-shallow portrait-mode cutout. Fine irregular silver/colour grain, modest scanner softness, slightly muted greens and blues, skin tones that remain natural rather than orange, gently rolled-off highlights, mildly lifted shadow detail but real blacks. Tiny subtle halation at the brightest practical light only. Ordinary available light and candid snapshot feel, not advertising, not cinematic teal/orange. No added flash unless already motivated by scene. No oversharpening, clarity/HDR, dreamy bloom, gloss, plastic skin, dramatic grading, scratches, dust specks, film borders, timestamps, date stamps or artificial aging. It should look like a real photograph, not a retro filter demonstration.\nLuminance contrast and simple silhouettes must still read under the eye mask in grayscale. Keep key subjects in focus and retain enough defocused context to identify each place. No new words, digits, brands, logos or watermarks, EXCEPT the exact pre-existing name \"Mom\" on Sunday's phone. For people retain believable individual faces, gestures and matte natural skin with restrained pores, lines and incidental asymmetry; do not beautify or turn them into polished AI-stock models. Preserve anatomy and hand count.\n\nTHURSDAY: keep the same seated laughing brunette woman in the RIGHT eye, light blouse, head tilted back in genuine warm laughter, with the monitor back and office context in the LEFT eye. Face and smile must remain clearly inside the right aperture, not at its upper edge; copy their positions from the reference. Focus on the laughing woman, foreground monitor and distant office softly out of focus. Natural unretouched skin, very slight candid-movement softness, no polished glamour portrait. Retain her happy expression and recognizable approved styling.",
+      "crop": [
+        0,
+        205,
+        1536,
+        819
+      ],
+      "outputSize": [
+        2560,
+        1024
+      ],
+      "offset": [
+        0,
+        0
+      ],
+      "zoom": 1
+    },
+    {
+      "day": 4,
+      "dayName": "friday",
+      "asset": "Assets/_Game/Resources/Eyes/day4.png",
+      "model": "gpt-image-2.5",
+      "selected": "therapist-evening-v6/day4-friday-v6-evening-crossed-legs.png",
+      "filmPrompt": "Create a NEW photographic version of the approved scene in reference 1, as if exposed on a 1990s 35mm film SLR using a normal 50mm prime lens at f/2.8. This is a CAMERA / FILM LOOK change, not a change to the date of the depicted story: retain the existing objects, modern smartphones, rooms, clothing, people and actions.\nReference 1 is the approved panoramic photograph letterboxed in a 1536x1024 canvas. Its actual scene is precisely the strip x0..1536 y205..819. Keep that strip's framing and positions as faithfully as possible: key left-eye subject near x390 and right-eye subject near x1130. Output 1536x1024, with the new version of the same panoramic scene inside y205..819. The top and bottom letterbox areas may stay neutral grey. They will be discarded. Do not move a subject above the panoramic strip. Reference 2 is ONLY the game's eye-mask visibility guide: the white areas show where important subject details must remain readable; never render that guide, black eye shapes, actual eyes, borders, or vignette inside the photograph. Keep unimportant background at central seam x768.\nLOOK: believable unretouched 1990s consumer color-negative ISO400 still photograph, developed and scanned with restraint. Normal 50mm perspective and gentle optical compression, no ultrawide look, no computer-rendered architectural perfection. At f/2.8 use physically plausible selective focus and natural soft out-of-focus falloff with simple rounded bokeh, NOT fake Gaussian blur or ultra-shallow portrait-mode cutout. Fine irregular silver/colour grain, modest scanner softness, slightly muted greens and blues, skin tones that remain natural rather than orange, gently rolled-off highlights, mildly lifted shadow detail but real blacks. Tiny subtle halation at the brightest practical light only. Ordinary available light and candid snapshot feel, not advertising, not cinematic teal/orange. No added flash unless already motivated by scene. No oversharpening, clarity/HDR, dreamy bloom, gloss, plastic skin, dramatic grading, scratches, dust specks, film borders, timestamps, date stamps or artificial aging. It should look like a real photograph, not a retro filter demonstration.\nLuminance contrast and simple silhouettes must still read under the eye mask in grayscale. Keep key subjects in focus and retain enough defocused context to identify each place. No new words, digits, brands, logos or watermarks, EXCEPT the exact pre-existing name \"Mom\" on Sunday's phone. For people retain believable individual faces, gestures and matte natural skin with restrained pores, lines and incidental asymmetry; do not beautify or turn them into polished AI-stock models. Preserve anatomy and hand count.\n\nFRIDAY: keep the SAME fictional elderly balding therapist with thin glasses in the LEFT eye, worn dark pullover sweater, faded old blue jeans, legs casually crossed, plain notepad and pen resting on his lap. Same relaxed slightly tilted attentive head, NOT a younger or glossy new man. His matte unretouched skin was specifically approved: do not smooth, polish, beautify or give him a plastic stock-photo face. Keep his entire head, sweater, notebook and crossed knees visible inside the LEFT aperture. Bright articulated desk lamp and small table remain in RIGHT aperture at roughly the same distance, a little softer but clear. Focus on his face, plausible f/2.8 falloff in room. Do not replace the room or remove him.",
+      "revisionBrief": "Final V6: evening after sunset, mature grey-haired man from user-supplied appearance reference with thick black glasses, grey stubble and natural wrinkles; worn navy sweater over light blue shirt, faded jeans; seated naturally with legs crossed at the KNEE, gaze down at physical lap notepad, pen in hand. Warm local task lamp, dim cool window. Preserve V5 relaxed upper body and head proportions; change only crossed legs and needed lap support. User-provided stock-preview appearance reference was not independently licensed; generated output is a new room scene, not the original stock image.",
+      "crop": [
+        0,
+        205,
+        1536,
+        819
+      ],
+      "outputSize": [
+        2560,
+        1024
+      ],
+      "offset": [
+        0,
+        0
+      ],
+      "zoom": 1
+    },
+    {
+      "day": 5,
+      "dayName": "saturday",
+      "asset": "Assets/_Game/Resources/Eyes/day5.png",
+      "model": "gpt-image-2.5",
+      "selected": "90s-50mm-f2.8/photos/day5-saturday-v2-90s.png",
+      "filmPrompt": "Create a NEW photographic version of the approved scene in reference 1, as if exposed on a 1990s 35mm film SLR using a normal 50mm prime lens at f/2.8. This is a CAMERA / FILM LOOK change, not a change to the date of the depicted story: retain the existing objects, modern smartphones, rooms, clothing, people and actions.\nReference 1 is the approved panoramic photograph letterboxed in a 1536x1024 canvas. Its actual scene is precisely the strip x0..1536 y205..819. Keep that strip's framing and positions as faithfully as possible: key left-eye subject near x390 and right-eye subject near x1130. Output 1536x1024, with the new version of the same panoramic scene inside y205..819. The top and bottom letterbox areas may stay neutral grey. They will be discarded. Do not move a subject above the panoramic strip. Reference 2 is ONLY the game's eye-mask visibility guide: the white areas show where important subject details must remain readable; never render that guide, black eye shapes, actual eyes, borders, or vignette inside the photograph. Keep unimportant background at central seam x768.\nLOOK: believable unretouched 1990s consumer color-negative ISO400 still photograph, developed and scanned with restraint. Normal 50mm perspective and gentle optical compression, no ultrawide look, no computer-rendered architectural perfection. At f/2.8 use physically plausible selective focus and natural soft out-of-focus falloff with simple rounded bokeh, NOT fake Gaussian blur or ultra-shallow portrait-mode cutout. Fine irregular silver/colour grain, modest scanner softness, slightly muted greens and blues, skin tones that remain natural rather than orange, gently rolled-off highlights, mildly lifted shadow detail but real blacks. Tiny subtle halation at the brightest practical light only. Ordinary available light and candid snapshot feel, not advertising, not cinematic teal/orange. No added flash unless already motivated by scene. No oversharpening, clarity/HDR, dreamy bloom, gloss, plastic skin, dramatic grading, scratches, dust specks, film borders, timestamps, date stamps or artificial aging. It should look like a real photograph, not a retro filter demonstration.\nLuminance contrast and simple silhouettes must still read under the eye mask in grayscale. Keep key subjects in focus and retain enough defocused context to identify each place. No new words, digits, brands, logos or watermarks, EXCEPT the exact pre-existing name \"Mom\" on Sunday's phone. For people retain believable individual faces, gestures and matte natural skin with restrained pores, lines and incidental asymmetry; do not beautify or turn them into polished AI-stock models. Preserve anatomy and hand count.\n\nSATURDAY: keep a bare right hand holding silver blister pack of plain white oval pills in the RIGHT eye, waiting-room chairs in the LEFT eye. Focus on pills and fingers, diffuse grainy highlights on foil, clinic chairs softly out of focus but recognizable. No pill text or packaging logos. Same small clinic waiting room, not a tabletop commercial pill still-life.",
+      "crop": [
+        0,
+        205,
+        1536,
+        819
+      ],
+      "outputSize": [
+        2560,
+        1024
+      ],
+      "offset": [
+        0,
+        0
+      ],
+      "zoom": 1
+    },
+    {
+      "day": 6,
+      "dayName": "sunday",
+      "asset": "Assets/_Game/Resources/Eyes/day6.png",
+      "model": "gpt-image-2.5",
+      "selected": "90s-50mm-f2.8/photos/day6-sunday-v2-90s.png",
+      "filmPrompt": "Create a NEW photographic version of the approved scene in reference 1, as if exposed on a 1990s 35mm film SLR using a normal 50mm prime lens at f/2.8. This is a CAMERA / FILM LOOK change, not a change to the date of the depicted story: retain the existing objects, modern smartphones, rooms, clothing, people and actions.\nReference 1 is the approved panoramic photograph letterboxed in a 1536x1024 canvas. Its actual scene is precisely the strip x0..1536 y205..819. Keep that strip's framing and positions as faithfully as possible: key left-eye subject near x390 and right-eye subject near x1130. Output 1536x1024, with the new version of the same panoramic scene inside y205..819. The top and bottom letterbox areas may stay neutral grey. They will be discarded. Do not move a subject above the panoramic strip. Reference 2 is ONLY the game's eye-mask visibility guide: the white areas show where important subject details must remain readable; never render that guide, black eye shapes, actual eyes, borders, or vignette inside the photograph. Keep unimportant background at central seam x768.\nLOOK: believable unretouched 1990s consumer color-negative ISO400 still photograph, developed and scanned with restraint. Normal 50mm perspective and gentle optical compression, no ultrawide look, no computer-rendered architectural perfection. At f/2.8 use physically plausible selective focus and natural soft out-of-focus falloff with simple rounded bokeh, NOT fake Gaussian blur or ultra-shallow portrait-mode cutout. Fine irregular silver/colour grain, modest scanner softness, slightly muted greens and blues, skin tones that remain natural rather than orange, gently rolled-off highlights, mildly lifted shadow detail but real blacks. Tiny subtle halation at the brightest practical light only. Ordinary available light and candid snapshot feel, not advertising, not cinematic teal/orange. No added flash unless already motivated by scene. No oversharpening, clarity/HDR, dreamy bloom, gloss, plastic skin, dramatic grading, scratches, dust specks, film borders, timestamps, date stamps or artificial aging. It should look like a real photograph, not a retro filter demonstration.\nLuminance contrast and simple silhouettes must still read under the eye mask in grayscale. Keep key subjects in focus and retain enough defocused context to identify each place. No new words, digits, brands, logos or watermarks, EXCEPT the exact pre-existing name \"Mom\" on Sunday's phone. For people retain believable individual faces, gestures and matte natural skin with restrained pores, lines and incidental asymmetry; do not beautify or turn them into polished AI-stock models. Preserve anatomy and hand count.\n\nSUNDAY: keep the SAME bare hand holding the incoming-call smartphone in the RIGHT eye and the sofa/window/mug in LEFT eye. The screen MUST clearly read EXACTLY \"Mom\", capital M lowercase om, above the same anonymous round avatar and circular accept/decline handset icons. This caller name is essential, legible and in focus inside the eye opening, never hidden near top. No other words or digits. Keep phone position and orientation. Focus on phone and hand, home setting softly out of focus, subdued natural window light. Do not change phone into a 1990s landline or flip phone.",
+      "crop": [
+        0,
+        205,
+        1536,
+        819
+      ],
+      "outputSize": [
+        2560,
+        1024
+      ],
+      "offset": [
+        0,
+        0
+      ],
+      "zoom": 1
+    }
+  ],
+  "mask": {
+    "asset": "Assets/_Game/Resources/Eyes/Mask.png",
+    "selected": "masks/natural.png",
+    "model": "gpt-image-2.5",
+    "prompt": "Generate a production-ready grayscale ALPHA MATTE texture, NOT a picture of eyeballs or a face. The supplied image is the existing two-eye visibility mask for a FIRST-PERSON POV game. White is the open area that reveals the scene; black is hidden. Make it more anatomically plausible and organic than the vector almond shapes, while remaining usable as a clean image mask.\nOUTPUT: 1536x1024 image, solid pure BLACK background across entire image. There are exactly TWO solid WHITE openings, side by side, entirely inside the central panoramic band y205..819. Left aperture centered at (395,510), right aperture at (1135,510). Left opening roughly x65..740, right x800..1470. Leave a narrow black bridge around x768. Top and bottom outside y205..819 must remain pure black and empty. Match original composition and keep broad visibility in both eyes. No actual eyes, pupils, irises, sclera shading, skin, skin color, face, nose drawing, eyebrows, text, grids or decoration. Each aperture has a PURE FLAT WHITE interior so scenes show clearly. Only the aperture boundary has a softly defocused organic grayscale falloff, approx 8-15 pixels. Silhouette suggests a photographed view from just behind relaxed human eyelids: uneven upper-lid curvature, tear-duct-shaped inner corners, more horizontal lower lids, tiny natural left-right asymmetry; a FEW very soft and short tapered eyelash occlusions only at upper outer edges, never heavy mascara or hairy fringe. Keep no isolated speckles in white. This is a functional mask like a cinematic POV blink frame, NOT two images of a person's eyes. The two apertures must be recognizably eye-shaped but not geometrically perfect symmetric vector ellipses. VARIANT NATURAL: relaxed open gaze, upper eyelids lightly arched and slightly flattened above the pupil area; lower edge shallow with small organic irregularity. Preserve about the original open area. Subtle realism, not stylized and not sleepy.",
+    "crop": [
+      0,
+      205,
+      1536,
+      819
+    ],
+    "outputSize": [
+      1600,
+      640
+    ],
+    "processing": "Grayscale matte from generated crop; <=5 becomes 0 and >=250 becomes 255; white RGB plus grayscale alpha."
+  },
+  "notes": [
+    "Generated art, not CC0 stock photographs. Governed by applicable OpenAI terms; no exclusive copyright or model-release claim.",
+    "Prior candidate versions and backup remain outside the Unity project under ../eye-photo-review.",
+    "Existing Unity texture GUIDs retained. No scenes, shaders or C# modified."
+  ]
+}
