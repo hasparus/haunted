@@ -30,7 +30,7 @@ namespace Demons
             "TUESDAY\nThe Host opened the office fridge and his yogurt is gone, the one with his name on it. It's only a yogurt, so we'll have to work to make it matter.\n\nBig thoughts take long. Haunt them together.",
             "WEDNESDAY\nThe Host's boss wants to see him in his office to talk about something. Doesn't say what. We'll fill that in for him.\n214 unread emails.\n\nIT finally sent a tool: the pot. Drop a thought in and it haunts itself.",
             "THURSDAY\nThe Host has to send an introduction email, two or three sentences about himself. It's not much to work with, but we've done more with less.\nHe's getting defensive.\n\nShelled thoughts need the hammer first.",
-            "FRIDAY\nThe Host has to prepare a presentation on how his team did this week and what's planned for next week. Slides, numbers, plenty of ways to go wrong. We'll make sure he finds every one of them.\nTherapy at five.\n\nStay out of the light.",
+            "FRIDAY\nTherapy at five. Watch out, team.\n\nStay out of the light.",
             "SATURDAY\nThe Host's manager asked him to come in on Saturday for overtime. If The Host doesn't rest, he can't fight us next week, so we're rooting for the manager.\nNew meds. The waiting-room music won't stop.\n\nWhen he takes a pill, controls flip.",
             "SUNDAY\nThe Host has found a date on a dating app. A healthy relationship would make him stronger against us, so we'd prefer it to go badly.\nMom keeps calling. He tries to pull himself together.\n\nAnswer the phone. Save thoughts from his hand.",
         };
