@@ -45,6 +45,20 @@ namespace Demons
             return null;
         }
 
+        LocalPlayer pressFor;
+        string pressText;
+
+        // Worked out once per player, not every frame they stand by the head.
+        string Press(LocalPlayer player)
+        {
+            if (player != pressFor)
+            {
+                pressFor = player;
+                pressText = $"Press {LocalPlayers.KeysOf(player, p => p.Grab)}";
+            }
+            return pressText;
+        }
+
         // The name on the floor turns into the key to press while one of this machine's demons could put the head on.
         void Update()
         {
@@ -55,7 +69,7 @@ namespace Demons
                 if (d.Head.Value == Head) wearer = d;
                 else if (press == null && d.IsOwner && d.Carrying.Value == Net.None && Near(d.transform.position, d) == this
                          && LocalPlayers.Find(d.LocalIndex.Value) is { } player)
-                    press = $"Press {LocalPlayers.KeysOf(player, p => p.Grab)}";
+                    press = Press(player);
             }
             if (worn != (bool)wearer)
             {
