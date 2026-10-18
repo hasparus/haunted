@@ -152,7 +152,7 @@ namespace Demons
             float gained = Scoring.Deliver(pebble.Stamps.Value, pebble.LastHolder.Value, prestige, pebble.Points);
             Influence.Value += gained;
             if (Progression.Instance) Progression.Instance.Earned(gained);
-            if (gained > 0) PopupRpc(pebble.transform.position, $"+{gained:0.#} zł", pebble.LastHolder.Value);
+            if (gained > 0) PopupRpc(pebble.transform.position, $"+{Scoring.Zloty(gained)}", pebble.LastHolder.Value);
             if (pebble.Stamps.Value != 0 && Demon.All.Find(d => d.Slot.Value == pebble.LastHolder.Value) is { } deliverer)
                 deliverer.Deliveries.Value++;
             for (int slot = 0; slot < Scoring.MaxDemons; slot++)
@@ -187,7 +187,7 @@ namespace Demons
             if (Progression.Instance.Mode.Value == GameMode.Survival)
             {
                 Influence.Value -= Balance.I.survivalMissPenalty;
-                PopupRpc(at, $"\u2212{Balance.I.survivalMissPenalty:0.#} zł", -1);
+                PopupRpc(at, $"\u2212{Scoring.Zloty(Balance.I.survivalMissPenalty)}", -1);
             }
             Progression.Instance.Crack();
         }
@@ -195,7 +195,7 @@ namespace Demons
         public void Forgotten(Vector3 at)
         {
             Influence.Value -= Balance.I.forgottenPenalty;
-            PopupRpc(at, $"\u2212{Balance.I.forgottenPenalty:0.#} zł", -1);
+            PopupRpc(at, $"\u2212{Scoring.Zloty(Balance.I.forgottenPenalty)}", -1);
             if (Progression.Instance) Progression.Instance.Crack();
         }
 

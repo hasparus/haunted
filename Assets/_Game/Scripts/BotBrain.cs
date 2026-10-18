@@ -142,7 +142,8 @@ namespace Demons
                 if (needsMe && !threatened)
                 {
                     float combo = s.Workers.Value != 0 ? 2.5f * p.Weight : 0;
-                    yield return Shared(s, s.Slot.position, 5 + combo + urgency - Dist(me, s.Slot.position) * 0.25f);
+                    var at = s.Kind == StationKind.Hammer ? s.SidePoint(FreeSide(s, d)) : s.Slot.position;
+                    yield return Shared(s, at, 5 + combo + urgency - Dist(me, at) * 0.25f);
                 }
                 if (done || threatened)
                     yield return Tap(p, s.Slot.position, GamepadButton.South, 4 + p.Weight + urgency - Dist(me, s.Slot.position) * 0.25f);
@@ -176,6 +177,14 @@ namespace Demons
                 float prefer = s.Kind == StationKind.Pot ? 0.5f : 1f;
                 yield return Tap(s, s.Slot.position, GamepadButton.South, 6 * prefer - Dist(me, s.Slot.position) * 0.3f);
             }
+        }
+
+        // The side of the hammer nobody else is working, so two bots (or a bot and a player) end up facing each other.
+        static int FreeSide(Station s, Demon me)
+        {
+            foreach (var d in Demon.All)
+                if (d != me && d.Using == s) return -s.SideOf(d.transform.position);
+            return s.SideOf(me.transform.position);
         }
 
         static int DesiredStamps(Pebble p) => p.Kind.Value == PebbleKind.Big && Demon.All.Count > 1 ? 2 : 1;

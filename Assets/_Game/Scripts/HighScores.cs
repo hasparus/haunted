@@ -60,7 +60,7 @@ namespace Demons
                 for (int i = 0; i < Mathf.Min(5, board.scores.Length); i++)
                 {
                     var e = board.scores[i];
-                    sb.AppendLine($"{i + 1}.  {e.score:0}   {(string.IsNullOrEmpty(e.name) ? "anonymous" : e.name)}  ({e.players} demon{(e.players == 1 ? "" : "s")})");
+                    sb.AppendLine($"{i + 1}.  {Scoring.Zloty(e.score)}   {(string.IsNullOrEmpty(e.name) ? "anonymous" : e.name)}  ({e.players} demon{(e.players == 1 ? "" : "s")})");
                 }
                 Top = sb.ToString().TrimEnd();
             }

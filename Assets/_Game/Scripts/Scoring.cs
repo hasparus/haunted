@@ -5,6 +5,9 @@ namespace Demons
         public const int MaxDemons = 4;
         public const float PrestigePerPower = 10f;
 
+        // Revenue is shown in whole złoty: ten to a point of influence (a demon's prestige is already counted that way).
+        public static string Zloty(float influence) => $"{influence * PrestigePerPower:0} zł";
+
         public static int StampCount(byte stamps)
         {
             int n = 0;

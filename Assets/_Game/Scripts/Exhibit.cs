@@ -69,7 +69,8 @@ namespace Demons
                 view = new RenderTexture(Size, Size, 24) { antiAliasing = 4 };
                 eye.targetTexture = view;
             }
-            eye.enabled = visible;
+            // The window drifts slowly, so its view renders every other frame: half the cost of a second camera.
+            eye.enabled = visible && Time.frameCount % 2 == 0;
             window.forceRenderingOff = !visible;
             if (!visible) return;
             float t = 1 - shown;

@@ -341,12 +341,12 @@ namespace Demons
             if (infoNow != infoShown)
             {
                 infoShown = infoNow;
-                UI.Set(dayInfo, !progress ? "" : week ? $"goal {infoNow.Item2:0} zł" : $"best {infoNow.Item2:0} zł");
+                UI.Set(dayInfo, !progress ? "" : week ? $"goal {Scoring.Zloty(infoNow.Item2)}" : $"best {Scoring.Zloty(infoNow.Item2)}");
             }
             if (state.Influence.Value != revenueShown)
             {
                 revenueShown = state.Influence.Value;
-                UI.Set(revenue, $"Revenue: {revenueShown:0.#} zł");
+                UI.Set(revenue, $"Revenue: {Scoring.Zloty(revenueShown)}");
             }
             RefreshCracks(progress);
 
@@ -373,7 +373,7 @@ namespace Demons
                 int slot = chips[i].Slot.Value;
                 var value = (state.Prestige.Count > slot ? state.Prestige[slot] : 0) / Scoring.PrestigePerPower;
                 var score = (Label)scores[i];
-                if (value != scoreSeen[slot]) UI.Set(score, $"{value:0.#} zł");
+                if (value != scoreSeen[slot]) UI.Set(score, Scoring.Zloty(value));
                 if (value > scoreSeen[slot]) Hop(score);
                 scoreSeen[slot] = value;
             }
@@ -490,7 +490,7 @@ namespace Demons
                     UI.Box("hud-chip-dot", name).style.backgroundColor = d.Tint;
                     name.Add(UI.Text(d.Name, "td", i == 0 ? UI.PlexBold : null));
                     if (i == 0 && Score(d) > 0) name.Add(UI.Text("Employee of the Week", "employee"));
-                    row.Add(UI.Text($"{Score(d) / Scoring.PrestigePerPower:0.#} zł", "td-num"));
+                    row.Add(UI.Text(Scoring.Zloty(Score(d) / Scoring.PrestigePerPower), "td-num"));
                     foreach (var value in new[] { d.Haunts.Value, d.Deliveries.Value, d.Assists.Value, d.Throws.Value, d.Dashes.Value })
                         row.Add(UI.Text(value.ToString("0"), "td-num"));
                 }

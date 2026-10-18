@@ -29,7 +29,7 @@ namespace Demons
             "MONDAY\nThe Host is standing in front of the skyscraper with his new office in it, checking the address again. Good. Let him doubt all the way to the door.\n\nGrab the thoughts, haunt them on the desks, bring them back to the conveyor belt.",
             "TUESDAY\nHis yogurt is gone from the office fridge. The one with his name on it. Small thing, but we'll make it matter.\n\nBig thoughts take long. Haunt them together.",
             "WEDNESDAY\nThe Host's boss wants to see him in his office to talk about something. Doesn't say what. Let it simmer.\n\nIT finally sent a tool: the pot. Drop a thought in and it haunts itself.",
-            "THURSDAY\nThe girl from accounting laughed at his joke. He's carrying it around like a shield.\n\nShelled thoughts need the hammer first.",
+            "THURSDAY\nThe girl from accounting laughed at his joke. He's carrying it around like a shield.\n\nShelled thoughts need the hammer: one demon on each side.",
             "FRIDAY\nTherapy at five. Watch out, team.\n\nStay out of the light.",
             "SATURDAY\nNew meds. The waiting-room music won't stop.\n\nWhen he takes a pill, controls flip.",
             "SUNDAY\nMom keeps calling. He's trying to pull himself together.\n\nAnswer the phone. Save thoughts from his hand.",
@@ -315,7 +315,7 @@ namespace Demons
             PlayerPrefs.Save();
             signers = Demon.All.FindAll(d => !Bots.IsBot(d)).Count;
             bool assisted = Bots.All.Count > 0;
-            End($"Peak revenue {Peak.Value:0} zł  ·  best {Best.Value:0} zł", System.Array.FindAll(Balance.I.survivalStarSeconds, s => Elapsed >= s).Length);
+            End($"Peak revenue {Scoring.Zloty(Peak.Value)}  ·  best {Scoring.Zloty(Best.Value)}", System.Array.FindAll(Balance.I.survivalStarSeconds, s => Elapsed >= s).Length);
             if (Peak.Value > 0 && signers > 0 && !assisted)
             {
                 Signing.Value = true;

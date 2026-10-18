@@ -77,6 +77,13 @@ namespace Demons
             Workers.Value = 0;
         }
 
+        // The hammer takes two: a demon on each side of it (left and right as the room is built), unless there's only one.
+        const float SideReach = 0.75f;
+
+        public int SideOf(Vector3 at) => Vector3.Dot(at - Slot.position, transform.right) < 0 ? -1 : 1;
+
+        public Vector3 SidePoint(int side) => Slot.position + transform.right * side * SideReach;
+
         public bool NeedsWorkFrom(Demon d, Pebble p) => Kind switch
         {
             StationKind.Hammer => p.Shelled.Value,
@@ -121,6 +128,18 @@ namespace Demons
             return workers;
         }
 
+        bool BothSides(byte hands)
+        {
+            bool left = false, right = false;
+            foreach (var d in Demon.All)
+            {
+                if ((hands & d.SlotBit) == 0) continue;
+                if (SideOf(d.transform.position) < 0) left = true;
+                else right = true;
+            }
+            return left && right;
+        }
+
         void Work()
         {
             if (Ringing.Value)
@@ -155,7 +174,7 @@ namespace Demons
                     break;
                 case StationKind.Hammer:
                     useful = pebble.Shelled.Value ? Hands() : (byte)0;
-                    n = Scoring.StampCount(useful);
+                    n = useful != 0 && (Demon.All.Count < 2 || BothSides(useful)) ? 1 : 0;
                     duration = Balance.I.hammerTime;
                     break;
                 default:
