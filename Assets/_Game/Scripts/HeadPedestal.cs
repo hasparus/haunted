@@ -9,7 +9,7 @@ namespace Demons
     {
         public static readonly List<HeadPedestal> All = new();
 
-        const float Reach = 1f, Vanish = 0.075f;
+        const float Reach = 2f, Vanish = 0.075f;
         static readonly int BlurId = Shader.PropertyToID("_Blur");
 
         public int Head;
@@ -37,12 +37,15 @@ namespace Demons
 
         public static HeadPedestal Near(Vector3 at, Demon demon)
         {
+            HeadPedestal near = null;
+            float best = Reach;
             foreach (var p in All)
             {
                 var off = p.transform.position - at;
-                if (p.Head != demon.Head.Value && !Demon.HeadTaken(p.Head, demon) && new Vector2(off.x, off.z).magnitude < Reach) return p;
+                float d = new Vector2(off.x, off.z).magnitude;
+                if (d < best && p.Head != demon.Head.Value && !Demon.HeadTaken(p.Head, demon)) (near, best) = (p, d);
             }
-            return null;
+            return near;
         }
 
         LocalPlayer pressFor;
