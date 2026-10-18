@@ -85,12 +85,12 @@ MonoBehaviour:
   newDay:
   - {fileID: 8300000, guid: 0a0047c9617a6364bbe5f0b67e2be043, type: 3}
   spotHunt:
-  - {fileID: 8300000, guid: 028c8826edc77d240b2a69d418b5cec3, type: 3}
-  spotSweep: {fileID: 8300000, guid: 923fcbff916164f4391505e417fd3b72, type: 3}
+  - {fileID: 8300000, guid: b178ace53071b4d2b8dac927c42375db, type: 3}
+  spotSweep: {fileID: 0}
   spotAim:
   - {fileID: 8300000, guid: 70acb58412c85cf4ebcf727e08a453dc, type: 3}
   spotStrike:
-  - {fileID: 8300000, guid: 910bad56c2932aa40989ad2661258847, type: 3}
+  - {fileID: 8300000, guid: b178ace53071b4d2b8dac927c42375db, type: 3}
   lit:
   - {fileID: 8300000, guid: 4e76d9b8db60e544e81247a38421adbe, type: 3}
   clawWarning:

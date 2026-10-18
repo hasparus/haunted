@@ -308,6 +308,13 @@ Week_events/spotHunt.wav  (pole spotHunt w Sounds.asset)
   licencja: CC0 1.0 (License.txt w paczce)
   obróbka: obcięta cisza
 
+Week_events/spotOn.wav  (pola spotHunt i spotStrike w Sounds.asset)
+  źródło: freesound_community-spotlight-91359.mp3
+  autor: freesound_community (Pixabay)
+  URL: https://pixabay.com/sound-effects/spotlight-91359/
+  licencja: Pixabay Content License
+  obróbka: mp3 -> wav mono 44,1 kHz, obcięta cisza
+
 Week_events/spotStrike.wav  (pole spotStrike w Sounds.asset)
   źródło: laserLarge_000.ogg
   autor: Kenney (www.kenney.nl), paczka Sci-fi Sounds; credit niewymagany
