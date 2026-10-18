@@ -161,8 +161,8 @@ namespace Demons
             UI.Button("Join", () => NetBootstrap.Instance.Join(code.value), joining).AddToClassList("button--primary");
             UI.Button("Cancel", () => NetBootstrap.Instance.CancelJoin(), joining);
             cpu = UI.Box("hud-net-row", net);
-            UI.Button("Add bot", Bots.AddCpu, cpu);
             removeCpu = UI.Button("Remove bot", Bots.RemoveCpu, cpu);
+            UI.Button("Add bot", Bots.AddCpu, cpu);
             online = UI.Box("hud-net-row", net);
             Button copy = null;
             copy = UI.Button("Copy code", () =>
