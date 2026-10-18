@@ -26,17 +26,19 @@ namespace Demons
 
         static readonly string[] DayCards =
         {
-            "MONDAY\nThe Host is standing in front of the skyscraper with his new office in it, checking the address on his phone again. Good. We want him doubting it all the way to the door.\nFirst day at the new job. Everyone smiles a little too much.",
-            "TUESDAY\nThe Host opened the office fridge and his yogurt is gone, the one with his name on it. It's only a yogurt, so we'll have to work to make it matter.\nBig thoughts take long. Haunt them together.",
-            "WEDNESDAY\nThe Host's boss wants to see him in his office to talk about something. Doesn't say what. We'll fill that in for him.\n214 unread emails. IT finally sent a tool: the pot.\nDrop a thought in and it haunts itself.",
-            "THURSDAY\nThe Host has to send an introduction email, two or three sentences about himself. It's not much to work with, but we've done more with less.\nHe's getting defensive.\nShelled thoughts need the hammer first.",
-            "FRIDAY\nThe Host has to prepare a presentation on how his team did this week and what's planned for next week. Slides, numbers, plenty of ways to go wrong. We'll make sure he finds every one of them.\nTherapy at five.\nStay out of the light.",
-            "SATURDAY\nThe Host's manager asked him to come in on Saturday for overtime. If The Host doesn't rest, he can't fight us next week, so we're rooting for the manager.\nNew meds. The waiting-room music won't stop.\nWhen he takes a pill, controls flip.",
-            "SUNDAY\nThe Host has found a date on a dating app. A healthy relationship would make him stronger against us, so we'd prefer it to go badly.\nMom keeps calling. He tries to pull himself together.\nAnswer the phone. Save thoughts from his hand.",
+            "MONDAY\nThe Host is standing in front of the skyscraper with his new office in it, checking the address on his phone again. Good. We want him doubting it all the way to the door.\nFirst day at the new job. Everyone smiles a little too much.\n\nGrab the thoughts, haunt them on the desks, bring them back to the conveyor belt.",
+            "TUESDAY\nThe Host opened the office fridge and his yogurt is gone, the one with his name on it. It's only a yogurt, so we'll have to work to make it matter.\n\nBig thoughts take long. Haunt them together.",
+            "WEDNESDAY\nThe Host's boss wants to see him in his office to talk about something. Doesn't say what. We'll fill that in for him.\n214 unread emails.\n\nIT finally sent a tool: the pot. Drop a thought in and it haunts itself.",
+            "THURSDAY\nThe Host has to send an introduction email, two or three sentences about himself. It's not much to work with, but we've done more with less.\nHe's getting defensive.\n\nShelled thoughts need the hammer first.",
+            "FRIDAY\nThe Host has to prepare a presentation on how his team did this week and what's planned for next week. Slides, numbers, plenty of ways to go wrong. We'll make sure he finds every one of them.\nTherapy at five.\n\nStay out of the light.",
+            "SATURDAY\nThe Host's manager asked him to come in on Saturday for overtime. If The Host doesn't rest, he can't fight us next week, so we're rooting for the manager.\nNew meds. The waiting-room music won't stop.\n\nWhen he takes a pill, controls flip.",
+            "SUNDAY\nThe Host has found a date on a dating app. A healthy relationship would make him stronger against us, so we'd prefer it to go badly.\nMom keeps calling. He tries to pull himself together.\n\nAnswer the phone. Save thoughts from his hand.",
         };
 
         // Friday, halfway to the goal.
-        const string PenCard = "HOMEWORK\nWrite it all down. Mash or wiggle off the pen.";
+        public static System.Collections.Generic.IEnumerable<string> Cards => System.Linq.Enumerable.Append(DayCards, PenCard);
+
+        const string PenCard = "HOMEWORK\nWrite it all down.\n\nMash or wiggle off the pen.";
 
         static readonly (Feature feature, string card)[] SurvivalCards =
         {

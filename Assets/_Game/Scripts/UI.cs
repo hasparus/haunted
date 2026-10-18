@@ -20,7 +20,7 @@ namespace Demons
             plex = plexBold = jolly = null;
         }
 
-        static PanelSettings Settings()
+        public static PanelSettings Settings()
         {
             if (settings) return settings;
             settings = ScriptableObject.CreateInstance<PanelSettings>();

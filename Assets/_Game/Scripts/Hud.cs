@@ -9,8 +9,8 @@ namespace Demons
     {
         static readonly string[] Columns = { "Revenue", "Haunts", "Deliveries", "Assists", "Throws", "Dashes" };
 
-        VisualElement top, scores, crackPips, review, net, offline, joining, online, notice, cpu, cardWrap, card, reviewWrap, table, sign;
-        Label cardHint, day, dayInfo, revenue, netStatus, noticeTitle, noticeBody, cardTitle, cardBody, paused, reviewTitle, reviewBody, reviewStat, signHint, signWait;
+        VisualElement top, scores, crackPips, review, net, offline, joining, online, notice, cpu, cardWrap, reviewWrap, table, sign;
+        Label day, dayInfo, revenue, netStatus, noticeTitle, noticeBody, paused, reviewTitle, reviewBody, reviewStat, signHint, signWait;
         TextField code, signature;
         Button removeCpu;
         VisualElement footer;
@@ -25,8 +25,8 @@ namespace Demons
         (int players, bool lobby, bool typing) hintFor = (-1, false, false);
         List<(string text, bool key)> hint;
         bool signFocused, codeFocused, reviewing;
-        StarRow reviewStars, cardStars;
-        Label cardStarsFor;
+        StarRow reviewStars;
+        DayCard card;
 
         static Hud instance;
 
@@ -47,7 +47,7 @@ namespace Demons
         VisualElement world;
         VisualElement hud;
         string lastCard;
-        int cardIn, reviewIn;
+        int cardIn, reviewIn, cardStarsSeen = -2;
         readonly List<(Label label, Vector3 at, float born)> popups = new();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -182,17 +182,8 @@ namespace Demons
             UI.Button("OK", () => NetBootstrap.Instance.DismissError(), notice).AddToClassList("button--primary");
 
             cardWrap = UI.Box("center", hud);
-            card = UI.Box("card", cardWrap);
-            cardTitle = UI.Text("", "card-title", UI.Jolly);
-            cardBody = UI.Text("", "card-body");
-            cardStarsFor = UI.Text("", "card-stars-for");
-            card.Add(cardStarsFor);
-            cardStars = new StarRow();
-            card.Add(cardStars);
-            card.Add(cardTitle);
-            card.Add(cardBody);
-            cardHint = UI.Text("Haunt or pick up to get back to work.", "card-hint");
-            card.Add(cardHint);
+            card = new DayCard();
+            cardWrap.Add(card);
 
             paused = UI.Text("Paused", "paused", UI.Jolly);
             var pausedWrap = UI.Box("center", hud);
@@ -241,7 +232,11 @@ namespace Demons
 
             UI.Show(top, live && !state.IsLobby);
             UI.Show(scores.parent, live && !state.IsLobby);
-            if (!live || state.IsLobby) UI.Show(crackPips, false);
+            if (!live || state.IsLobby)
+            {
+                UI.Show(crackPips, false);
+                lights.Refresh(0, 0, Balance.I.maxCracks);
+            }
             if (live && !state.IsLobby) RefreshTop(state, progress);
 
             RefreshNet(state);
@@ -310,7 +305,7 @@ namespace Demons
             }
             if (!showCard && !burningOut) lastCard = null;
             if (showCard && !showReview) RefreshCard(progress.Card.Value.ToString(), progress);
-            if (showCard) UI.Show(cardHint, live && state.Held.Value);
+            if (showCard) UI.Show(card.Hint, live && state.Held.Value);
             if (showReview && !reviewing)
             {
                 reviewStars.Show(progress.Stars.Value);
@@ -438,14 +433,12 @@ namespace Demons
         {
             // A new day's card first reviews the day before it.
             int stars = progress.CardStars.Value;
-            UI.Show(cardStars, stars >= 0);
-            UI.Show(cardStarsFor, stars >= 0);
-            if (text != lastCard && stars >= 0)
+            if (text != lastCard || stars != cardStarsSeen)
             {
-                UI.Set(cardStarsFor, $"{Progression.Title(progress.Day.Value - 1)}'s review");
-                cardStars.Show(stars);
+                cardStarsSeen = stars;
+                card.Review(Progression.Title(progress.Day.Value - 1), stars);
             }
-            if (stars >= 0) cardStars.Tick();
+            if (stars >= 0) card.Stars.Tick();
             if (text != lastCard)
             {
                 lastCard = text;
@@ -455,14 +448,7 @@ namespace Demons
             // A frame later, so the pop-in transition starts from the hidden state; frames, not the panel's
             // scheduler, because the boss's card arrives with the game paused.
             if (Time.frameCount >= cardIn) card.AddToClassList("card--in");
-            int split = text.IndexOf('\n');
-            UI.Set(cardTitle, split < 0 ? text : text[..split]);
-            if (cardBody.text != (split < 0 ? "" : text[(split + 1)..]))
-            {
-                UI.Set(cardBody, split < 0 ? "" : text[(split + 1)..]);
-                UI.Balance(cardBody, 560);
-            }
-            UI.Show(cardBody, split >= 0);
+            card.Set(text);
         }
 
         void RefreshReview(GameState state, Progression progress)

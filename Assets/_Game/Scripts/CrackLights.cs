@@ -24,6 +24,7 @@ namespace Demons
 
         public void Refresh(int open, float seal, int max)
         {
+            int was = cracks.Count;
             if (open >= max && cracks.Count < open) floodAt = Time.unscaledTime;
             while (cracks.Count < open) cracks.Add((Time.unscaledTime, Grow()));
             while (cracks.Count > open) cracks.RemoveAt(cracks.Count - 1);
@@ -38,7 +39,7 @@ namespace Demons
                 float flicker = cracks.Count >= 3 ? 0.7f + 0.3f * Mathf.PerlinNoise(now * 9, i * 7.3f) : 1;
                 Glows.Add(new Vector3(p.x, 1 - p.y, grown * flicker * (i == cracks.Count - 1 ? 1 - seal * 0.6f : 1)));
             }
-            if (cracks.Count > 0 || Time.unscaledTime - floodAt < FloodTime) MarkDirtyRepaint();
+            if (cracks.Count > 0 || cracks.Count != was || Time.unscaledTime - floodAt < FloodTime) MarkDirtyRepaint();
         }
 
         static List<Vector2[]> Grow()

@@ -456,10 +456,22 @@
     align-items: center;
 }
 
+.card-head {
+    flex-direction: row;
+    align-self: stretch;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.card-review {
+    align-items: flex-end;
+}
+
 .card-title {
     font-size: 48px;
     color: var(--yellow);
-    -unity-text-align: middle-center;
+    -unity-text-align: middle-left;
     margin: 0;
     padding: 0;
 }
@@ -468,13 +480,13 @@
     font-size: 14px;
     letter-spacing: 1px;
     color: var(--muted);
-    -unity-text-align: middle-center;
+    -unity-text-align: middle-right;
     margin: 0;
     padding: 0;
 }
 
 .card .stars {
-    margin: 2px 0 8px 0;
+    margin: 2px -4px 0 0;
 }
 
 .card .star {
@@ -484,20 +496,49 @@
 }
 
 .card-hint {
+    align-self: stretch;
     font-size: 15px;
     color: var(--muted);
-    -unity-text-align: middle-center;
+    -unity-text-align: middle-left;
     margin: 12px 0 0 0;
     padding: 0;
 }
 
 .card-body {
+    align-self: stretch;
     font-size: 21px;
     color: var(--ink);
-    -unity-text-align: middle-center;
+    -unity-text-align: middle-left;
     white-space: normal;
     margin: 4px 0 0 0;
     padding: 0;
+}
+
+.card-task {
+    align-self: stretch;
+    font-size: 19px;
+    color: var(--yellow);
+    -unity-text-align: middle-left;
+    white-space: normal;
+    margin: 14px 0 0 0;
+    padding: 0;
+}
+
+.atelier {
+    flex-grow: 1;
+    background-color: rgb(15, 15, 15);
+}
+
+.atelier .unity-scroll-view__content-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 24px;
+}
+
+.atelier .card {
+    width: 620px;
+    margin: 12px;
 }
 
 .paused {

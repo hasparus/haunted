@@ -531,6 +531,18 @@ namespace Demons.Editor
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), $"{Root}/Scenes/DemonAnimation.unity");
         }
 
+        // Every boss card side by side in play mode, no game around them: to tune their copy and layout.
+        [MenuItem("Demons/Build UI Atelier Scene")]
+        public static void BuildUIAtelierScene()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            var cam = Camera.main;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = Gray(0.06f);
+            new GameObject("UI Atelier").AddComponent<UIAtelier>();
+            EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), $"{Root}/Scenes/UIAtelier.unity");
+        }
+
         static GameObject BuildMeds(Vector3 pos, bool demo, float size = 1)
         {
             var go = new GameObject(demo ? "MedsDemo" : "Meds");
