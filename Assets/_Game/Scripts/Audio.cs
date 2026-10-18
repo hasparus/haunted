@@ -28,11 +28,13 @@ namespace Demons
         }
 
         public const string MusicKey = "music_volume", SoundKey = "sound_volume";
+        // Music starts at 70% of the mix; the settings slider goes back up to all of it.
+        public const float DefaultMusicLevel = 0.7f;
 
         // Player settings on top of the designer's mix in Sounds.asset.
         public static float MusicLevel
         {
-            get => PlayerPrefs.GetFloat(MusicKey, 1);
+            get => PlayerPrefs.GetFloat(MusicKey, DefaultMusicLevel);
             set
             {
                 PlayerPrefs.SetFloat(MusicKey, value);
