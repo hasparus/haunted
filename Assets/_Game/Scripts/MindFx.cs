@@ -39,6 +39,7 @@ namespace Demons
         }
 
         FullScreenPassRendererFeature[] passes;
+        const float FireDelay = 0.07f;
         float fxTime, inverted, fire;
         bool active = true;
 
@@ -69,8 +70,9 @@ namespace Demons
             Mind = Mathf.MoveTowards(Mind, Mathf.Max(Mood.Gloom * 0.5f, danger), dt);
             fxTime += dt * 0.2f * (1 - (1 - Mind) * (1 - Mind));
             inverted = Mathf.MoveTowards(inverted, progress && progress.Inverted || Demon.AnyLocalFlipped ? 1 : 0, dt * 3);
-            // Out the moment the card has gone; the card's own exit already faded the flames.
-            fire = Hud.CardShown ? Mathf.MoveTowards(fire, 1, dt * 4) : 0;
+            // They catch a beat after the card appears and blaze up fast; out the moment the card has gone, the card's own
+            // exit having already faded them.
+            fire = Hud.CardShown && Time.unscaledTime - Hud.CardSince >= FireDelay ? Mathf.MoveTowards(fire, 1, dt * 10) : Hud.CardShown ? fire : 0;
             float wobble = Distortion ? Mind * Mind : 0;
 
             // Haunted/Paper lights the floor around the point under the board's middle, a third of the way up the screen.

@@ -32,6 +32,8 @@ namespace Demons
 
         // The boss's card or the Performance Review on screen, for MindFx to set alight.
         public static bool CardShown { get; private set; }
+        // When the card (or the review) last came up, unscaled: the flames catch just after it.
+        public static float CardSince { get; private set; }
         public static Rect CardBounds { get; private set; }
         public static Vector2 PanelSize { get; private set; }
         // 0 while a card is up, 0 to 1 as it burns away.
@@ -297,6 +299,7 @@ namespace Demons
                 UI.Show(cardWrap, showCard && !showReview);
                 UI.Show(reviewWrap, showReview);
             }
+            if (!CardShown && (showCard || burningOut)) CardSince = Time.unscaledTime;
             CardShown = showCard || burningOut;
             if (CardShown)
             {
