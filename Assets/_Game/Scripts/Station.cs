@@ -25,6 +25,9 @@ namespace Demons
         const float StampPixels = 400, StampRest = 137, StampLift = 0.4f;
         static readonly int AloftId = Shader.PropertyToID("_Aloft");
         Transform stamp, leverLeft, leverRight, helper;
+        readonly Renderer[] sideRings = new Renderer[2];
+        MaterialPropertyBlock ringBlock;
+        static readonly int FeetId = Shader.PropertyToID("_Feet"), BaseColorId = Shader.PropertyToID("_BaseColor");
         float stampAt;
         int helperSide = 1;
 
@@ -86,6 +89,20 @@ namespace Demons
             stamp = Part("StampHead", new Vector2(0, StampRest), 0.6f);
             Slot.position = root.TransformPoint(new Vector3(0, StampRest / StampPixels, 0)) + root.up * Pebble.SmallRadius;
 
+            // A ring on each side the stamp still needs a demon at.
+            var limb = Resources.Load<Material>("Fx/Limb");
+            for (int i = 0; i < 2; i++)
+            {
+                var ring = new GameObject(i == 0 ? "RingLeft" : "RingRight");
+                ring.transform.SetParent(transform, false);
+                ring.AddComponent<MeshFilter>().sharedMesh = Demon.RingMesh();
+                var r = ring.AddComponent<MeshRenderer>();
+                r.sharedMaterial = limb;
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                sideRings[i] = r;
+            }
+            ringBlock = new MaterialPropertyBlock();
+
             var stand = new GameObject("Helper").AddComponent<SpriteRenderer>();
             stand.sprite = Resources.Load<Sprite>("Art/Devil_Front");
             stand.sharedMaterial = card;
@@ -102,7 +119,9 @@ namespace Demons
         {
             if (!stamp) return;
             var held = Net.Find<Pebble>(Item.Value);
-            float target = held ? 2 * held.LooksRadius + StampLift * (1 - Progress.Value) : 0;
+            // Empty, it lifts to take a shelled thought as soon as one is carried near.
+            var coming = held ? null : ShelledNear();
+            float target = held ? 2 * held.LooksRadius + StampLift * (1 - Progress.Value) : coming ? 2 * coming.LooksRadius + StampLift : 0;
             stampAt = Mathf.Lerp(stampAt, target, 1 - Mathf.Exp(-Time.deltaTime * (target < stampAt ? 30 : 8)));
             stamp.localPosition = new Vector3(0, StampRest / StampPixels + stampAt, 0);
             bool left = false, right = false;
@@ -126,9 +145,34 @@ namespace Demons
                     right = true;
                 }
             }
+            bool waiting = held && held.Shelled.Value && !Locked;
+            bool alone = Demon.All.Count < 2;
+            for (int i = 0; i < 2; i++)
+            {
+                bool manned = i == 0 ? left : right;
+                bool show = waiting && !manned && !(alone && (left || right));
+                var r = sideRings[i];
+                r.gameObject.SetActive(show);
+                if (!show) continue;
+                var at = SidePoint(i == 0 ? -1 : 1);
+                at.y = transform.position.y + 0.03f;
+                r.transform.position = at;
+                r.transform.localScale = new Vector3(0.45f, 1, 0.45f) * (1 + 0.08f * Mathf.Sin(Time.time * 6));
+                ringBlock.SetVector(FeetId, at);
+                ringBlock.SetColor(BaseColorId, new Color(1, 0.88f, 0.6f, 1));
+                r.SetPropertyBlock(ringBlock);
+            }
             float wiggle = 6 * Mathf.Sin(Time.time * 14);
             leverLeft.localRotation = Quaternion.Euler(0, 0, left ? 22 + wiggle : 0);
             leverRight.localRotation = Quaternion.Euler(0, 0, right ? -22 - wiggle : 0);
+        }
+
+        Pebble ShelledNear()
+        {
+            foreach (var d in Demon.All)
+                if (Net.Find<Pebble>(d.Carrying.Value) is { } p && p.Shelled.Value && d.InReach(Slot.position))
+                    return p;
+            return null;
         }
 
         public override void OnNetworkSpawn()

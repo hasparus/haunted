@@ -409,7 +409,7 @@ namespace Demons
         static Mesh ringMesh;
 
         // Flat annulus of unit outer radius, faces both ways.
-        static Mesh RingMesh()
+        public static Mesh RingMesh()
         {
             if (ringMesh) return ringMesh;
             const int sides = 48;
