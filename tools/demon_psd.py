@@ -3,7 +3,7 @@
 # ///
 """Cuts the artist's demon PSD into the game's sprites (Assets/_Game/Resources/Art/Demon) and writes pivots.json next to
 them: body parts pivot at the canvas feet point (256, 760); side heads (and their faces) are scaled about the chin to
-their front's height; arms pivot at the shoulder; the orb's swirl is kept as ink only.
+their front's height; arms pivot at the shoulder; the orb's wings pivot at their roots.
 
     uv run tools/demon_psd.py WoF_Character.psd some/folder
 
@@ -107,17 +107,8 @@ cut("Hands Holding/Hands_Holding_Orb_Front", "GripFront", False)
 cut("Hands Holding/Hands_Holding_Orb_Back", "GripBack", False)
 cut("Hands Holding/Hands_Holding_Orb_Side", "GripSide", False)
 
-# The orb's swirl, ink only and inside the rim (our sphere draws its own outline), and the wings.
+# The orb's wings, placed relative to the orb (our thoughts keep their own sphere).
 orb = layer("Orb/Orb"); ob = bbox(orb); oc = ((ob[0] + ob[2]) / 2, (ob[1] + ob[3]) / 2); r = (ob[2] - ob[0]) / 2
-arr = np.asarray(orb).astype(float)
-lum = arr[..., :3].mean(-1) / 255
-yy, xx = np.mgrid[0:arr.shape[0], 0:arr.shape[1]]
-inside = np.hypot(xx - oc[0], yy - oc[1]) < r * 0.86
-ink = np.clip((0.6 - lum) / 0.4, 0, 1) * (arr[..., 3] / 255) * inside
-swirl = np.zeros_like(arr); swirl[..., :3] = 20; swirl[..., 3] = ink * 255
-# The swirl spans the whole orb, so the shader can map the ball's facing straight onto it.
-Image.fromarray(swirl.astype(np.uint8)).crop((ob[0], ob[1], ob[2], ob[3])).save(f"{O}/OrbSwirl.png")
-pivots["OrbSwirl"] = [0.5, 0.5]
 for side in ("L", "R"):
     w = layer(f"Orb/Orb_Wing_{side}"); wb = bbox(w)
     root = (wb[2] if side == "L" else wb[0], (wb[1] + wb[3]) / 2)
