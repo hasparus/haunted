@@ -109,7 +109,7 @@ namespace Demons
             stand.sharedMaterial = card;
             stand.color = new Color(0.62f, 0.62f, 0.64f);
             stand.transform.SetParent(root, false);
-            stand.transform.localPosition = new Vector3(-(194 + 150) / StampPixels, 0, 0);
+            stand.transform.localPosition = new Vector3(-(194 + 270) / StampPixels, 0, 0);
             stand.transform.localScale = Vector3.one * 1.3f / stand.sprite.bounds.size.y;
             helper = stand.transform;
             var knob = leverLeft.GetComponent<SpriteRenderer>().sprite.bounds;
