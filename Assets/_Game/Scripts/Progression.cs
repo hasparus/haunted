@@ -55,7 +55,6 @@ namespace Demons
             "\"I'm not angry. I'm documenting.\"",
             "\"Let's take this offline. Permanently.\"",
             "\"HR has a calendar invite for you.\"",
-            "\"Per my last email: haunt him.\"",
             "\"I've seen interns haunt harder.\"",
             "\"We'll circle back on your role.\"",
             "\"Not a great look for the department.\"",
