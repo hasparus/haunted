@@ -2,8 +2,8 @@
 
 Usage: uv run --with pillow --with numpy tools/hand_frames.py [master.png]
 Add --add-nails only when preparing the original nail-free master. The default
-master is HandGrab.png. Only the distal thumb/index move; the wrist, palm and
-other three fingers stay registered. The fingertips never meet. Rebuilds the
+master is HandGrab.png. The thumb/index open wide for standby/falling and almost
+close on the orb. The wrist/palm stay registered; fingertips never meet. Rebuilds the
 three transparent PNGs, contact sheet and looping animation preview.
 """
 import argparse
@@ -59,12 +59,13 @@ def smooth(t):
 
 
 def displacement(x, y, pose):
-    thumb = smooth((y - 530) / 290) * (1 - smooth((x - 385) / 45))
-    index = smooth((y - 650) / 230) * smooth((x - 410) / 50) * (1 - smooth((x - 635) / 65))
+    side = smooth((x - 385) / 50)
+    thumb = smooth((y - 530) / 290) * (1 - side)
+    index = smooth((y - 650) / 230) * side * (1 - smooth((x - 700) / 160))
     if pose < 0:
-        tx, ix, ty, iy = 30 * pose, -20 * pose, 2 * pose, -8 * pose
+        tx, ix, ty, iy = 115 * pose, -100 * pose, -15 * pose, -35 * pose
     else:
-        tx, ix, ty, iy = 18 * pose, -12 * pose, 5 * pose, -10 * pose
+        tx, ix, ty, iy = 28 * pose, -18 * pose, 10 * pose, -15 * pose
     return thumb * tx + index * ix, thumb * ty + index * iy
 
 
@@ -73,9 +74,10 @@ def animate(master, pose):
         return master.copy()
     y, x = np.mgrid[:SIZE, :SIZE].astype(np.float32)
     sx, sy = x.copy(), y.copy()
-    for _ in range(6):
+    for _ in range(70):
         dx, dy = displacement(sx, sy, pose)
-        sx, sy = x - dx, y - dy
+        sx += 0.2 * (x - dx - sx)
+        sy += 0.2 * (y - dy - sy)
     xi, yi = np.floor(sx).astype(int), np.floor(sy).astype(int)
     fx, fy = sx - xi, sy - yi
     a = np.asarray(master, dtype=np.float32) / 255
