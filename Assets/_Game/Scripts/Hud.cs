@@ -319,7 +319,12 @@ namespace Demons
             reviewing = showReview;
             if (showReview) RefreshReview(state, progress);
 
-            UI.Show(paused.parent, live && state.Paused && !Menu.Open && !showCard);
+            bool showPaused = live && state.Paused && !Menu.Open && !showCard;
+            UI.Show(paused.parent, showPaused);
+            if (showPaused)
+            {
+                UI.Set(paused, Menu.PausedTitle());
+            }
 
             var hintNow = (live ? LocalPlayers.All.Count : -1, live && state.IsLobby, Progression.Typing);
             if (hintNow != hintFor)

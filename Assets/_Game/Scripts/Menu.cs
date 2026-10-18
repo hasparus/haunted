@@ -55,13 +55,26 @@ namespace Demons
             root.Add(scrim);
         }
 
-        static void Show(bool open)
+        static void Show(bool open, InputDevice by = null)
         {
             Open = open;
             Audio.Ui(open ? Sounds.I.menuOpen : Sounds.I.menuClose);
             LocalPlayers.SetEnabled(!open);
-            if (GameState.Instance && GameState.Instance.IsSpawned) GameState.Instance.PauseRpc(open);
+            if (GameState.Instance && GameState.Instance.IsSpawned) GameState.Instance.PauseRpc(open, SlotOf(by));
             if (instance) instance.Present(open);
+        }
+
+        public static string PausedTitle()
+        {
+            var by = GameState.Instance ? Demon.All.Find(d => d.Slot.Value == GameState.Instance.PausedBy.Value) : null;
+            return by ? $"Paused by <color=#{ColorUtility.ToHtmlStringRGB(by.Tint)}>{by.Name}</color>" : "Paused";
+        }
+
+        // The demon of the local player on that device (the first local one if none), for "Paused by".
+        static int SlotOf(InputDevice device)
+        {
+            var player = LocalPlayers.All.Find(p => p.Device == device) ?? LocalPlayers.All.Find(p => !Bots.IsBot(p.Device));
+            return player != null && LocalPlayers.DemonOf(player) is { } demon ? demon.Slot.Value : -1;
         }
 
         void Present(bool open)
@@ -101,10 +114,10 @@ namespace Demons
             if (scrim != null) Fade();
             if (NetBootstrap.TypingCode || Progression.Typing) return;
             var kb = Keyboard.current;
-            bool toggle = kb != null && kb.escapeKey.wasPressedThisFrame;
+            InputDevice by = kb != null && kb.escapeKey.wasPressedThisFrame ? kb : null;
             foreach (var pad in Gamepad.all)
-                if (!Bots.IsBot(pad) && pad.startButton.wasPressedThisFrame) toggle = true;
-            if (toggle) Show(!Open);
+                if (!Bots.IsBot(pad) && pad.startButton.wasPressedThisFrame) by = pad;
+            if (by != null) Show(!Open, by);
             if (!Open || scrim == null) return;
 
             Rebuild();
@@ -165,7 +178,7 @@ namespace Demons
             var joins = LocalPlayers.JoinOptions().ConvertAll(o => o.key == "A" ? "A on a gamepad" : o.key);
             var key = new StringBuilder().Append(string.Join(",", joins)).Append(CameraRig.ShakeEnabled)
                 .Append(ScaleIndex).Append(NetBootstrap.Instance && NetBootstrap.Instance.Online).Append(Screen.fullScreen).Append(Mood.Effects).Append(MindFx.Distortion).Append(Audio.MusicLevel).Append(Audio.SoundLevel)
-                .Append(Progression.Instance && Progression.Instance.IsSpawned);
+                .Append(Progression.Instance && Progression.Instance.IsSpawned).Append(GameState.Instance ? GameState.Instance.PausedBy.Value : -1);
             foreach (var p in players) key.Append('|').Append(p.Index).Append(p.Scheme).Append(LocalPlayers.DemonOf(p) is { } d ? d.ColorIndex.Value : -1);
             foreach (var d in Demon.All) key.Append(',').Append(d.ColorIndex.Value);
             if (key.ToString() == shape) return;
@@ -174,7 +187,7 @@ namespace Demons
             panel.Clear();
             rows.Clear();
             var head = UI.Box("menu-head", panel);
-            head.Add(UI.Text("Paused", "title", UI.Jolly));
+            head.Add(UI.Text(PausedTitle(), "title", UI.Jolly));
             head.Add(Text(Version, "version"));
 
             if (players.Count == 0) panel.Add(Text("Nobody has joined yet.", "empty"));

@@ -28,6 +28,8 @@ namespace Demons
 
         public NetworkVariable<float> Influence = new();
         public NetworkVariable<double> PausedFor = new(), PausedAt = new(-1);
+        // The slot of the demon whose player last paused, or -1 (a card holding the game, or nobody's demon).
+        public NetworkVariable<int> PausedBy = new(-1);
 
         static bool wasPaused;
 
@@ -79,10 +81,15 @@ namespace Demons
         }
 
         [Rpc(SendTo.Server)]
-        public void PauseRpc(bool pause, RpcParams rpc = default)
+        public void PauseRpc(bool pause, int by = -1, RpcParams rpc = default)
         {
-            if (pause) pausers.Add(rpc.Receive.SenderClientId);
+            if (pause)
+            {
+                pausers.Add(rpc.Receive.SenderClientId);
+                PausedBy.Value = by;
+            }
             else pausers.Remove(rpc.Receive.SenderClientId);
+            if (pausers.Count == 0) PausedBy.Value = -1;
             SetPaused(pausers.Count > 0 || Held.Value);
         }
 
