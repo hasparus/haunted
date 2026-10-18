@@ -29,7 +29,10 @@ namespace Demons
         int strikesLeft;
         bool strikeNext;
 
-        bool Active => Demo || Progression.Interrupting(Feature.Therapist);
+        // A demo light in headquarters only wakes when a demon comes near its lesson, so it doesn't light the whole room;
+        // one in an exhibit window always runs.
+        bool Active => Demo ? !(GameState.Instance && GameState.Instance.IsLobby) || Demon.All.Exists(d => Flat(d.transform.position - home) < WakeReach)
+            : Progression.Interrupting(Feature.Therapist);
         float Scale => phase.Value switch { Phase.Rest => 0.35f, Phase.Hunt => 1, _ => Balance.I.strikeScale };
 
         public bool Threatens(Vector3 p) =>
@@ -37,7 +40,7 @@ namespace Demons
 
         public static Spotlight Instance;
 
-        const float DemoReach = 6;
+        const float DemoReach = 6, WakeReach = 7;
 
         void Awake()
         {
