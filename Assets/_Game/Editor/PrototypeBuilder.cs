@@ -530,7 +530,7 @@ namespace Demons.Editor
             beam.transform.SetParent(go.transform, false);
             beam.AddComponent<MeshFilter>().sharedMesh = Cone();
             var beamRenderer = beam.AddComponent<MeshRenderer>();
-            beamRenderer.sharedMaterial = Additive("SpotBeam", new Color(1f, 0.88f, 0.62f, 0.07f), Gradient("SpotBeam", radial: false));
+            beamRenderer.sharedMaterial = Additive("SpotBeam", new Color(1f, 0.88f, 0.62f, 0.1f), Gradient("SpotBeam", radial: false));
             beamRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
             var lamp = new GameObject("Lamp").AddComponent<Light>();
@@ -551,7 +551,6 @@ namespace Demons.Editor
             Set(spot, "beam", beam.transform);
             Set(spot, "lamp", lamp);
             Set(spot, "glow", glow);
-            Set(spot, "ringMaterial", Unlit("SpotRing", warm));
             return go;
         }
 
