@@ -95,7 +95,8 @@ Shader "Haunted/SpotInk"
                 float angle = atan2(p.y, p.x), turn = angle / (2 * PI) + 0.5;
                 // The edge wobbles like a hand-drawn circle and boils like the drawings' lines.
                 float r = length(p) + (Noise(float2(turn * 9, boil)) - 0.5) * 0.06;
-                half k = _Aim > 0 ? Sight(r, turn, angle, p) : 0;
+                // The sight is drawn still and clean, so it reads as a steady mark of where the strike lands.
+                half k = _Aim > 0 ? Sight(length(p), turn, angle, p) : 0;
                 half shadow = Darken(r, i.positionWS.xz, boil);
                 // Nothing at the quad's edge, so it never shows as a square.
                 half fade = smoothstep(SPAN * 0.92, SPAN, length(p));
