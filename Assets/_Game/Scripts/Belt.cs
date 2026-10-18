@@ -47,9 +47,32 @@ namespace Demons
 
         static readonly int TravelId = Shader.PropertyToID("_BeltTravel");
 
+        // The hum comes from the stretch of belt nearest a local player's demon, panned with it and fading as they walk
+        // away, down to a faint floor; with nobody local it comes from the middle of the screen at that floor.
+        const float HumReach = 7, HumFloor = 0.2f;
+
+        void HumAround(out Vector3 at, out float near)
+        {
+            at = transform.position;
+            near = HumFloor;
+            float best = float.MaxValue;
+            foreach (var d in Demon.All)
+            {
+                if (!d.IsOwner || Bots.IsBot(d)) continue;
+                var p = ClosestPoint(d.transform.position);
+                float dist = new Vector2(p.x - d.transform.position.x, p.z - d.transform.position.z).magnitude;
+                if (dist >= best) continue;
+                best = dist;
+                at = p;
+            }
+            if (best < float.MaxValue) near = Mathf.Lerp(1, HumFloor, Mathf.Clamp01(best / HumReach));
+            else if (Camera.main) at = Camera.main.transform.position + Camera.main.transform.forward * 10;
+        }
+
         void Update()
         {
-            hum = Audio.Loop(hum, this, IsSpawned ? Sounds.I.conveyorLoop : null, null, Sounds.I.ambienceVolume);
+            HumAround(out var at, out float near);
+            hum = Audio.Loop(hum, this, IsSpawned ? Sounds.I.conveyorLoop : null, at, Sounds.I.ambienceVolume * near);
             // Haunted/Paper scrolls the belt's slats by this; wrapped at a whole number of slats so it never jumps.
             if (IsSpawned) Shader.SetGlobalFloat(TravelId, (float)(Travel(Net.Now) % 1000));
             if (!IsServer || Demon.All.Count == 0) return;
