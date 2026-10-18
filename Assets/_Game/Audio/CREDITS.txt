@@ -299,7 +299,7 @@ Week_events/spotAim.wav  (pole spotAim w Sounds.asset)
   autor: Kenney (www.kenney.nl), paczka Sci-fi Sounds; credit niewymagany
   URL: https://kenney.nl/media/pages/assets/sci-fi-sounds/6b296f9ecf-1677589334/kenney_sci-fi-sounds.zip -> Audio/forceField_003.ogg
   licencja: CC0 1.0 (License.txt w paczce)
-  obróbka: obcięta cisza; faza celowania trwa 0,9 s (strikeAim)
+  obróbka: obcięta cisza; faza celowania trwa 1,3 s (strikeAim)
 
 Week_events/spotHunt.wav  (pole spotHunt w Sounds.asset)
   źródło: spaceEngineLow_000.ogg (z paczki v1: Przeszkadzajki/sfx_spot_warning__k2.ogg)

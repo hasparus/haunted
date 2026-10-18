@@ -73,12 +73,14 @@ namespace Demons
             look.SetActive(active);
             glowDisc.SetActive(!aiming);
             if (phase.Value != heard) phaseAt = Time.time;
+            // The sight shows at once where the strike will land, at its full size.
+            if (phase.Value == Phase.Aim && heard != Phase.Aim) look.transform.localScale = Vector3.one * Scale;
             if (phase.Value == Phase.Strike && heard != Phase.Strike) look.transform.localScale = Vector3.one * Scale * 0.55f;
             look.transform.localScale = Vector3.Lerp(look.transform.localScale, Vector3.one * Scale, Time.deltaTime * (phase.Value == Phase.Strike ? 20 : 8));
             bool striking = active && phase.Value == Phase.Strike;
             dark = striking ? Mathf.Min(1, dark + Time.deltaTime * 12) : Mathf.Max(0, dark - Time.deltaTime * 4);
             ink.gameObject.SetActive(aiming || dark > 0);
-            block.SetFloat(AimId, aiming ? Mathf.Clamp((Time.time - phaseAt) / (Balance.I.strikeAim * (Demo ? 0.5f : 1)), 0.001f, 1) : 0);
+            block.SetFloat(AimId, aiming ? Mathf.Clamp((Time.time - phaseAt) / Balance.I.strikeAim, 0.001f, 1) : 0);
             block.SetFloat(DarkId, dark);
             ink.SetPropertyBlock(block);
             Shine(look.activeSelf && !aiming);
@@ -141,7 +143,8 @@ namespace Demons
             if (next == Phase.Aim) GetComponent<NetworkTransform>().Teleport(StrikeAt(), transform.rotation, transform.localScale);
             phase.Value = next;
             float seconds = next switch { Phase.Rest => b.spotRest, Phase.Hunt => b.spotHunt, Phase.Aim => b.strikeAim, _ => b.strikeTime };
-            phaseEnd = Time.time + seconds * (Demo ? 0.5f : 1);
+            // A demo light rests and hunts in half the time, but aims and strikes like the real one.
+            phaseEnd = Time.time + seconds * (Demo && next is Phase.Rest or Phase.Hunt ? 0.5f : 1);
         }
 
         Vector3 StrikeAt()
