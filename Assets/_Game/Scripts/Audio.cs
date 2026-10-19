@@ -27,30 +27,26 @@ namespace Demons
             instance = go.AddComponent<Audio>();
         }
 
-        public const string MusicKey = "music_volume", SoundKey = "sound_volume";
-        // Music starts at 70% of the mix; the settings slider goes back up to all of it.
-        public const float DefaultMusicLevel = 0.7f;
+        public const string MusicKey = "music_setting", SoundKey = "sound_setting";
+        // The settings read 100% at these shares of the designer's mix in Sounds.asset, and go up to these multiples.
+        const float MusicShare = 0.3f, SoundShare = 0.5f;
+        public const float MaxMusic = 3, MaxSound = 2;
 
-        // Player settings on top of the designer's mix in Sounds.asset.
-        public static float MusicLevel
+        // Saved when the menu closes, not on every step of a held arrow.
+        public static float MusicSetting
         {
-            get => PlayerPrefs.GetFloat(MusicKey, DefaultMusicLevel);
-            set
-            {
-                PlayerPrefs.SetFloat(MusicKey, value);
-                PlayerPrefs.Save();
-            }
+            get => PlayerPrefs.GetFloat(MusicKey, 1);
+            set => PlayerPrefs.SetFloat(MusicKey, value);
         }
 
-        public static float SoundLevel
+        public static float SoundSetting
         {
             get => PlayerPrefs.GetFloat(SoundKey, 1);
-            set
-            {
-                PlayerPrefs.SetFloat(SoundKey, value);
-                PlayerPrefs.Save();
-            }
+            set => PlayerPrefs.SetFloat(SoundKey, value);
         }
+
+        public static float MusicLevel => MusicSetting * MusicShare;
+        public static float SoundLevel => SoundSetting * SoundShare;
 
         readonly AudioSource[] voices = new AudioSource[Voices];
         int next;

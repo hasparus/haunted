@@ -20,7 +20,7 @@ namespace Demons
 
         NetworkManager net;
         ISession session;
-        string status = "", joinCode = "";
+        string status = "", joinCode = "", refusal = "";
         bool busy;
 
         void Start()
@@ -35,13 +35,11 @@ namespace Demons
             net.NetworkConfig.ConnectionApproval = true;
             net.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(Application.version);
             net.ConnectionApprovalCallback = Approve;
-            net.OnClientStopped += wasHost =>
+            net.OnClientStopped += _ =>
             {
-                if (session == null || busy) return;
-                string reason = net.DisconnectReason;
-                string title = reason == Closed ? "Room closed" : reason == Full || reason.StartsWith("Different builds") ? "Couldn't join" : "Disconnected";
-                _ = BackToCouch("", string.IsNullOrEmpty(reason) ? "Lost connection to the room." : reason, title);
+                if (session != null && !busy) Dropped(net.DisconnectReason);
             };
+            GetComponent<CouchTransport>().Lost += RoomLost;
 
             var args = Environment.GetCommandLineArgs();
             int i = Array.IndexOf(args, "-join");
@@ -55,8 +53,20 @@ namespace Demons
 
         void StartCouch()
         {
-            net.NetworkConfig.NetworkTransport = GetComponent<OfflineTransport>();
+            net.NetworkConfig.NetworkTransport = GetComponent<CouchTransport>();
             net.StartHost();
+        }
+
+        void Dropped(string reason)
+        {
+            string title = reason == Closed ? "Room closed" : reason == Full || reason.StartsWith("Different builds") ? "Couldn't join" : "Disconnected";
+            _ = BackToCouch("", string.IsNullOrEmpty(reason) ? "Lost connection to the room." : reason, title);
+        }
+
+        // The host's room went away under the couch game (relay failure, or the services dropped it); the game plays on.
+        void RoomLost()
+        {
+            if (session != null && !busy) Dropped("");
         }
 
         const string Closed = "The host closed the room.";
@@ -87,7 +97,11 @@ namespace Demons
                 try { await leaving.LeaveAsync(); }
                 catch (Exception e) { Debug.LogException(e); }
             }
-            if (net.IsListening && net.NetworkConfig.NetworkTransport is OfflineTransport) return;
+            if (net.IsListening && net.NetworkConfig.NetworkTransport is CouchTransport couch)
+            {
+                couch.CloseRoom();
+                return;
+            }
             if (net.IsListening) net.Shutdown();
             while (net.ShutdownInProgress) await Task.Yield();
             StartCouch();
@@ -95,26 +109,39 @@ namespace Demons
 
         readonly RoomHandoff handoff = new();
 
-        // Starts Netcode for a booked room only once it exists, so the couch game (and everyone's demons) keeps running
-        // through signing in and booking instead of vanishing for those seconds.
+        // A host opens its booked room under the running couch game. A guest has to swap the couch game for the host's,
+        // but only once the room exists, so everyone keeps playing through signing in and booking.
         class RoomHandoff : INetworkHandler
         {
             public async Task StartAsync(NetworkConfiguration configuration)
             {
                 var net = NetworkManager.Singleton;
+                if (configuration.Role != NetworkRole.Client)
+                {
+                    if (!net.GetComponent<CouchTransport>().OpenRoom(configuration.RelayServerData)) throw new InvalidOperationException("The room's relay didn't start.");
+                    return;
+                }
                 if (net.IsListening) net.Shutdown();
                 while (net.ShutdownInProgress) await Task.Yield();
                 var transport = net.GetComponent<UnityTransport>();
                 net.NetworkConfig.NetworkTransport = transport;
                 transport.SetRelayServerData(configuration.RelayServerData);
-                bool started = configuration.Role == NetworkRole.Client ? net.StartClient() : net.StartHost();
-                if (!started) throw new InvalidOperationException("Netcode didn't start for the room.");
+                if (net.StartClient())
+                    while (net.IsListening && !net.IsConnectedClient) await Task.Yield();
+                if (net.IsConnectedClient) return;
+                Instance.refusal = string.IsNullOrEmpty(net.DisconnectReason) ? "Couldn't reach the room. Check your connection and try again." : net.DisconnectReason;
+                throw new InvalidOperationException(Instance.refusal);
             }
 
             public Task StopAsync()
             {
                 var net = NetworkManager.Singleton;
-                if (net && net.IsListening) net.Shutdown();
+                if (net && net.NetworkConfig.NetworkTransport is CouchTransport couch)
+                {
+                    couch.CloseRoom();
+                    Instance.RoomLost();
+                }
+                else if (net && net.IsListening) net.Shutdown();
                 return Task.CompletedTask;
             }
         }
@@ -122,10 +149,14 @@ namespace Demons
         public async Task GoOnline(bool host)
         {
             busy = true;
+            refusal = "";
             try
             {
                 status = "Signing in...";
-                if (UnityServices.State != ServicesInitializationState.Initialized) await UnityServices.InitializeAsync();
+                // A fresh anonymous player per launch: two tabs or windows on one machine would otherwise be one player,
+                // and the services refuse a player joining a room they're already in.
+                if (UnityServices.State != ServicesInitializationState.Initialized)
+                    await UnityServices.InitializeAsync(new InitializationOptions().SetProfile($"p{Guid.NewGuid():N}"[..30]));
                 if (!AuthenticationService.Instance.IsSignedIn) await AuthenticationService.Instance.SignInAnonymouslyAsync();
 
                 var network = new NetworkOptions { RelayProtocol = RelayProtocol.WSS };
@@ -147,12 +178,26 @@ namespace Demons
             catch (Exception e)
             {
                 Debug.LogException(e);
-                await BackToCouch("", host
-                    ? "Couldn't book a room. Check your connection and try again."
-                    : $"Room {joinCode.Trim().ToUpperInvariant()} isn't on the calendar. Double-check the code with your host.");
+                if (refusal != "") await BackToCouch("", refusal, "Couldn't join");
+                else await BackToCouch("", host ? "Couldn't book a room. Check your connection and try again." : JoinFailure(e, joinCode.Trim().ToUpperInvariant()));
             }
             busy = false;
+            // The room can close between connecting and the booking going through.
+            if (session != null && !host && !net.IsConnectedClient) Dropped(net.DisconnectReason);
         }
+
+        static string JoinFailure(Exception e, string code) => e switch
+        {
+            SessionException { Error: SessionError.SessionNotFound or SessionError.InvalidParameter } =>
+                $"Room {code} isn't on the calendar. Double-check the code with your host.",
+            SessionException { Error: SessionError.RateLimitExceeded } => "Too many attempts. Give it a minute, then try again.",
+            // ponytail: a mistyped code and a full room both come back as unknown errors, told apart only by the message
+            SessionException typo when typo.Message.Contains("invalid character") =>
+                $"Room {code} isn't on the calendar. Double-check the code with your host.",
+            SessionException full when full.Message.Contains("full") => Full,
+            SessionException => $"Couldn't get into room {code}. Ask your host to check it's still open, then try again.",
+            _ => "Couldn't reach the room. Check your connection and try again.",
+        };
 
         public static NetBootstrap Instance { get; private set; }
 
