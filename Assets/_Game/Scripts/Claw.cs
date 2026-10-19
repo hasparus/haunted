@@ -13,6 +13,7 @@ namespace Demons
         [SerializeField] GameObject look;
         [SerializeField] Transform shadow;
         [SerializeField] ClawHand rig;
+        public ClawHand Visual => rig;
 
         readonly NetworkVariable<Phase> phase = new();
         readonly NetworkVariable<float> gripRadius = new(Pebble.SmallRadius);

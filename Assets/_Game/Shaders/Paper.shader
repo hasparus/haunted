@@ -16,7 +16,6 @@ Shader "Haunted/Paper"
         _Anchor("Where it stands (xyz), when w is 1", Vector) = (0, 0, 0, 0)
         _AnchorFrom("The point of it that stands there", Vector) = (0, 0, 0, 0)
         _Fade("Shown (dithered, stays opaque)", Range(0, 1)) = 1
-        _PhysicalDepth("Physical depth inside the 3D hand", Float) = 0
     }
 
     SubShader
@@ -30,7 +29,7 @@ Shader "Haunted/Paper"
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
                 half _Hatch, _Tiles;
-                float _TileSize, _Outline, _PoolRadius, _Slats, _Silhouette, _Scenery, _Fade, _PhysicalDepth;
+                float _TileSize, _Outline, _PoolRadius, _Slats, _Silhouette, _Scenery, _Fade;
                 float4 _Anchor, _AnchorFrom;
             CBUFFER_END
         ENDHLSL
@@ -91,9 +90,8 @@ Shader "Haunted/Paper"
                 // the sphere's front reaching past the point.
                 // Scenery writes its depth per pixel instead (Frag): pushed back exactly, whatever the triangle's size.
                 #if !defined(_SCENERY)
-                if (_PhysicalDepth < 0.5)
-                    o.positionCS.z = SortedZ(o.positionCS, _Anchor.w > 0 ? _Anchor.xyz + (o.positionWS - _AnchorFrom.xyz) * 0.1
-                        : Underneath(TransformObjectToWorld(float3(0, 0, 0))));
+                o.positionCS.z = SortedZ(o.positionCS, _Anchor.w > 0 ? _Anchor.xyz + (o.positionWS - _AnchorFrom.xyz) * 0.1
+                    : Underneath(TransformObjectToWorld(float3(0, 0, 0))));
                 #endif
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
                 o.fog = ComputeFogFactor(o.positionCS.z);

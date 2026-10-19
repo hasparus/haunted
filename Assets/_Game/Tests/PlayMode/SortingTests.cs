@@ -61,7 +61,7 @@ namespace Demons.PlayTests
 
         // Whether `top` is drawn over `under` anywhere: inside where `under` shows with `top` gone (shrunk by `trim` pixels
         // so the drawings' soft outlines don't count), `top` changes the frame.
-        static bool Covers(Renderer[] top, Renderer[] under, int trim = 2, int least = 20)
+        internal static bool Covers(Renderer[] top, Renderer[] under, int trim = 2, int least = 20)
         {
             // One size whatever the game view's, so the trim means the same everywhere. Without shadows and ambient
             // occlusion: they'd count `under`'s shadow as `under`, and shade one drawing by the depth of another.

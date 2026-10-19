@@ -86,6 +86,7 @@ namespace Demons.PlayTests
                 yield return null;
                 StartGrab();
                 yield return Until(() => pebble.State.Value == PebbleState.Held && pebble.Anchor.Value == claw.NetworkObjectId, 5, "the claw did not grab the thought");
+                yield return new WaitForFixedUpdate();
                 var grabbedAt = claw.transform.position;
                 float began = Time.time;
                 bool partial = false;
@@ -93,6 +94,7 @@ namespace Demons.PlayTests
                 {
                     partial |= hand.Grip > 0 && hand.Grip < 1;
                     Assert.That(Vector3.Distance(grabbedAt, claw.transform.position), Is.LessThan(0.005f), "the claw lifted before closing");
+                    Assert.That(Vector3.Distance(pebble.transform.localScale, Vector3.one), Is.LessThan(0.0001f), "the orb pulsed during pickup");
                     yield return null;
                 }
                 Assert.IsTrue(partial, "the fingers jumped instead of animating");
@@ -103,9 +105,55 @@ namespace Demons.PlayTests
                 var renderer = Array.Find(pebble.GetComponentsInChildren<Renderer>(), r => r.name == "Stone");
                 var block = new MaterialPropertyBlock();
                 renderer.GetPropertyBlock(block);
-                Assert.That(block.GetFloat("_PhysicalDepth"), Is.EqualTo(1), "the sphere must interleave with the 3D fingers");
+                var handBlock = new MaterialPropertyBlock();
+                hand.GetComponentInChildren<SkinnedMeshRenderer>().GetPropertyBlock(handBlock);
+                Assert.That(Vector4.Distance(block.GetVector("_Anchor"), handBlock.GetVector("_HandSortAnchor")), Is.LessThan(0.0001f), "the hand and orb must share their foreground layer");
+                var anchor = block.GetVector("_Anchor");
+                var feet = new Vector3(claw.Hand.position.x, 0, claw.Hand.position.z);
+                Assert.That(Vector3.Dot((Vector3)anchor - feet, -Camera.main.transform.forward), Is.EqualTo(8).Within(0.001f));
                 yield return Until(() => pebble.State.Value == PebbleState.OnBelt, 3, "the thought was not released");
                 yield return Until(() => hand.Grip < 0.001f, 1, "the hand did not reopen");
+            }
+        }
+
+        [UnityTest, Timeout(30000)]
+        public IEnumerator DeskCannotCoverTheHandOrHeldOrb()
+        {
+            Pebble pebble = null;
+            yield return Thought(p => pebble = p);
+            pebble.PutOn(desk);
+            StartGrab();
+            yield return Until(() => pebble.State.Value == PebbleState.Held && hand.Grip > 0.999f, 5, "the hand did not close");
+            yield return new WaitForFixedUpdate();
+            var eye = Camera.main;
+            var position = eye.transform.position;
+            float fov = eye.fieldOfView;
+            var art = desk.GetComponentInChildren<SpriteRenderer>();
+            var artPosition = art.transform.position;
+            var artScale = art.transform.localScale;
+            var skin = hand.GetComponentInChildren<SkinnedMeshRenderer>();
+            var stone = Array.Find(pebble.GetComponentsInChildren<Renderer>(), r => r.name == "Stone");
+            var originalArt = new MaterialPropertyBlock(); art.GetPropertyBlock(originalArt);
+            var originalSkin = new MaterialPropertyBlock(); skin.GetPropertyBlock(originalSkin);
+            var originalStone = new MaterialPropertyBlock(); stone.GetPropertyBlock(originalStone);
+            try
+            {
+                eye.transform.position = claw.Hand.position + eye.transform.up * 0.6f - eye.transform.forward * 15;
+                eye.fieldOfView = 9;
+                art.transform.position = claw.Hand.position - eye.transform.forward * 0.5f;
+                art.transform.localScale *= 3;
+                var layer = new MaterialPropertyBlock(); art.GetPropertyBlock(layer);
+                layer.SetFloat("_Aloft", 4); art.SetPropertyBlock(layer);
+                Assert.IsFalse(SortingTests.Covers(new Renderer[] { art }, new Renderer[] { skin, stone }), "the desk covered the foreground hand or orb");
+                skin.GetPropertyBlock(layer); layer.SetVector("_HandSortAnchor", Vector4.zero); skin.SetPropertyBlock(layer);
+                stone.GetPropertyBlock(layer); layer.SetVector("_Anchor", new Vector4(claw.Hand.position.x, 0, claw.Hand.position.z, 1)); stone.SetPropertyBlock(layer);
+                Assert.IsTrue(SortingTests.Covers(new Renderer[] { art }, new Renderer[] { skin, stone }), "the overlap control did not cover the unsorted hand");
+            }
+            finally
+            {
+                eye.transform.position = position; eye.fieldOfView = fov;
+                art.transform.position = artPosition; art.transform.localScale = artScale;
+                art.SetPropertyBlock(originalArt); skin.SetPropertyBlock(originalSkin); stone.SetPropertyBlock(originalStone);
             }
         }
 

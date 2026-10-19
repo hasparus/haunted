@@ -11,6 +11,12 @@ namespace Demons
 
         public void Punch(Vector3 amount) => velocity += amount * 18f;
 
+        public void Settle()
+        {
+            offset = velocity = Vector3.zero;
+            transform.localScale = rest;
+        }
+
         public void Rest(Vector3 scale)
         {
             rest = scale;

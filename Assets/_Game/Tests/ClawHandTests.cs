@@ -94,6 +94,42 @@ namespace Demons.Tests
             Assert.That(runtime.triangles, Is.EqualTo(source.triangles));
         }
 
+        [Test]
+        public void FingerSortLayersFollowIndexAndThumbSkinWeights()
+        {
+            var skin = actor.GetComponentInChildren<SkinnedMeshRenderer>();
+            var mesh = skin.sharedMesh;
+            var weights = mesh.boneWeights;
+            var colors = mesh.colors32;
+            Assert.That(colors.Length, Is.EqualTo(mesh.vertexCount));
+            for (int i = 0; i < weights.Length; i++)
+            {
+                var w = weights[i];
+                int[] bones = { w.boneIndex0, w.boneIndex1, w.boneIndex2, w.boneIndex3 };
+                float[] values = { w.weight0, w.weight1, w.weight2, w.weight3 };
+                float index = 0, thumb = 0;
+                for (int j = 0; j < 4; j++)
+                {
+                    if (skin.bones[bones[j]].name.StartsWith("index_")) index += values[j];
+                    if (skin.bones[bones[j]].name.StartsWith("thumb_")) thumb += values[j];
+                }
+                Assert.That(colors[i].r / 255f, Is.EqualTo(index).Within(1f / 255));
+                Assert.That(colors[i].g / 255f, Is.EqualTo(thumb).Within(1f / 255));
+            }
+        }
+
+        [Test]
+        public void SettlingAPickupCancelsThePulseWithoutChangingRestScale()
+        {
+            var spring = actor.AddComponent<Springy>();
+            var rest = actor.transform.localScale;
+            spring.Rest(rest);
+            spring.Punch(Vector3.one);
+            spring.Settle();
+            typeof(Springy).GetMethod("Update", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(spring, null);
+            Assert.That(actor.transform.localScale, Is.EqualTo(rest));
+        }
+
         [TestCase(0.25f)]
         [TestCase(0.4f)]
         [TestCase(0.496f)]
