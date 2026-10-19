@@ -2086,6 +2086,10 @@ PrefabInstance:
       value: 31
       objectReference: {fileID: 0}
     - target: {fileID: -138966646841944475, guid: e27cea7cf21a4447b820efdf7596e94d, type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 4300000, guid: 85f47214453ce4b0cb45f2b7351dcebc, type: 2}
+    - target: {fileID: -138966646841944475, guid: e27cea7cf21a4447b820efdf7596e94d, type: 3}
       propertyPath: m_UpdateWhenOffscreen
       value: 1
       objectReference: {fileID: 0}
@@ -3350,7 +3354,7 @@ SkinnedMeshRenderer:
   m_Quality: 0
   m_UpdateWhenOffscreen: 1
   m_SkinnedMotionVectors: 1
-  m_Mesh: {fileID: 4300000, guid: a9fafde066bfc4a71ba869e634bfdbfb, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 85f47214453ce4b0cb45f2b7351dcebc, type: 2}
   m_Bones:
   - {fileID: 1035431475}
   - {fileID: 803335538}
@@ -4384,7 +4388,7 @@ SkinnedMeshRenderer:
   m_Quality: 0
   m_UpdateWhenOffscreen: 1
   m_SkinnedMotionVectors: 1
-  m_Mesh: {fileID: -8252822329853041290, guid: e27cea7cf21a4447b820efdf7596e94d, type: 3}
+  m_Mesh: {fileID: 4300000, guid: 85f47214453ce4b0cb45f2b7351dcebc, type: 2}
   m_Bones:
   - {fileID: 1724619756}
   - {fileID: 1509713083}

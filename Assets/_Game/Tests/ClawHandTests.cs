@@ -66,7 +66,7 @@ namespace Demons.Tests
         }
 
         [Test]
-        public void GameplayForearmExtensionLeavesTheHandVerticesAndWeightsUntouched()
+        public void StylizationPreservesTheOriginalGeometryAndSkinWeights()
         {
             var skin = actor.GetComponentInChildren<SkinnedMeshRenderer>();
             var runtime = skin.sharedMesh;
@@ -78,20 +78,42 @@ namespace Demons.Tests
             var after = runtime.vertices;
             var weights = runtime.boneWeights;
             var originalWeights = source.boneWeights;
-            int forearm = System.Array.FindIndex(skin.bones, bone => bone.name == "forearm_r");
-            int changed = 0;
-            for (int i = 0; i < before.Length; i++)
-            {
-                Assert.That(weights[i], Is.EqualTo(originalWeights[i]));
-                if ((before[i] - after[i]).sqrMagnitude < 0.00000001f) continue;
-                changed++;
-                var w = weights[i];
-                float armWeight = (w.boneIndex0 == forearm ? w.weight0 : 0) + (w.boneIndex1 == forearm ? w.weight1 : 0)
-                    + (w.boneIndex2 == forearm ? w.weight2 : 0) + (w.boneIndex3 == forearm ? w.weight3 : 0);
-                Assert.That(armWeight, Is.GreaterThan(0.999f), "a hand vertex was stretched");
-            }
-            Assert.That(changed, Is.InRange(6, 300));
+            Assert.That(after, Is.EqualTo(before), "styling must not sculpt or stretch the approved hand");
+            Assert.That(weights, Is.EqualTo(originalWeights));
+            Assert.That(runtime.bindposes, Is.EqualTo(source.bindposes));
+            Assert.That(runtime.normals, Is.EqualTo(source.normals));
+            Assert.That(runtime.uv.Length, Is.EqualTo(runtime.vertexCount), "paper grain needs skin-locked coordinates");
             Assert.That(runtime.triangles, Is.EqualTo(source.triangles));
+        }
+
+        [Test]
+        public void GameplayKeepsTheApprovedCloudPlacement()
+        {
+            var authoring = EditorSceneManager.OpenPreviewScene(Art + "RightHandRigging.unity");
+            try
+            {
+                var demo = System.Array.Find(authoring.GetRootGameObjects(), g => g.name == "Animation Demo");
+                var reference = demo.transform.Find("Motion/Cloud mockup");
+                var cloud = actor.transform.Find("Cloud");
+                Assert.IsNotNull(cloud);
+                Assert.That(cloud.localPosition, Is.EqualTo(reference.localPosition));
+                Assert.That(Quaternion.Angle(cloud.localRotation, reference.localRotation), Is.LessThan(0.1f));
+                Assert.That(cloud.localScale, Is.EqualTo(reference.localScale));
+                Assert.That(cloud.CompareTag("EditorOnly"), Is.False);
+            }
+            finally { EditorSceneManager.ClosePreviewScene(authoring); }
+        }
+
+        [Test]
+        public void StyledHandUsesPaperAndInkWithoutSpecularHighlights()
+        {
+            var material = actor.GetComponentInChildren<SkinnedMeshRenderer>().sharedMaterial;
+            Assert.That(material.shader.name, Is.EqualTo("Haunted/Hand"));
+            Assert.That(material.GetFloat("_Smoothness"), Is.Zero);
+            Assert.That(material.GetFloat("_Outline"), Is.GreaterThan(0));
+            Assert.That(material.GetFloat("_Grain"), Is.GreaterThan(0));
+            foreach (var message in ShaderUtil.GetShaderMessages(material.shader))
+                Assert.That(message.severity.ToString(), Is.Not.EqualTo("Error"), message.message);
         }
 
         [Test]

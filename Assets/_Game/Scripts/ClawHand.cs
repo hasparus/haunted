@@ -7,6 +7,7 @@ namespace Demons
         public const float GrabTime = 0.18f;
         static readonly int GripId = Animator.StringToHash("Grip");
         static readonly int AnchorId = Shader.PropertyToID("_HandSortAnchor"), FromId = Shader.PropertyToID("_HandSortFrom"), RadiusId = Shader.PropertyToID("_HandSortRadius");
+        static readonly int PaperAnchorId = Shader.PropertyToID("_Anchor"), PaperFromId = Shader.PropertyToID("_AnchorFrom");
         const float Foreground = 8f;
 
         [SerializeField] Animator animator;
@@ -76,6 +77,8 @@ namespace Demons
                 sorting.SetVector(AnchorId, new Vector4(anchor.x, anchor.y, anchor.z, 1));
                 sorting.SetVector(FromId, socket.position);
                 sorting.SetFloat(RadiusId, orbRadius);
+                sorting.SetVector(PaperAnchorId, new Vector4(anchor.x, anchor.y, anchor.z, 1));
+                sorting.SetVector(PaperFromId, socket.position);
                 renderer.SetPropertyBlock(sorting);
             }
         }

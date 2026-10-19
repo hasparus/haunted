@@ -110,6 +110,9 @@ namespace Demons.PlayTests
                 var handBlock = new MaterialPropertyBlock();
                 hand.GetComponentInChildren<SkinnedMeshRenderer>().GetPropertyBlock(handBlock);
                 Assert.That(Vector4.Distance(block.GetVector("_Anchor"), handBlock.GetVector("_HandSortAnchor")), Is.LessThan(0.0001f), "the hand and orb must share their foreground layer");
+                var cloudBlock = new MaterialPropertyBlock();
+                hand.transform.Find("Cloud").GetComponent<Renderer>().GetPropertyBlock(cloudBlock);
+                Assert.That(Vector4.Distance(block.GetVector("_Anchor"), cloudBlock.GetVector("_Anchor")), Is.LessThan(0.0001f), "the cloud must share the hand's foreground layer");
                 var anchor = block.GetVector("_Anchor");
                 var feet = new Vector3(claw.Hand.position.x, 0, claw.Hand.position.z);
                 Assert.That(Vector3.Dot((Vector3)anchor - feet, -Camera.main.transform.forward), Is.EqualTo(8).Within(0.001f));
@@ -146,7 +149,7 @@ namespace Demons.PlayTests
                 art.transform.localScale *= 3;
                 var layer = new MaterialPropertyBlock(); art.GetPropertyBlock(layer);
                 layer.SetFloat("_Aloft", 4); art.SetPropertyBlock(layer);
-                Assert.IsFalse(SortingTests.Covers(new Renderer[] { art }, new Renderer[] { skin, stone }), "the desk covered the foreground hand or orb");
+                Assert.IsFalse(SortingTests.Covers(new Renderer[] { art }, new Renderer[] { skin, stone, hand.transform.Find("Cloud").GetComponent<Renderer>() }), "the desk covered the foreground hand, orb or cloud");
                 skin.GetPropertyBlock(layer); layer.SetVector("_HandSortAnchor", Vector4.zero); skin.SetPropertyBlock(layer);
                 stone.GetPropertyBlock(layer); layer.SetVector("_Anchor", new Vector4(claw.Hand.position.x, 0, claw.Hand.position.z, 1)); stone.SetPropertyBlock(layer);
                 Assert.IsTrue(SortingTests.Covers(new Renderer[] { art }, new Renderer[] { skin, stone }), "the overlap control did not cover the unsorted hand");
