@@ -2,7 +2,7 @@
 
 ## Diagnosis
 
-The reported problems have concrete causes. This study changes no poses, animation assets, or cloud placement.
+The reported problems have concrete causes. The initial audit was read-only; subsequent asset corrections are recorded below. Authored scene poses and cloud placement remain untouched.
 
 ### The fingers start late by design
 
@@ -28,6 +28,20 @@ Unity sampling on a temporary, isolated model confirmed these changes across tha
 The release switch, 1.0 → 1.4, reverses the same differences. This is a preview defect, not a reason to alter the approved Holding pose.
 
 Gameplay uses a different evaluator: constant Standby/Holding clips blended by `SmoothStep(Grip)`. Its normal pickup has no equivalent explicit sample-time jump. The short, synchronized 0.18-second curl can still *look* abrupt. Quaternion sign reversal is not supported by the asset inspection; this is not a demonstrated 180-degree interpolation problem.
+
+## Follow-up: latest Standby and contact clearance
+
+A subsequent audit confirmed that the baked Standby was stale: the live rig differed by 16.46° at `index_01_r`, 14.89° at `thumb_03_r`, and 3.55° at `index_meta_r`. The live pose was backed up before resynchronizing `Standby.anim`, the preview and the prefab. A repeat audit reported no remaining pose differences; Holding and the cloud placement were unchanged.
+
+The preview was regenerated with flat Holding tangents. Unity sampling then reported no rotational jumps above 0.1° across the former 0.63 → 1.0 → 1.4 switches. The diagnosis above records the earlier, defective version.
+
+With the latest Standby, an isolated skinned-vertex audit found no index penetration during descent: minimum clearance at contact was 0.0394 preview units. The final grip still puts 17 index vertices just inside the sphere, to a maximum depth of 0.00808 units (reference sphere radius 0.175). These are geometric measurements, not claims that the contact silhouette is already satisfactory. Contact clearance still needs review while implementing earlier closure; do not compensate by moving the orb or introducing an attachment jump.
+
+### Earlier-closure pass
+
+Finger shaping now begins 0.20 seconds into the 0.60-second descent, using a shared approach curve in gameplay and the demo. Blend progress reaches 0.8 at contact and finishes smoothly over the next 0.12 seconds. The lift delay, authored endpoints and cloud placement are unchanged. Gameplay uses a replicated phase-start timestamp so remote presentation does not restart the approach on receipt.
+
+An isolated check of this earlier path found a small geometric index overlap during approach (maximum sampled depth 0.0116 preview units). Foreground finger/orb sorting preserves the intended visible order, but this remains a geometric contact refinement to address with a near-contact breakdown rather than hiding it in timing claims.
 
 ## What the references support
 

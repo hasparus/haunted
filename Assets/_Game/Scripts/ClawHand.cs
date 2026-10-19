@@ -32,10 +32,25 @@ namespace Demons
             return 1 - remaining * remaining * remaining;
         }
 
+        public static float ApproachGrip(float descentProgress)
+        {
+            float t = Mathf.InverseLerp(1f / 3, 1, descentProgress);
+            return 0.8f * (1 - (1 - t) * (1 - t));
+        }
+
+        public static float ContactGrip(float seconds)
+        {
+            float t = Mathf.Clamp01(seconds / 0.12f);
+            return 0.8f + 0.2f * (1 - (1 - t) * (1 - t));
+        }
+
         public Transform Socket => socket;
         public float Grip => grip;
 
         public void Present(bool holding, float radius, float deltaTime, bool snap = false)
+            => PresentGrip(holding ? 1 : 0, radius, deltaTime, snap);
+
+        public void PresentGrip(float target, float radius, float deltaTime, bool snap = false)
         {
             if (!initialized)
             {
@@ -44,7 +59,7 @@ namespace Demons
             }
             orbRadius = Mathf.Max(0.01f, radius);
             transform.localScale = authoredScale * (orbRadius / Pebble.SmallRadius);
-            float target = holding ? 1 : 0;
+            target = Mathf.Clamp01(target);
             grip = snap ? target : Mathf.MoveTowards(grip, target, deltaTime / GrabTime);
             if (animator.isActiveAndEnabled) animator.SetFloat(GripId, Mathf.SmoothStep(0, 1, grip));
         }

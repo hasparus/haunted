@@ -131,6 +131,32 @@ namespace Demons.Tests
         }
 
         [Test]
+        public void GrabPreviewDoesNotJumpWhenItEntersOrLeavesTheHold()
+        {
+            var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(Art + "GrabPreview.anim");
+            var bones = animator.GetComponentsInChildren<Transform>(true);
+            clip.SampleAnimation(animator.gameObject, 0.45f + ClawHand.GrabTime);
+            var held = new Quaternion[bones.Length];
+            for (int i = 0; i < bones.Length; i++) held[i] = bones[i].localRotation;
+            foreach (float time in new[] { 0.8f, 1f, 1.2f, 1.4f })
+            {
+                clip.SampleAnimation(animator.gameObject, time);
+                for (int i = 0; i < bones.Length; i++)
+                    Assert.That(Quaternion.Angle(held[i], bones[i].localRotation), Is.LessThan(0.1f), bones[i].name);
+            }
+        }
+
+        [Test]
+        public void FingersPrepareDuringDescentAndFinishContinuouslyAtContact()
+        {
+            Assert.That(ClawHand.ApproachGrip(0), Is.Zero);
+            Assert.That(ClawHand.ApproachGrip(1f / 3), Is.Zero);
+            Assert.That(ClawHand.ApproachGrip(0.5f), Is.GreaterThan(0.3f));
+            Assert.That(ClawHand.ApproachGrip(1), Is.EqualTo(ClawHand.ContactGrip(0)).Within(0.0001f));
+            Assert.That(ClawHand.ContactGrip(0.12f), Is.EqualTo(1));
+        }
+
+        [Test]
         public void DescentSlowsDownAsItReachesTheOrb()
         {
             Assert.That(ClawHand.EaseDescent(0), Is.Zero);

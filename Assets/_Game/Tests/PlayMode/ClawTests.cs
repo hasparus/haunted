@@ -85,6 +85,8 @@ namespace Demons.PlayTests
                 pebble.PutOn(desk);
                 yield return null;
                 StartGrab();
+                yield return Until(() => hand.Grip > 0.1f, 5, "the fingers did not prepare for contact");
+                Assert.That(Phase, Is.EqualTo("Descending"), "finger closure started only after arrival");
                 yield return Until(() => pebble.State.Value == PebbleState.Held && pebble.Anchor.Value == claw.NetworkObjectId, 5, "the claw did not grab the thought");
                 yield return new WaitForFixedUpdate();
                 var grabbedAt = claw.transform.position;

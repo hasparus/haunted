@@ -88,12 +88,13 @@ namespace Demons
             {
                 handOffset = Vector3.Lerp(high, Vector3.zero, ClawHand.EaseDescent(Mathf.InverseLerp(DescentStart, Contact, seconds)));
                 orbOffset = Vector3.zero;
-                poseTime = 0;
+                float descentProgress = Mathf.InverseLerp(DescentStart, Contact, seconds);
+                poseTime = 0.45f + ClawHand.GrabTime * ClawHand.ApproachGrip(descentProgress);
             }
             else if (seconds < Contact + ClawHand.GrabTime)
             {
                 handOffset = orbOffset = Vector3.zero;
-                poseTime = 0.45f + seconds - Contact;
+                poseTime = 0.45f + ClawHand.GrabTime * ClawHand.ContactGrip(seconds - Contact);
             }
             else if (seconds < Release)
             {

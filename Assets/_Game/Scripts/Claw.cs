@@ -17,6 +17,7 @@ namespace Demons
 
         readonly NetworkVariable<Phase> phase = new();
         readonly NetworkVariable<float> gripRadius = new(Pebble.SmallRadius);
+        readonly NetworkVariable<double> phaseSince = new();
 
         Vector3 home;
         Station target;
@@ -39,7 +40,7 @@ namespace Demons
         {
             if (IsServer) phase.Value = Phase.Idle;
             phase.OnValueChanged += PhaseChanged;
-            rig.Present(phase.Value == Phase.Carrying, gripRadius.Value, 0, snap: true);
+            rig.PresentGrip(PresentationGrip, gripRadius.Value, 0, snap: true);
         }
 
         public override void OnNetworkDespawn() => phase.OnValueChanged -= PhaseChanged;
@@ -51,6 +52,12 @@ namespace Demons
         }
 
         Vector3 GripOffset => Hand.position - transform.position;
+        float PresentationGrip => !IsSpawned || !Unity.Netcode.NetworkManager.Singleton ? 0 : phase.Value switch
+        {
+            Phase.Descending => ClawHand.ApproachGrip((float)(Net.Now - phaseSince.Value) / Duration(Phase.Descending)),
+            Phase.Carrying => ClawHand.ContactGrip((float)(Net.Now - phaseSince.Value)),
+            _ => 0,
+        };
 
         void SizeFor(Pebble pebble)
         {
@@ -64,7 +71,7 @@ namespace Demons
         {
             bool visible = phase.Value != Phase.Idle;
             look.SetActive(visible);
-            rig.Present(phase.Value == Phase.Carrying, gripRadius.Value, Time.deltaTime);
+            rig.PresentGrip(PresentationGrip, gripRadius.Value, Time.deltaTime, snap: phase.Value is Phase.Descending or Phase.Carrying);
             shadow.gameObject.SetActive(phase.Value is Phase.Warning or Phase.Descending);
             shadow.position = new Vector3(Hand.position.x, 0.03f, Hand.position.z);
             if (IsServer && IsSpawned) Tick();
@@ -72,6 +79,7 @@ namespace Demons
 
         void Go(Phase next, float seconds, Vector3 destination)
         {
+            phaseSince.Value = Net.Now;
             phase.Value = next;
             phaseEnd = Time.time + seconds;
             from = transform.position;
