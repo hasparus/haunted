@@ -84,7 +84,9 @@ namespace Demons
             if (phase.Value != Phase.Idle && phase.Value != Phase.Warning)
             {
                 float d = Duration(phase.Value) - (phase.Value == Phase.Carrying ? ClawHand.GrabTime : 0);
-                transform.position = Vector3.Lerp(from, to, d > 0 ? 1 - Mathf.Clamp01(left / d) : 1);
+                float progress = d > 0 ? 1 - Mathf.Clamp01(left / d) : 1;
+                if (phase.Value == Phase.Descending) progress = ClawHand.EaseDescent(progress);
+                transform.position = Vector3.Lerp(from, to, progress);
             }
             if (left > 0) return;
 

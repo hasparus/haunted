@@ -130,6 +130,20 @@ namespace Demons.Tests
             Assert.That(actor.transform.localScale, Is.EqualTo(rest));
         }
 
+        [Test]
+        public void DescentSlowsDownAsItReachesTheOrb()
+        {
+            Assert.That(ClawHand.EaseDescent(0), Is.Zero);
+            Assert.That(ClawHand.EaseDescent(1), Is.EqualTo(1));
+            float previousStep = float.PositiveInfinity;
+            for (int i = 1; i <= 10; i++)
+            {
+                float step = ClawHand.EaseDescent(i / 10f) - ClawHand.EaseDescent((i - 1) / 10f);
+                Assert.That(step, Is.GreaterThan(0).And.LessThan(previousStep));
+                previousStep = step;
+            }
+        }
+
         [TestCase(0.25f)]
         [TestCase(0.4f)]
         [TestCase(0.496f)]

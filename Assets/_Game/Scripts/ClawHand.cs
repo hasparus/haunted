@@ -26,6 +26,12 @@ namespace Demons
                 return new Vector3(p.x, 0, p.z) - (Camera.main ? Camera.main.transform.forward * Foreground : Vector3.zero);
             }
         }
+        public static float EaseDescent(float progress)
+        {
+            float remaining = 1 - Mathf.Clamp01(progress);
+            return 1 - remaining * remaining * remaining;
+        }
+
         public Transform Socket => socket;
         public float Grip => grip;
 
