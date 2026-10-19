@@ -37,6 +37,14 @@ The preview was regenerated with flat Holding tangents. Unity sampling then repo
 
 With the latest Standby, an isolated skinned-vertex audit found no index penetration during descent: minimum clearance at contact was 0.0394 preview units. The final grip still puts 17 index vertices just inside the sphere, to a maximum depth of 0.00808 units (reference sphere radius 0.175). These are geometric measurements, not claims that the contact silhouette is already satisfactory. Contact clearance still needs review while implementing earlier closure; do not compensate by moving the orb or introducing an attachment jump.
 
+### Follow-up: Holding endpoint audit
+
+The Holding clip matched the live Grabbing rig, but the regenerated preview clip's held interval was flat at the **wrong** rotation: the thumb remained 12.26° off. The previous flatness regression test caught drift but did not compare the held value to the authored endpoint. Both are now checked.
+
+The scene demo now reads Standby and Grabbing transforms directly and blends position/scale plus quaternion Slerp, using the same eased grip weight as gameplay. It no longer samples the intermediate preview clip. Source pose edits therefore update the demo without rebaking. A fresh audit measured zero rotation, position or scale error at both endpoints; source rigs and cloud placement were unchanged.
+
+The reusable `GrabPreview.anim` asset was also rebuilt using `AnimationUtility.SetEditorCurves` in a single batch, rather than setting quaternion components sequentially. Unity sampling then matched both authored clips at open/hold/release keys and throughout the held interval.
+
 ### Earlier-closure pass
 
 Finger shaping now begins 0.20 seconds into the 0.60-second descent, using a shared approach curve in gameplay and the demo. Blend progress reaches 0.8 at contact and finishes smoothly over the next 0.12 seconds. The lift delay, authored endpoints and cloud placement are unchanged. Gameplay uses a replicated phase-start timestamp so remote presentation does not restart the approach on receipt.

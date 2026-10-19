@@ -130,6 +130,42 @@ namespace Demons.Tests
             Assert.That(actor.transform.localScale, Is.EqualTo(rest));
         }
 
+        [TestCase(0f, "Standby")]
+        [TestCase(0.63f, "Holding")]
+        [TestCase(1f, "Holding")]
+        [TestCase(1.4f, "Holding")]
+        [TestCase(1.58f, "Standby")]
+        public void PreviewClipMatchesItsActualEndpoint(float time, string pose)
+        {
+            var model = animator.transform;
+            AssetDatabase.LoadAssetAtPath<AnimationClip>(Art + pose + ".anim").SampleAnimation(model.gameObject, 0);
+            var nodes = model.GetComponentsInChildren<Transform>(true);
+            var expected = new Quaternion[nodes.Length];
+            for (int i = 0; i < nodes.Length; i++) expected[i] = nodes[i].localRotation;
+            AssetDatabase.LoadAssetAtPath<AnimationClip>(Art + "GrabPreview.anim").SampleAnimation(model.gameObject, time);
+            for (int i = 0; i < nodes.Length; i++)
+                Assert.That(Quaternion.Angle(expected[i], nodes[i].localRotation), Is.LessThan(0.1f), nodes[i].name);
+        }
+
+        [Test]
+        public void DemoReadsCurrentScenePosesInsteadOfStaleBakedCurves()
+        {
+            var authoring = EditorSceneManager.OpenPreviewScene(Art + "RightHandRigging.unity");
+            try
+            {
+                var roots = authoring.GetRootGameObjects();
+                var holding = System.Array.Find(roots, g => g.name == "Grabbing").transform.Find("WristOrientation");
+                var demo = System.Array.Find(roots, g => g.name == "Animation Demo").GetComponent<HandGrabPreview>();
+                var source = holding.GetComponentInChildren<SkinnedMeshRenderer>().bones;
+                var target = demo.GetComponentInChildren<SkinnedMeshRenderer>().bones;
+                source[0].localRotation *= Quaternion.AngleAxis(5, Vector3.right);
+                demo.Scrub(1.6f);
+                for (int i = 0; i < source.Length; i++)
+                    Assert.That(Quaternion.Angle(source[i].localRotation, target[i].localRotation), Is.LessThan(0.1f), source[i].name);
+            }
+            finally { EditorSceneManager.ClosePreviewScene(authoring); }
+        }
+
         [Test]
         public void GrabPreviewDoesNotJumpWhenItEntersOrLeavesTheHold()
         {

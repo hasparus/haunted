@@ -9,7 +9,9 @@ namespace Demons
     [ExecuteAlways]
     public sealed class HandGrabPreview : MonoBehaviour
     {
-        [SerializeField] AnimationClip clip;
+        [SerializeField] Transform standbyPose;
+        [SerializeField] Transform holdingPose;
+        [SerializeField] Transform posedHand;
         [SerializeField] GameObject model;
         [SerializeField] GameObject orb;
         [SerializeField] Transform handRoot;
@@ -24,6 +26,12 @@ namespace Demons
         Renderer orbPart;
         Renderer[] cloudParts;
         MaterialPropertyBlock block;
+        PoseBinding[] bindings;
+
+        struct PoseBinding
+        {
+            public Transform target, standby, holding;
+        }
 #if UNITY_EDITOR
         double lastTick;
 #endif
@@ -31,12 +39,13 @@ namespace Demons
         public bool Playing => playing;
         public float Seconds => seconds;
         const float DescentStart = 0.6f, Contact = 1.2f, Release = 2.4f, RiseEnd = 3;
-        public float Duration => clip ? 3.6f : 0;
+        public float Duration => standbyPose && holdingPose && posedHand ? 3.6f : 0;
         public string State => seconds < DescentStart ? "Waiting above" : seconds < Contact ? "Descending" : seconds < Contact + ClawHand.GrabTime ? "Grabbing" : seconds < Release ? "Carrying" : seconds < RiseEnd ? "Releasing / rising" : "Waiting above";
 
         void OnEnable()
         {
             playing = autoPlay;
+            bindings = null;
 #if UNITY_EDITOR
             lastTick = EditorApplication.timeSinceStartup;
             EditorApplication.update -= EditorTick;
@@ -76,41 +85,70 @@ namespace Demons
         }
 #endif
 
+        void ApplyPose(float progress)
+        {
+            if (bindings == null)
+            {
+                var targets = posedHand.GetComponentsInChildren<Transform>(true);
+                bindings = new PoseBinding[targets.Length];
+                for (int i = 0; i < targets.Length; i++)
+                {
+                    string path = targets[i] == posedHand ? "" : RelativePath(targets[i], posedHand);
+                    bindings[i] = new PoseBinding { target = targets[i], standby = path == "" ? standbyPose : standbyPose.Find(path), holding = path == "" ? holdingPose : holdingPose.Find(path) };
+                }
+            }
+            float weight = Mathf.SmoothStep(0, 1, progress);
+            foreach (var pose in bindings)
+            {
+                if (!pose.standby || !pose.holding || !pose.target) continue;
+                pose.target.localPosition = Vector3.Lerp(pose.standby.localPosition, pose.holding.localPosition, weight);
+                pose.target.localRotation = Quaternion.Slerp(pose.standby.localRotation, pose.holding.localRotation, weight);
+                pose.target.localScale = Vector3.Lerp(pose.standby.localScale, pose.holding.localScale, weight);
+            }
+        }
+
+        static string RelativePath(Transform node, Transform root)
+        {
+            string path = node.name;
+            while (node.parent && node.parent != root) { node = node.parent; path = node.name + "/" + path; }
+            return path;
+        }
+
         void Sample(float time)
         {
-            if (!clip || !model || !orb || !handRoot) return;
+            if (!standbyPose || !holdingPose || !posedHand || !model || !orb || !handRoot) return;
             seconds = Mathf.Clamp(time, 0, Duration);
             var high = Vector3.up * descendHeight;
             var carried = new Vector3(0, 0.45f, 0.35f);
             Vector3 handOffset, orbOffset;
-            float poseTime;
+            float closure;
             if (seconds < Contact)
             {
                 handOffset = Vector3.Lerp(high, Vector3.zero, ClawHand.EaseDescent(Mathf.InverseLerp(DescentStart, Contact, seconds)));
                 orbOffset = Vector3.zero;
                 float descentProgress = Mathf.InverseLerp(DescentStart, Contact, seconds);
-                poseTime = 0.45f + ClawHand.GrabTime * ClawHand.ApproachGrip(descentProgress);
+                closure = ClawHand.ApproachGrip(descentProgress);
             }
             else if (seconds < Contact + ClawHand.GrabTime)
             {
                 handOffset = orbOffset = Vector3.zero;
-                poseTime = 0.45f + ClawHand.GrabTime * ClawHand.ContactGrip(seconds - Contact);
+                closure = ClawHand.ContactGrip(seconds - Contact);
             }
             else if (seconds < Release)
             {
                 handOffset = orbOffset = Vector3.Lerp(Vector3.zero, carried, Mathf.InverseLerp(Contact + ClawHand.GrabTime, Release, seconds));
-                poseTime = 1;
+                closure = 1;
             }
             else
             {
                 handOffset = Vector3.Lerp(carried, high, Mathf.InverseLerp(Release, RiseEnd, seconds));
                 float fall = Mathf.Clamp01((seconds - Release) / 0.22f);
                 orbOffset = Vector3.Lerp(carried, Vector3.zero, fall * fall);
-                poseTime = 1.4f + Mathf.Min(seconds - Release, ClawHand.GrabTime);
+                closure = 1 - Mathf.Clamp01((seconds - Release) / ClawHand.GrabTime);
             }
             handRoot.localPosition = handOffset;
             orb.transform.localPosition = pickupPosition + orbOffset;
-            clip.SampleAnimation(model, poseTime);
+            ApplyPose(closure);
             orb.SetActive(true);
             handParts ??= model.GetComponentsInChildren<Renderer>(true);
             orbPart = orbPart ? orbPart : orb.GetComponent<Renderer>();
