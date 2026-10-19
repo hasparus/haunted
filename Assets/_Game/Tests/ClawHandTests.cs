@@ -117,6 +117,49 @@ namespace Demons.Tests
         }
 
         [Test]
+        public void SurfaceDetailCoordinatesAreFiniteAndRestrained()
+        {
+            var mesh = actor.GetComponentInChildren<SkinnedMeshRenderer>().sharedMesh;
+            var detail = new System.Collections.Generic.List<Vector4>();
+            mesh.GetUVs(1, detail);
+            Assert.That(detail.Count, Is.EqualTo(mesh.vertexCount));
+            foreach (var value in detail)
+            {
+                for (int channel = 0; channel < 4; channel++)
+                    Assert.That(float.IsNaN(value[channel]) || float.IsInfinity(value[channel]), Is.False);
+                Assert.That(value.z, Is.InRange(0, 1));
+                Assert.That(value.w, Is.InRange(0, 1));
+            }
+            var material = actor.GetComponentInChildren<SkinnedMeshRenderer>().sharedMaterial;
+            Assert.That(material.GetFloat("_Warmth"), Is.InRange(0.01f, 0.35f));
+            Assert.That(material.GetFloat("_Nails"), Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void EveryFingerHasDorsalNailCoordinates()
+        {
+            var skin = actor.GetComponentInChildren<SkinnedMeshRenderer>();
+            var mesh = skin.sharedMesh;
+            var detail = new System.Collections.Generic.List<Vector4>();
+            mesh.GetUVs(1, detail);
+            var weights = mesh.boneWeights;
+            foreach (string finger in new[] { "thumb", "index", "middle", "ring", "pinky" })
+            {
+                int bone = System.Array.FindIndex(skin.bones, b => b.name == finger + "_03_r");
+                int nails = 0;
+                for (int i = 0; i < detail.Count; i++)
+                {
+                    var w = weights[i];
+                    float weight = (w.boneIndex0 == bone ? w.weight0 : 0) + (w.boneIndex1 == bone ? w.weight1 : 0)
+                        + (w.boneIndex2 == bone ? w.weight2 : 0) + (w.boneIndex3 == bone ? w.weight3 : 0);
+                    var value = detail[i];
+                    if (weight > 0.5f && Mathf.Abs(value.x) < 0.5f && value.y > 0.3f && value.y < 0.8f && value.z > 0.5f) nails++;
+                }
+                Assert.That(nails, Is.GreaterThan(5), finger);
+            }
+        }
+
+        [Test]
         public void FingerSortLayersFollowIndexAndThumbSkinWeights()
         {
             var skin = actor.GetComponentInChildren<SkinnedMeshRenderer>();

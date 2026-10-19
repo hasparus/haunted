@@ -10,6 +10,12 @@ Shader "Haunted/Hand"
         _Grain("Paper grain", Range(0,1)) = 0.3
         _Hatch("Shadow hatching", Range(0,1)) = 0.35
         _Creases("Baked crease ink", Range(0,1)) = 0.7
+        _NailColor("Natural nail", Color) = (0.87,0.78,0.73,1)
+        _CuticleColor("Cuticle", Color) = (0.48,0.37,0.35,1)
+        _WarmColor("Knuckle and fingertip warmth", Color) = (0.84,0.64,0.60,1)
+        _Nails("Nail definition", Range(0,1)) = 0.9
+        _Warmth("Localized warmth", Range(0,1)) = 0.25
+        _ShadeSoftness("Softer painted planes", Range(0,1)) = 0.5
         _Smoothness("Smoothness", Range(0,1)) = 0
         _Metallic("Metallic", Range(0,1)) = 0
         _SpecColor("Specular", Color) = (0.2,0.2,0.2,1)
@@ -36,6 +42,8 @@ Shader "Haunted/Hand"
         float _HandSortRadius;
         half4 _InkColor, _ShadeColor;
         half _Outline, _Grain, _Hatch, _Creases;
+        half4 _NailColor, _CuticleColor, _WarmColor;
+        half _Nails, _Warmth, _ShadeSoftness;
         float _MindTime;
 
         float4 HandSortedPosition(float4 clip, float3 world, half2 fingers)
@@ -75,6 +83,16 @@ Shader "Haunted/Hand"
             #define LitPassVertex UnsortedLitVertex
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
             #undef LitPassVertex
+            struct HandAttributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS : NORMAL;
+                float2 uv : TEXCOORD0;
+                float4 detail : TEXCOORD1;
+                half4 fingers : COLOR;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
             struct HandVaryings
             {
                 float4 positionCS : SV_POSITION;
@@ -83,11 +101,12 @@ Shader "Haunted/Hand"
                 float2 uv : TEXCOORD2;
                 half crease : TEXCOORD3;
                 half fog : TEXCOORD4;
+                float4 detail : TEXCOORD5;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
-            HandVaryings HandVertex(Attributes input, half4 fingers : COLOR)
+            HandVaryings HandVertex(HandAttributes input)
             {
                 HandVaryings output = (HandVaryings)0;
                 UNITY_SETUP_INSTANCE_ID(input);
@@ -96,10 +115,11 @@ Shader "Haunted/Hand"
                 output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
                 float4 clip = TransformWorldToHClip(output.positionWS);
                 output.fog = ComputeFogFactor(clip.z);
-                output.positionCS = HandSortedPosition(clip, output.positionWS, fingers.rg);
+                output.positionCS = HandSortedPosition(clip, output.positionWS, input.fingers.rg);
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
-                output.uv = input.texcoord;
-                output.crease = fingers.b;
+                output.uv = input.uv;
+                output.crease = input.fingers.b;
+                output.detail = input.detail;
                 return output;
             }
 
@@ -122,7 +142,21 @@ Shader "Haunted/Hand"
                 half lit = saturate(dot(normal, sun.direction) * 0.5 + 0.5);
                 // Painted planes, not flesh/specular: the same soft three-band treatment as the paper props.
                 half band = 0.35 + 0.4 * smoothstep(0.3, 0.36, lit) + 0.25 * smoothstep(0.62, 0.68, lit);
-                half3 paper = _BaseColor.rgb * lerp(_ShadeColor.rgb, half3(1, 1, 1), band);
+                band = lerp(band, 0.4 + 0.6 * smoothstep(0.05, 0.95, lit), _ShadeSoftness);
+                half3 skin = lerp(_BaseColor.rgb, _WarmColor.rgb, saturate(input.detail.w) * _Warmth);
+                float2 nailPoint = float2(input.detail.x, (input.detail.y - 0.55) * 2);
+                float2 nailBox = abs(nailPoint) - float2(0.41, 0.40);
+                float nailDistance = length(max(nailBox, 0)) + min(max(nailBox.x, nailBox.y), 0) - 0.24;
+                float aa = max(fwidth(nailDistance), 0.012);
+                half dorsal = saturate(input.detail.z) * _Nails;
+                half nail = (1 - smoothstep(-aa, aa, nailDistance)) * dorsal;
+                half tip = smoothstep(0.80, 0.85, input.detail.y);
+                half3 nailColor = lerp(_NailColor.rgb, _NailColor.rgb * 0.96 + 0.04, tip);
+                skin = lerp(skin, nailColor, nail);
+                half cuticle = (1 - smoothstep(0.012, 0.035 + aa, abs(nailDistance)))
+                    * (1 - smoothstep(0.15, 0.45, nailPoint.y)) * dorsal;
+                skin = lerp(skin, _CuticleColor.rgb, cuticle * 0.45);
+                half3 paper = skin * lerp(_ShadeColor.rgb, half3(1, 1, 1), band);
                 half3 illumination = clamp(sun.color * 0.7 + SampleSH(normal) * 0.6, 0.65, 1.15);
                 paper *= illumination;
                 // UV-locked grain follows the skin instead of swimming as the hand descends.
