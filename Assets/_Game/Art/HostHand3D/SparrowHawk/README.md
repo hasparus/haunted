@@ -1,13 +1,19 @@
 # Right hand
 
-Open `RightHandRigging.unity` in **Edit Mode**.
+## Posing
 
-- **Standby** (left): saved manual pose.
-- **Grabbing** (right): same scale and base pose, with thumb–index grip. Middle, ring and pinky retain their standby transforms.
-- **ThoughtOrb - game size**: the sphere mesh from `Assets/_Game/Prefabs/Pebble.prefab`, diameter **0.5 world units** (`Pebble.SmallRadius = 0.25`). An opaque Lit preview material keeps physical occlusion with the hand.
-- Select any hand object and click **Match Game Camera** at the top of the Inspector to reset the Scene view. It never moves the hand or game camera.
-- Both scene Animators are disabled for manual posing. Rotate joints in **Local** space; save the scene.
+Open `RightHandRigging.unity` in **Edit Mode**: **Standby** on the left, **Grabbing** on the right. Both Animators stay disabled for manual posing. Select any hand object and click **Match Game Camera** in the Inspector to reset only the Scene view.
 
-`RightHand.prefab` enables its Animator: `RightHand.controller` blends `Grip` from 0 (standby) to 1 (holding). `GrabPreview.anim` loops between the captured poses. `GripSocket` marks the held orb centre; the comparison orb is not included in the runtime prefab.
+The saved reference orb is **0.35 units** across. The gameplay prefab enlarges the hand by **1.428571×** to preserve that fit around a normal thought's **0.5-unit** diameter. The authoring scene is not rescaled.
 
-CC0 model: SparrowHawk, *Hands Rigged*. See `CREDITS.txt`. The mesh is manifold, outward-facing and fully weighted, with positive object scales. Gameplay attachment and final stylization remain unfinished.
+## Gameplay
+
+`RightHand.prefab` contains the skinned rig and `ClawHand`. Its Animator blends `Grip` from 0 (`Standby.anim`) to 1 (`Holding.anim`), including the authored joint translations. `GripSocket` uses the saved reference orb's centre; no orb is included in the prefab.
+
+`Claw` descends to the target orb, closes over **0.18 seconds**, then lifts. Release reopens the hand. Its replicated phase/radius drive presentation on each peer, including late joins. Big and shelled thoughts enlarge the hand proportionally without resizing the thoughts. Claw-held thoughts use physical depth so the sphere interleaves with the 3D fingers, then return to paper sorting on release.
+
+`RightHandGameplayMesh.asset` extends only the forearm cap upward so the arm continues offscreen; the hand vertices, weights and authoring mesh are unchanged.
+
+Office and Headquarters use the rig; `PrototypeBuilder.BuildClaw` preserves it on rebuild. `GrabPreview.anim` loops between the saved poses. Tests: `ClawHandTests` (Edit Mode), `ClawTests` (Play Mode).
+
+CC0 model: SparrowHawk, *Hands Rigged*. See `CREDITS.txt`. Final stylization remains unfinished.

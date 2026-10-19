@@ -142,6 +142,13 @@ namespace Demons
             Sort();
         }
 
+        void LateUpdate()
+        {
+            if (State.Value != PebbleState.Held || Net.Find<Claw>(Anchor.Value) is not { } claw) return;
+            transform.position = claw.Hand.position;
+            Sort();
+        }
+
         const float FallTime = 1.1f, FallFrom = 3f, BounceTime = 0.6f, BounceHeight = 0.22f, BigLift = 0.115f;
 
         // Seconds since it appeared at the start of the belt, or infinity for any other thought.
@@ -164,7 +171,7 @@ namespace Demons
             }
         }
 
-        static readonly int AnchorId = Shader.PropertyToID("_Anchor"), AnchorFromId = Shader.PropertyToID("_AnchorFrom"), FadeId = Shader.PropertyToID("_Fade"), AloftId = Shader.PropertyToID("_Aloft");
+        static readonly int AnchorId = Shader.PropertyToID("_Anchor"), AnchorFromId = Shader.PropertyToID("_AnchorFrom"), FadeId = Shader.PropertyToID("_Fade"), AloftId = Shader.PropertyToID("_Aloft"), PhysicalDepthId = Shader.PropertyToID("_PhysicalDepth");
         const float SortStep = 0.05f, HeldAhead = 1.2f;
         MaterialPropertyBlock sortBlock;
         Renderer[] parts;
@@ -172,6 +179,7 @@ namespace Demons
         // The floor point the thought is drawn at the depth of (Sort).
         public Vector3 SortedAt => float.IsFinite(sortedAt.x) ? sortedAt : new Vector3(transform.position.x, 0, transform.position.z);
         float sortedFade;
+        bool sortedPhysical;
 
         // Where the thought stands for sorting (plans/sorting.md), handed to Haunted/Paper: a step in front of the desk
         // drawing it sits on, at the belt's front edge, in hand a step behind the carrier facing up the screen and
@@ -197,16 +205,19 @@ namespace Demons
                     break;
             }
             float fade = Fallen;
+            bool physical = State.Value == PebbleState.Held && Net.Find<Claw>(Anchor.Value);
             DeskShadow(cam, towards);
-            if (at == sortedAt && p == sortedFrom && fade == sortedFade) return;
+            if (at == sortedAt && p == sortedFrom && fade == sortedFade && physical == sortedPhysical) return;
             sortedAt = at;
             sortedFrom = p;
             sortedFade = fade;
+            sortedPhysical = physical;
             sortBlock ??= new MaterialPropertyBlock();
             parts ??= GetComponentsInChildren<Renderer>(true);
             sortBlock.SetVector(AnchorId, new Vector4(at.x, at.y, at.z, 1));
             sortBlock.SetVector(AnchorFromId, p);
             sortBlock.SetFloat(FadeId, fade);
+            sortBlock.SetFloat(PhysicalDepthId, physical ? 1 : 0);
             // The wings (drawings) a little behind the ball.
             sortBlock.SetFloat(AloftId, -0.05f);
             foreach (var r in parts)
@@ -309,9 +320,6 @@ namespace Demons
                 case PebbleState.Held when Net.Find<Demon>(Anchor.Value) is { } demon:
                     // A bigger thought is held further out, so it doesn't sink into the holder.
                     transform.position = demon.HoldAt + demon.transform.forward * (LooksRadius - SmallRadius);
-                    break;
-                case PebbleState.Held when Net.Find<Claw>(Anchor.Value) is { } claw:
-                    transform.position = claw.Hand.position;
                     break;
                 case PebbleState.OnStation when Net.Find<Station>(Anchor.Value) is { } station:
                     transform.position = station.Slot.position;

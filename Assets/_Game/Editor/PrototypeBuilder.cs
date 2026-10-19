@@ -407,15 +407,13 @@ namespace Demons.Editor
             var claw = go.AddComponent<Claw>();
             claw.Demo = demo;
 
-            var look = new GameObject("Look");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{Root}/Art/HostHand3D/SparrowHawk/RightHand.prefab");
+            var look = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            look.name = "Look";
             look.transform.SetParent(go.transform, false);
-            var skin = Mat("Skin", Gray(0.82f));
-            Prim(PrimitiveType.Cube, "Palm", look.transform, new Vector3(0, 0.35f, 0), new Vector3(0.9f, 0.25f, 0.8f), skin);
-            Prim(PrimitiveType.Cube, "Arm", look.transform, new Vector3(0, 4f, 0), new Vector3(0.5f, 7f, 0.5f), skin);
-            for (int i = 0; i < 4; i++)
-                Prim(PrimitiveType.Cube, $"Finger{i}", look.transform, new Vector3(-0.32f + i * 0.21f, 0f, 0.3f), new Vector3(0.14f, 0.55f, 0.14f), skin);
-            Prim(PrimitiveType.Cube, "Thumb", look.transform, new Vector3(0.45f, 0.05f, -0.15f), new Vector3(0.14f, 0.45f, 0.14f), skin);
-            claw.Hand = Point("Grip", go.transform, new Vector3(0, -0.15f, 0));
+            var rig = look.GetComponent<ClawHand>();
+            claw.Hand = rig.Socket;
+            Set(claw, "rig", rig);
             look.SetActive(false);
 
             var shadow = Prim(PrimitiveType.Cylinder, "Shadow", go.transform, Vector3.zero, new Vector3(1.6f, 0.005f, 1.6f), Unlit("HandShadow", Gray(0.12f)));
