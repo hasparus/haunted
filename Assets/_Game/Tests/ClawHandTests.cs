@@ -286,21 +286,27 @@ namespace Demons.Tests
         }
 
         [Test]
-        public void CarryMotionLiftsBeforeCrossingToTheConveyor()
+        public void CarryArcBlendsLiftAndLoweringWithoutCornersOrSidewaysCorrections()
         {
             var pickup = new Vector3(1, 0.6f, 2);
-            var aboveBelt = new Vector3(8, 2.05f, 6);
-            Assert.That(ClawHand.CarryPosition(pickup, aboveBelt, ClawHand.GrabTime), Is.EqualTo(pickup));
-            var lifting = ClawHand.CarryPosition(pickup, aboveBelt, ClawHand.GrabTime + ClawHand.LiftTime * 0.5f);
-            Assert.That(lifting.x, Is.EqualTo(pickup.x));
-            Assert.That(lifting.z, Is.EqualTo(pickup.z));
-            Assert.That(lifting.y, Is.GreaterThan(pickup.y));
-            var lifted = ClawHand.CarryPosition(pickup, aboveBelt, ClawHand.GrabTime + ClawHand.LiftTime);
-            Assert.That(lifted, Is.EqualTo(new Vector3(pickup.x, aboveBelt.y, pickup.z)));
-            var crossing = ClawHand.CarryPosition(pickup, aboveBelt, ClawHand.CarryTime - ClawHand.TransferTime * 0.5f);
-            Assert.That(crossing.y, Is.EqualTo(aboveBelt.y));
-            Assert.That(crossing.x, Is.InRange(pickup.x + 0.01f, aboveBelt.x - 0.01f));
-            Assert.That(Vector3.Distance(ClawHand.CarryPosition(pickup, aboveBelt, ClawHand.CarryTime), aboveBelt), Is.LessThan(0.0001f));
+            var landing = new Vector3(8, 0.65f, 6);
+            Vector3 At(float t) => ClawHand.CarryPosition(pickup, landing, 2.05f, ClawHand.GrabTime + t * ClawHand.MoveTime);
+            Assert.That(At(0), Is.EqualTo(pickup));
+            Assert.That(Vector3.Distance(At(1), landing), Is.LessThan(0.0001f));
+            Assert.That(At(0.5f).y, Is.EqualTo(2.05f).Within(0.001f));
+            var previous = At(0.02f);
+            var velocity = previous - At(0.01f);
+            for (int i = 3; i < 100; i++)
+            {
+                var position = At(i / 100f);
+                var nextVelocity = position - previous;
+                Assert.That(position.x, Is.GreaterThanOrEqualTo(previous.x));
+                Assert.That(position.z, Is.GreaterThanOrEqualTo(previous.z));
+                Assert.That(nextVelocity.sqrMagnitude, Is.GreaterThan(0.00000001f), "the hand stopped mid-arc");
+                Assert.That(Vector3.Angle(velocity, nextVelocity), Is.LessThan(8), "the path has a corner");
+                previous = position;
+                velocity = nextVelocity;
+            }
         }
 
         [Test]

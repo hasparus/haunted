@@ -39,9 +39,9 @@ namespace Demons
         public bool Playing => playing;
         public float Seconds => seconds;
         const float DescentStart = 0.6f, Contact = 1.2f;
-        const float Drop = Contact + ClawHand.CarryTime, Release = Drop + ClawHand.LowerTime, RiseEnd = Release + 0.6f;
+        const float Release = Contact + ClawHand.CarryTime, RiseEnd = Release + 0.6f;
         public float Duration => standbyPose && holdingPose && posedHand ? RiseEnd + 0.6f : 0;
-        public string State => seconds < DescentStart ? "Waiting above" : seconds < Contact ? "Descending" : seconds < Contact + ClawHand.GrabTime ? "Grabbing" : seconds < Drop ? "Lifting / carrying" : seconds < Release ? "Lowering to conveyor" : seconds < RiseEnd ? "Releasing / rising" : "Waiting above";
+        public string State => seconds < DescentStart ? "Waiting above" : seconds < Contact ? "Descending" : seconds < Contact + ClawHand.GrabTime ? "Grabbing" : seconds < Release ? "Arcing to conveyor" : seconds < RiseEnd ? "Releasing / rising" : "Waiting above";
 
         void OnEnable()
         {
@@ -120,7 +120,6 @@ namespace Demons
             if (!standbyPose || !holdingPose || !posedHand || !model || !orb || !handRoot) return;
             seconds = Mathf.Clamp(time, 0, Duration);
             var high = Vector3.up * descendHeight;
-            var carried = new Vector3(0, 0.65f, 0.35f);
             var deposited = new Vector3(0, 0, 0.35f);
             Vector3 handOffset, orbOffset;
             float closure;
@@ -136,14 +135,9 @@ namespace Demons
                 handOffset = orbOffset = Vector3.zero;
                 closure = ClawHand.ContactGrip(seconds - Contact);
             }
-            else if (seconds < Drop)
-            {
-                handOffset = orbOffset = ClawHand.CarryPosition(Vector3.zero, carried, seconds - Contact);
-                closure = 1;
-            }
             else if (seconds < Release)
             {
-                handOffset = orbOffset = Vector3.Lerp(carried, deposited, Mathf.SmoothStep(0, 1, Mathf.InverseLerp(Drop, Release, seconds)));
+                handOffset = orbOffset = ClawHand.CarryPosition(Vector3.zero, deposited, 0.65f, seconds - Contact);
                 closure = 1;
             }
             else

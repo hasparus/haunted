@@ -5,8 +5,8 @@ namespace Demons
     public sealed class ClawHand : MonoBehaviour
     {
         public const float GrabTime = 0.18f;
-        public const float LiftTime = 0.32f, TransferTime = 0.48f, LowerTime = 0.28f;
-        public const float CarryTime = GrabTime + LiftTime + TransferTime;
+        public const float MoveTime = 1.08f;
+        public const float CarryTime = GrabTime + MoveTime;
         static readonly int GripId = Animator.StringToHash("Grip");
         static readonly int AnchorId = Shader.PropertyToID("_HandSortAnchor"), FromId = Shader.PropertyToID("_HandSortFrom"), RadiusId = Shader.PropertyToID("_HandSortRadius");
         static readonly int PaperAnchorId = Shader.PropertyToID("_Anchor"), PaperFromId = Shader.PropertyToID("_AnchorFrom");
@@ -35,12 +35,14 @@ namespace Demons
             return 1 - remaining * remaining * remaining;
         }
 
-        public static Vector3 CarryPosition(Vector3 pickup, Vector3 aboveBelt, float seconds)
+        public static Vector3 CarryPosition(Vector3 pickup, Vector3 landing, float apex, float seconds)
         {
-            var lifted = new Vector3(pickup.x, aboveBelt.y, pickup.z);
-            if (seconds < GrabTime + LiftTime)
-                return Vector3.Lerp(pickup, lifted, Mathf.SmoothStep(0, 1, (seconds - GrabTime) / LiftTime));
-            return Vector3.Lerp(lifted, aboveBelt, Mathf.SmoothStep(0, 1, (seconds - GrabTime - LiftTime) / TransferTime));
+            float t = Mathf.SmoothStep(0, 1, (seconds - GrabTime) / MoveTime);
+            float u = 1 - t;
+            float height = (Mathf.Max(apex, Mathf.Max(pickup.y, landing.y)) - (pickup.y + landing.y) * 0.125f) / 0.75f;
+            var lift = new Vector3(pickup.x, height, pickup.z);
+            var lower = new Vector3(landing.x, height, landing.z);
+            return u * u * u * pickup + 3 * u * u * t * lift + 3 * u * t * t * lower + t * t * t * landing;
         }
 
         public static float ApproachGrip(float descentProgress)

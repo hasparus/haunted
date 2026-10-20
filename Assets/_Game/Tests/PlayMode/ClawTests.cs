@@ -118,16 +118,22 @@ namespace Demons.PlayTests
                 var feet = new Vector3(claw.Hand.position.x, 0, claw.Hand.position.z);
                 Assert.That(Vector3.Dot((Vector3)anchor - feet, -Camera.main.transform.forward), Is.EqualTo(8).Within(0.001f));
                 float highest = claw.Hand.position.y, previousY = highest, deadline = Time.time + 3;
+                float selectedGap = (float)Field("dropDistance").GetValue(claw);
+                var landing = (Vector3)Field("to").GetValue(claw) + claw.Hand.position - claw.transform.position;
+                var chord = new Vector2(landing.x - pickup.x, landing.z - pickup.z);
                 var lastHeld = claw.Hand.position;
                 bool lowered = false;
                 while (pebble.State.Value == PebbleState.Held && Time.time < deadline)
                 {
                     highest = Mathf.Max(highest, claw.Hand.position.y);
-                    if (Phase == "Dropping")
+                    Assert.That((float)Field("dropDistance").GetValue(claw), Is.EqualTo(selectedGap), "the landing gap was selected again mid-flight");
+                    var along = new Vector2(claw.Hand.position.x - pickup.x, claw.Hand.position.z - pickup.z);
+                    if (chord.magnitude > 0.001f)
+                        Assert.That(Mathf.Abs(chord.x * along.y - chord.y * along.x) / chord.magnitude, Is.LessThan(0.05f), "the hand made a sideways correction");
+                    if (claw.Hand.position.y < previousY - 0.001f && highest > pickup.y + 0.4f)
                     {
                         lowered = true;
                         Assert.That(hand.Grip, Is.EqualTo(1), "the hand opened before reaching the conveyor");
-                        Assert.That(claw.Hand.position.y, Is.LessThanOrEqualTo(previousY + 0.005f));
                     }
                     previousY = claw.Hand.position.y;
                     lastHeld = claw.Hand.position;
@@ -139,6 +145,29 @@ namespace Demons.PlayTests
                 Assert.That(Mathf.Abs(pebble.transform.position.y - lastHeld.y), Is.LessThan(0.07f), "the thought snapped down onto the conveyor");
                 yield return Until(() => hand.Grip < 0.001f, 1, "the hand did not reopen");
             }
+        }
+
+        [UnityTest, Timeout(30000)]
+        public IEnumerator OccupiedConveyorGapIsAvoidedBeforeTheHandStartsItsArc()
+        {
+            Pebble thought = null, blocker = null;
+            Field("nextGrab").SetValue(claw, float.PositiveInfinity);
+            yield return Thought(p => thought = p);
+            thought.PutOn(desk);
+            yield return Thought(p => blocker = p);
+            var belt = Belt.Instance;
+            float desired = belt.DistanceAt(desk.Slot.position);
+            float seconds = Balance.I.clawWarning + 0.6f + ClawHand.CarryTime;
+            float travel = (float)(Belt.Travel(Net.Now + seconds) - Belt.Travel(Net.Now));
+            blocker.PutOnBelt(Mathf.Clamp(desired - travel, 0, belt.Length));
+            StartGrab();
+            yield return Until(() => thought.State.Value == PebbleState.Held, 5, "the hand did not pick up the thought");
+            float selected = (float)Field("dropDistance").GetValue(claw);
+            Assert.That(Mathf.Abs(selected - blocker.BeltDistance), Is.GreaterThanOrEqualTo(Balance.I.beltGap - 0.05f));
+            var landing = (Vector3)Field("to").GetValue(claw) + claw.Hand.position - claw.transform.position;
+            Assert.That(Mathf.Abs(belt.DistanceAt(landing) - desired), Is.GreaterThan(0.5f), "the occupied landing lane was not avoided up front");
+            yield return Until(() => thought.State.Value == PebbleState.OnBelt, 3, "the thought was not released");
+            Assert.That((float)Field("dropDistance").GetValue(claw), Is.EqualTo(selected), "the hand chose a different gap late in its flight");
         }
 
         [UnityTest, Timeout(30000)]

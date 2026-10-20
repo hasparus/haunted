@@ -6,7 +6,7 @@ namespace Demons
 {
     public class Claw : NetworkBehaviour
     {
-        enum Phase : byte { Idle, Warning, Descending, Carrying, Dropping, Rising }
+        enum Phase : byte { Idle, Warning, Descending, Carrying, Rising }
 
         public bool Demo;
         public Transform Hand;
@@ -27,8 +27,8 @@ namespace Demons
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics() => Threatened = null;
         Pebble carried;
-        float phaseEnd, nextGrab = 6, dropDistance;
-        double dropTravel;
+        float phaseEnd, nextGrab = 6, dropDistance, carryApex;
+        double dropTravel, landingTime;
         Vector3 from, to;
 
         const float High = 7f, CarryHeight = 2.05f;
@@ -57,7 +57,6 @@ namespace Demons
         {
             Phase.Descending => ClawHand.ApproachGrip((float)(Net.Now - phaseSince.Value) / Duration(Phase.Descending)),
             Phase.Carrying => ClawHand.ContactGrip((float)(Net.Now - phaseSince.Value)),
-            Phase.Dropping => 1,
             _ => 0,
         };
 
@@ -73,7 +72,7 @@ namespace Demons
         {
             bool visible = phase.Value != Phase.Idle;
             look.SetActive(visible);
-            rig.PresentGrip(PresentationGrip, gripRadius.Value, Time.deltaTime, snap: phase.Value is Phase.Descending or Phase.Carrying or Phase.Dropping);
+            rig.PresentGrip(PresentationGrip, gripRadius.Value, Time.deltaTime, snap: phase.Value is Phase.Descending or Phase.Carrying);
             shadow.gameObject.SetActive(phase.Value is Phase.Warning or Phase.Descending);
             shadow.position = new Vector3(Hand.position.x, 0.03f, Hand.position.z);
             if (IsServer && IsSpawned) Tick();
@@ -88,7 +87,7 @@ namespace Demons
             to = destination;
         }
 
-        float DropDistance => Mathf.Clamp(dropDistance + (float)(Belt.Travel(Net.Now) - dropTravel), 0, Belt.Instance.Length);
+        float DropDistance(double when) => Mathf.Clamp(dropDistance + (float)(Belt.Travel(when) - dropTravel), 0, Belt.Instance.Length);
 
         void Tick()
         {
@@ -96,16 +95,14 @@ namespace Demons
             if (phase.Value != Phase.Idle && phase.Value != Phase.Warning)
             {
                 if (phase.Value == Phase.Carrying)
-                    transform.position = ClawHand.CarryPosition(from, to, Duration(Phase.Carrying) - left);
+                {
+                    to = Belt.Instance.PointAt(DropDistance(System.Math.Max(landingTime, Net.Now))) - GripOffset;
+                    transform.position = ClawHand.CarryPosition(from, to, carryApex, Duration(Phase.Carrying) - left);
+                }
                 else
                 {
                     float progress = 1 - Mathf.Clamp01(left / Duration(phase.Value));
                     if (phase.Value == Phase.Descending) progress = ClawHand.EaseDescent(progress);
-                    if (phase.Value == Phase.Dropping)
-                    {
-                        to = Belt.Instance.PointAt(DropDistance) - GripOffset;
-                        progress = Mathf.SmoothStep(0, 1, progress);
-                    }
                     transform.position = Vector3.Lerp(from, to, progress);
                 }
             }
@@ -147,22 +144,21 @@ namespace Demons
                         transform.position = carried.transform.position - GripOffset;
                         carried.Grip(this);
                     }
-                    var belt = Belt.Instance;
-                    var drop = belt.ClosestPoint(Hand.position);
-                    if (carried) Go(Phase.Carrying, Duration(Phase.Carrying), new Vector3(drop.x, Mathf.Max(CarryHeight, Hand.position.y + 0.55f), drop.z) - GripOffset);
-                    else Go(Phase.Rising, Duration(Phase.Rising), new Vector3(transform.position.x, High, transform.position.z));
-                    break;
-                case Phase.Carrying:
-                    if (carried && carried.IsSpawned)
+                    if (carried)
                     {
-                        dropDistance = Belt.Instance.FreeSpot(Hand.position, carried) ?? Belt.Instance.DistanceAt(Hand.position);
+                        var belt = Belt.Instance;
+                        landingTime = Net.Now + Duration(Phase.Carrying);
                         dropTravel = Belt.Travel(Net.Now);
-                        Go(Phase.Dropping, Duration(Phase.Dropping), Belt.Instance.PointAt(dropDistance) - GripOffset);
+                        float ahead = (float)(Belt.Travel(landingTime) - dropTravel);
+                        dropDistance = belt.FreeSpot(Hand.position, carried, Duration(Phase.Carrying))
+                            ?? Mathf.Clamp(belt.DistanceAt(Hand.position) - ahead, 0, Mathf.Max(0, belt.Length - ahead));
+                        carryApex = Mathf.Max(CarryHeight, Hand.position.y + 0.55f) - GripOffset.y;
+                        Go(Phase.Carrying, Duration(Phase.Carrying), belt.PointAt(DropDistance(landingTime)) - GripOffset);
                     }
                     else Go(Phase.Rising, Duration(Phase.Rising), new Vector3(transform.position.x, High, transform.position.z));
                     break;
-                case Phase.Dropping:
-                    if (carried && carried.IsSpawned) carried.LetGo(DropDistance);
+                case Phase.Carrying:
+                    if (carried && carried.IsSpawned) carried.LetGo(DropDistance(Net.Now));
                     carried = null;
                     Go(Phase.Rising, Duration(Phase.Rising), new Vector3(transform.position.x, High, transform.position.z));
                     break;
@@ -178,7 +174,6 @@ namespace Demons
         {
             Phase.Descending => 0.6f,
             Phase.Carrying => ClawHand.CarryTime,
-            Phase.Dropping => ClawHand.LowerTime,
             Phase.Rising => 0.6f,
             _ => 0,
         };
