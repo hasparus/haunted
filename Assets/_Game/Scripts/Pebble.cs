@@ -142,6 +142,14 @@ namespace Demons
             Sort();
         }
 
+        void LateUpdate()
+        {
+            if (State.Value != PebbleState.Held || Net.Find<Claw>(Anchor.Value) is not { } claw) return;
+            spring.Settle();
+            transform.position = claw.Hand.position;
+            Sort();
+        }
+
         const float FallTime = 1.1f, FallFrom = 3f, BounceTime = 0.6f, BounceHeight = 0.22f, BigLift = 0.115f;
 
         // Seconds since it appeared at the start of the belt, or infinity for any other thought.
@@ -190,6 +198,9 @@ namespace Demons
                     break;
                 case PebbleState.OnBelt:
                     at.z -= 0.5f;
+                    break;
+                case PebbleState.Held when Net.Find<Claw>(Anchor.Value) is { } claw:
+                    at = claw.Visual.SortAnchor;
                     break;
                 case PebbleState.Held when Net.Find<Demon>(Anchor.Value) is { } demon:
                     var up = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up).normalized;
@@ -309,9 +320,6 @@ namespace Demons
                 case PebbleState.Held when Net.Find<Demon>(Anchor.Value) is { } demon:
                     // A bigger thought is held further out, so it doesn't sink into the holder.
                     transform.position = demon.HoldAt + demon.transform.forward * (LooksRadius - SmallRadius);
-                    break;
-                case PebbleState.Held when Net.Find<Claw>(Anchor.Value) is { } claw:
-                    transform.position = claw.Hand.position;
                     break;
                 case PebbleState.OnStation when Net.Find<Station>(Anchor.Value) is { } station:
                     transform.position = station.Slot.position;

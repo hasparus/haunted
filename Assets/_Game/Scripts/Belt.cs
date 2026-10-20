@@ -27,13 +27,13 @@ namespace Demons
         bool Clear(float distance, Pebble except = null) =>
             !Pebble.All.Exists(p => p != except && p.State.Value == PebbleState.OnBelt && Mathf.Abs(p.BeltDistance - distance) < Balance.I.beltGap);
 
-        // Nearest spot to p with room for a thought, sliding up to the leeway either way.
-        public float? FreeSpot(Vector3 p, Pebble placing = null)
+        public float? FreeSpot(Vector3 p, Pebble placing = null, float secondsAhead = 0)
         {
-            float near = DistanceAt(p), leeway = Balance.I.beltDropLeeway;
+            float ahead = secondsAhead > 0 ? (float)(Travel(Net.Now + secondsAhead) - Travel(Net.Now)) : 0;
+            float near = Mathf.Clamp(DistanceAt(p) - ahead, 0, Mathf.Max(0, Length - ahead)), leeway = Balance.I.beltDropLeeway;
             for (float off = 0; off <= leeway; off += 0.1f)
                 foreach (float d in new[] { near + off, near - off })
-                    if (d >= 0 && d <= Length && Clear(d, placing)) return d;
+                    if (d >= 0 && d + ahead <= Length && Clear(d, placing)) return d;
             return null;
         }
 

@@ -1,0 +1,21 @@
+# Right hand
+
+## Posing
+
+Open `RightHandRigging.unity` in **Edit Mode**: **Standby** on the left, **Grabbing** on the right. Both Animators stay disabled for manual posing. Select any hand object and click **Match Game Camera** in the Inspector to reset only the Scene view.
+
+**Animation Demo** (rightmost) loops in Edit Mode without pressing Play: ease out while descending to a stationary orb, close, carry, release and rise. Select it for **Play/Pause**, **Restart**, **Scrub**, **Playback Speed** and **Descend Height**. It defaults to half speed, uses a separate rig, and is excluded from builds (`EditorOnly`). The preview reads the **live Standby and Grabbing rigs** and blends their transforms directly; it never animates or overwrites those source rigs. Further pose edits appear in the demo immediately. Gameplay still uses the captured animation assets. The ink-outlined cloud sits at the original upper forearm cut, not at the wrist. Gameplay uses the same cloud placement and original forearm length.
+
+The saved reference orb is **0.35 units** across. The gameplay prefab enlarges the hand by **1.428571×** to preserve that fit around a normal thought's **0.5-unit** diameter. The authoring scene is not rescaled.
+
+## Gameplay
+
+`RightHand.prefab` contains the skinned rig and `ClawHand`. Its Animator blends `Grip` from 0 (`Standby.anim`) to 1 (`Holding.anim`), including the authored joint translations. `GripSocket` uses the saved reference orb's centre; no orb is included in the prefab.
+
+`Claw` eases out on descent to the target orb. Fingers begin shaping **0.20 seconds into the 0.60-second descent**, reach 80% of their blend progress at contact, then settle into the final grip over 0.12 seconds. Lift still waits 0.18 seconds after contact, then follows a single eased cubic arc for 1.08 seconds. Lift, transfer and lowering blend without intermediate stops. The landing gap is selected at pickup, accounting for belt travel until arrival, rather than being chosen after crossing to the conveyor. The hand releases at the belt's actual thought height, then reopens and retreats. Its replicated phase/radius drive presentation on each peer, including late joins. Big and shelled thoughts enlarge the hand proportionally without resizing the thoughts. The hand and its held thought share the pen's foreground depth layer, ahead of desks. `Haunted/Hand` uses matte, soft painted skin shading, charcoal contours and restrained paper grain. Skin-weight vertex channels place the index finger behind the orb and the thumb in front, only near the orb's silhouette. The sphere returns to normal paper sorting on release. Claw-held thoughts suppress the pickup spring; demon pickups retain it.
+
+`RightHandStyledMesh.asset` is shared by the authoring rigs, demo and gameplay. It preserves the original vertices, normals, triangles, bind poses and skin weights. Projected UVs lock grain to the skin; vertex red/green retain finger sorting, and blue holds sparse cavity/crease ink baked from the approved Holding pose. UV1 holds bone-local nail coordinates, dorsal coverage and localized warmth. The shader adds short natural nails, fine cuticles and a little knuckle/fingertip colour variation without changing the muted base tone. Nail bounds follow the distal nail beds, rather than the full terminal phalanges; centres are fitted from the dorsal surface. The thumb nail starts beyond the midpoint of its distal segment, and dorsal coverage keeps colour off the sides and pad. Rebuild those coordinates with **Demons → Hand → Bake Surface Details**. These details follow the skinned mesh; no generated images, external skin maps or sprite geometry are used. The cloud conceals the original forearm cap; the old offscreen arm extension is removed. Its paper shader shares the hand/orb foreground anchor.
+
+Office and Headquarters use the rig; `PrototypeBuilder.BuildClaw` preserves it on rebuild. `GrabPreview.anim` loops between the saved poses. Tests: `ClawHandTests` (Edit Mode), `ClawTests` (Play Mode).
+
+CC0 model: SparrowHawk, *Hands Rigged*. See `CREDITS.txt`. The warm natural skin palette, ink and shade colours, contour width, grain, hatching, crease strength, nail/cuticle colours, localized warmth and shade softness are editable in `Skin.mat` and `GameplaySkin.mat`.
