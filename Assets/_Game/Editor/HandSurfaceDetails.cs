@@ -9,6 +9,8 @@ namespace Demons.Editor
     {
         const string Art = "Assets/_Game/Art/HostHand3D/SparrowHawk/";
         static readonly string[] Fingers = { "thumb", "index", "middle", "ring", "pinky" };
+        static readonly float[] NailBedStart = { 0.55f, 0.46f, 0.44f, 0.46f, 0.47f };
+        const float NailBedEnd = 0.93f;
 
         [MenuItem("Demons/Hand/Bake Surface Details")]
         public static void Bake()
@@ -64,6 +66,25 @@ namespace Demons.Editor
                 if (length[f] <= 0 || maximum[f] <= minimum[f])
                     throw new InvalidOperationException("Invalid nail bounds for " + Fingers[f]);
 
+            var nailCenter = new float[Fingers.Length];
+            for (int f = 0; f < Fingers.Length; f++)
+            {
+                float total = 0;
+                for (int i = 0; i < vertices.Length; i++)
+                {
+                    if (Weight(weights[i], distal[f]) <= 0.5f) continue;
+                    var p = bind[distal[f]].MultiplyPoint3x4(vertices[i]);
+                    float y = p.y / length[f];
+                    if (y < NailBedStart[f] || y > NailBedEnd) continue;
+                    var normal = bind[distal[f]].MultiplyVector(normals[i]).normalized;
+                    float weight = Mathf.Pow(Mathf.Max(0, normal.z), 32);
+                    nailCenter[f] += p.x * weight;
+                    total += weight;
+                }
+                if (total <= 0) throw new InvalidOperationException("Missing dorsal nail surface for " + Fingers[f]);
+                nailCenter[f] /= total;
+            }
+
             var details = new List<Vector4>(vertices.Length);
             var influence = new float[Fingers.Length];
             for (int i = 0; i < vertices.Length; i++)
@@ -84,13 +105,14 @@ namespace Demons.Editor
                 var local = bind[bone].MultiplyPoint3x4(vertices[i]);
                 var normal = bind[bone].MultiplyVector(normals[i]).normalized;
                 float halfWidth = (maximum[finger] - minimum[finger]) * 0.5f;
-                float center = (maximum[finger] + minimum[finger]) * 0.5f;
+                float center = nailCenter[finger];
                 float along = local.y / length[finger];
-                float dorsal = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.25f, 0.75f, normal.z))
-                    * Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0, 0.003f, local.z));
+                float nailAlong = 0.23f + 0.64f * (along - NailBedStart[finger]) / (NailBedEnd - NailBedStart[finger]);
+                float dorsal = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.65f, 0.95f, normal.z))
+                    * Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.001f, 0.003f, local.z));
                 float tip = Mathf.Exp(-((local - Vector3.up * length[finger] * 0.85f).sqrMagnitude) / 0.00012f);
                 warmth = Mathf.Max(warmth, tip * 0.8f);
-                details.Add(new Vector4((local.x - center) / halfWidth, along, dorsal, Mathf.Clamp01(warmth)));
+                details.Add(new Vector4((local.x - center) / halfWidth, nailAlong, dorsal, Mathf.Clamp01(warmth)));
             }
             mesh.SetUVs(1, details);
             EditorUtility.SetDirty(mesh);

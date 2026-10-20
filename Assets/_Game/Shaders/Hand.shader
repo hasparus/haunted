@@ -153,9 +153,9 @@ Shader "Haunted/Hand"
                 half tip = smoothstep(0.80, 0.85, input.detail.y);
                 half3 nailColor = lerp(_NailColor.rgb, _NailColor.rgb * 0.96 + 0.04, tip);
                 skin = lerp(skin, nailColor, nail);
-                half cuticle = (1 - smoothstep(0.012, 0.035 + aa, abs(nailDistance)))
+                half cuticle = (1 - smoothstep(0.006, 0.016 + aa * 0.5, abs(nailDistance)))
                     * (1 - smoothstep(0.15, 0.45, nailPoint.y)) * dorsal;
-                skin = lerp(skin, _CuticleColor.rgb, cuticle * 0.45);
+                skin = lerp(skin, _CuticleColor.rgb, cuticle * 0.25);
                 half3 paper = skin * lerp(_ShadeColor.rgb, half3(1, 1, 1), band);
                 half3 illumination = clamp(sun.color * 0.7 + SampleSH(normal) * 0.6, 0.65, 1.15);
                 paper *= illumination;

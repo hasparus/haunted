@@ -160,6 +160,44 @@ namespace Demons.Tests
         }
 
         [Test]
+        public void ThumbNailStaysShortAndOnTheDorsalNailBed()
+        {
+            var skin = actor.GetComponentInChildren<SkinnedMeshRenderer>();
+            var mesh = skin.sharedMesh;
+            int thumb = System.Array.FindIndex(skin.bones, b => b.name == "thumb_03_r");
+            var detail = new System.Collections.Generic.List<Vector4>();
+            mesh.GetUVs(1, detail);
+            var vertices = mesh.vertices;
+            var normals = mesh.normals;
+            var weights = mesh.boneWeights;
+            var bind = mesh.bindposes[thumb];
+            float length = 0, first = float.PositiveInfinity, last = float.NegativeInfinity;
+            int count = 0;
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                var w = weights[i];
+                float influence = (w.boneIndex0 == thumb ? w.weight0 : 0) + (w.boneIndex1 == thumb ? w.weight1 : 0)
+                    + (w.boneIndex2 == thumb ? w.weight2 : 0) + (w.boneIndex3 == thumb ? w.weight3 : 0);
+                if (influence <= 0.5f) continue;
+                float along = bind.MultiplyPoint3x4(vertices[i]).y;
+                length = Mathf.Max(length, along);
+                var d = detail[i];
+                var q = new Vector2(Mathf.Abs(d.x) - 0.41f, Mathf.Abs((d.y - 0.55f) * 2) - 0.4f);
+                float distance = new Vector2(Mathf.Max(q.x, 0), Mathf.Max(q.y, 0)).magnitude
+                    + Mathf.Min(Mathf.Max(q.x, q.y), 0) - 0.24f;
+                if (d.z <= 0.1f || distance >= 0) continue;
+                Assert.That(bind.MultiplyVector(normals[i]).normalized.z, Is.GreaterThan(0.65f), "the nail wrapped onto the side/pad");
+                first = Mathf.Min(first, along);
+                last = Mathf.Max(last, along);
+                count++;
+            }
+            Assert.That(count, Is.GreaterThan(5));
+            Assert.That(first / length, Is.GreaterThan(0.5f), "the old mask covered proximal thumb skin");
+            Assert.That(last / length, Is.LessThan(0.96f));
+            Assert.That((last - first) / length, Is.LessThan(0.42f), "the thumbnail is too long");
+        }
+
+        [Test]
         public void FingerSortLayersFollowIndexAndThumbSkinWeights()
         {
             var skin = actor.GetComponentInChildren<SkinnedMeshRenderer>();
