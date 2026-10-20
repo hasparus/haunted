@@ -90,6 +90,7 @@ namespace Demons.PlayTests
                 yield return Until(() => pebble.State.Value == PebbleState.Held && pebble.Anchor.Value == claw.NetworkObjectId, 5, "the claw did not grab the thought");
                 yield return new WaitForFixedUpdate();
                 var grabbedAt = claw.transform.position;
+                var pickup = claw.Hand.position;
                 float began = Time.time;
                 bool partial = false;
                 while (Time.time - began < ClawHand.GrabTime * 0.7f)
@@ -116,7 +117,26 @@ namespace Demons.PlayTests
                 var anchor = block.GetVector("_Anchor");
                 var feet = new Vector3(claw.Hand.position.x, 0, claw.Hand.position.z);
                 Assert.That(Vector3.Dot((Vector3)anchor - feet, -Camera.main.transform.forward), Is.EqualTo(8).Within(0.001f));
-                yield return Until(() => pebble.State.Value == PebbleState.OnBelt, 3, "the thought was not released");
+                float highest = claw.Hand.position.y, previousY = highest, deadline = Time.time + 3;
+                var lastHeld = claw.Hand.position;
+                bool lowered = false;
+                while (pebble.State.Value == PebbleState.Held && Time.time < deadline)
+                {
+                    highest = Mathf.Max(highest, claw.Hand.position.y);
+                    if (Phase == "Dropping")
+                    {
+                        lowered = true;
+                        Assert.That(hand.Grip, Is.EqualTo(1), "the hand opened before reaching the conveyor");
+                        Assert.That(claw.Hand.position.y, Is.LessThanOrEqualTo(previousY + 0.005f));
+                    }
+                    previousY = claw.Hand.position.y;
+                    lastHeld = claw.Hand.position;
+                    yield return null;
+                }
+                Assert.That(pebble.State.Value, Is.EqualTo(PebbleState.OnBelt), "the thought was not released");
+                Assert.IsTrue(lowered, "the hand skipped the conveyor descent");
+                Assert.That(highest - pickup.y, Is.GreaterThan(0.4f), "the hand did not lift clear of the desk");
+                Assert.That(Mathf.Abs(pebble.transform.position.y - lastHeld.y), Is.LessThan(0.07f), "the thought snapped down onto the conveyor");
                 yield return Until(() => hand.Grip < 0.001f, 1, "the hand did not reopen");
             }
         }

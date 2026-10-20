@@ -38,9 +38,10 @@ namespace Demons
 
         public bool Playing => playing;
         public float Seconds => seconds;
-        const float DescentStart = 0.6f, Contact = 1.2f, Release = 2.4f, RiseEnd = 3;
-        public float Duration => standbyPose && holdingPose && posedHand ? 3.6f : 0;
-        public string State => seconds < DescentStart ? "Waiting above" : seconds < Contact ? "Descending" : seconds < Contact + ClawHand.GrabTime ? "Grabbing" : seconds < Release ? "Carrying" : seconds < RiseEnd ? "Releasing / rising" : "Waiting above";
+        const float DescentStart = 0.6f, Contact = 1.2f;
+        const float Drop = Contact + ClawHand.CarryTime, Release = Drop + ClawHand.LowerTime, RiseEnd = Release + 0.6f;
+        public float Duration => standbyPose && holdingPose && posedHand ? RiseEnd + 0.6f : 0;
+        public string State => seconds < DescentStart ? "Waiting above" : seconds < Contact ? "Descending" : seconds < Contact + ClawHand.GrabTime ? "Grabbing" : seconds < Drop ? "Lifting / carrying" : seconds < Release ? "Lowering to conveyor" : seconds < RiseEnd ? "Releasing / rising" : "Waiting above";
 
         void OnEnable()
         {
@@ -119,7 +120,8 @@ namespace Demons
             if (!standbyPose || !holdingPose || !posedHand || !model || !orb || !handRoot) return;
             seconds = Mathf.Clamp(time, 0, Duration);
             var high = Vector3.up * descendHeight;
-            var carried = new Vector3(0, 0.45f, 0.35f);
+            var carried = new Vector3(0, 0.65f, 0.35f);
+            var deposited = new Vector3(0, 0, 0.35f);
             Vector3 handOffset, orbOffset;
             float closure;
             if (seconds < Contact)
@@ -134,16 +136,20 @@ namespace Demons
                 handOffset = orbOffset = Vector3.zero;
                 closure = ClawHand.ContactGrip(seconds - Contact);
             }
+            else if (seconds < Drop)
+            {
+                handOffset = orbOffset = ClawHand.CarryPosition(Vector3.zero, carried, seconds - Contact);
+                closure = 1;
+            }
             else if (seconds < Release)
             {
-                handOffset = orbOffset = Vector3.Lerp(Vector3.zero, carried, Mathf.InverseLerp(Contact + ClawHand.GrabTime, Release, seconds));
+                handOffset = orbOffset = Vector3.Lerp(carried, deposited, Mathf.SmoothStep(0, 1, Mathf.InverseLerp(Drop, Release, seconds)));
                 closure = 1;
             }
             else
             {
-                handOffset = Vector3.Lerp(carried, high, Mathf.InverseLerp(Release, RiseEnd, seconds));
-                float fall = Mathf.Clamp01((seconds - Release) / 0.22f);
-                orbOffset = Vector3.Lerp(carried, Vector3.zero, fall * fall);
+                handOffset = Vector3.Lerp(deposited, high, Mathf.InverseLerp(Release, RiseEnd, seconds));
+                orbOffset = Vector3.Lerp(deposited, Vector3.zero, Mathf.InverseLerp(RiseEnd, Duration, seconds));
                 closure = 1 - Mathf.Clamp01((seconds - Release) / ClawHand.GrabTime);
             }
             handRoot.localPosition = handOffset;

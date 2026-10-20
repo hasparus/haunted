@@ -286,6 +286,24 @@ namespace Demons.Tests
         }
 
         [Test]
+        public void CarryMotionLiftsBeforeCrossingToTheConveyor()
+        {
+            var pickup = new Vector3(1, 0.6f, 2);
+            var aboveBelt = new Vector3(8, 2.05f, 6);
+            Assert.That(ClawHand.CarryPosition(pickup, aboveBelt, ClawHand.GrabTime), Is.EqualTo(pickup));
+            var lifting = ClawHand.CarryPosition(pickup, aboveBelt, ClawHand.GrabTime + ClawHand.LiftTime * 0.5f);
+            Assert.That(lifting.x, Is.EqualTo(pickup.x));
+            Assert.That(lifting.z, Is.EqualTo(pickup.z));
+            Assert.That(lifting.y, Is.GreaterThan(pickup.y));
+            var lifted = ClawHand.CarryPosition(pickup, aboveBelt, ClawHand.GrabTime + ClawHand.LiftTime);
+            Assert.That(lifted, Is.EqualTo(new Vector3(pickup.x, aboveBelt.y, pickup.z)));
+            var crossing = ClawHand.CarryPosition(pickup, aboveBelt, ClawHand.CarryTime - ClawHand.TransferTime * 0.5f);
+            Assert.That(crossing.y, Is.EqualTo(aboveBelt.y));
+            Assert.That(crossing.x, Is.InRange(pickup.x + 0.01f, aboveBelt.x - 0.01f));
+            Assert.That(Vector3.Distance(ClawHand.CarryPosition(pickup, aboveBelt, ClawHand.CarryTime), aboveBelt), Is.LessThan(0.0001f));
+        }
+
+        [Test]
         public void FingersPrepareDuringDescentAndFinishContinuouslyAtContact()
         {
             Assert.That(ClawHand.ApproachGrip(0), Is.Zero);
