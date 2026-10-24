@@ -27,6 +27,8 @@ namespace Demons
         public Vector3 SpawnPoint(int slot) => SpawnOrigin + new Vector3(-2.25f + slot * 1.5f, 0, 0);
 
         public NetworkVariable<float> Influence = new();
+        // Set by the host: on the headquarters' pads, from the menu, or carried over from the last room.
+        public NetworkVariable<Difficulty> DifficultyLevel = new(Difficulty.Normal);
         public NetworkVariable<double> PausedFor = new(), PausedAt = new(-1);
         // The slot of a demon whose player has the game paused, or -1 (a card holding it, or nobody's demon).
         public NetworkVariable<int> PausedBy = new(-1);
@@ -139,6 +141,7 @@ namespace Demons
             demonCheckAt = 0;
             if (!IsServer) return;
             NetworkManager.OnClientDisconnectCallback += Dropped;
+            DifficultyLevel.Value = Difficulties.Chosen;
             Influence.Value = 0;
             Prestige.Clear();
             foreach (var d in Demon.All) d.ResetForRound();

@@ -66,7 +66,7 @@ namespace Demons
         {
             var progress = Progression.Instance && Progression.Instance.IsSpawned ? Progression.Instance : null;
             float dt = Time.unscaledDeltaTime;
-            float danger = progress ? (float)progress.Cracks.Value / Balance.I.maxCracks : 0;
+            float danger = progress ? (float)progress.Cracks.Value / Difficulties.MaxCracks : 0;
             Mind = Mathf.MoveTowards(Mind, Mathf.Max(Mood.Gloom * 0.5f, danger), dt);
             fxTime += dt * 0.2f * (1 - (1 - Mind) * (1 - Mind));
             inverted = Mathf.MoveTowards(inverted, progress && progress.Inverted || Demon.AnyLocalFlipped ? 1 : 0, dt * 3);
