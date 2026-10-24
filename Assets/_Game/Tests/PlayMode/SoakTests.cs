@@ -31,6 +31,7 @@ namespace Demons.PlayTests
         static IEnumerator StartOffice(GameMode mode, int bots)
         {
             Progression.NextMode = mode;
+            Difficulties.Chosen = Difficulty.Normal;
             SceneManager.LoadScene("Office");
             float waited = 0;
             while ((!GameState.Instance || !GameState.Instance.IsSpawned) && waited < 10)

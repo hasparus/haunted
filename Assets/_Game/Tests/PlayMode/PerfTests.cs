@@ -44,6 +44,7 @@ namespace Demons.PlayTests
             QualitySettings.renderPipeline = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.RenderPipelineAsset>("Assets/Settings/Mobile_RPAsset.asset");
 #endif
             Progression.NextMode = GameMode.Week;
+            Difficulties.Chosen = Difficulty.Normal;
             SceneManager.LoadScene("Office");
             float waited = 0;
             while ((!GameState.Instance || !GameState.Instance.IsSpawned) && waited < 10)

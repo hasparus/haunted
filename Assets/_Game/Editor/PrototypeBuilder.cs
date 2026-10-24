@@ -178,7 +178,7 @@ namespace Demons.Editor
 
             FloorLabel("First week at work", null, new Vector3(-9f, 0, 16.5f), 0.3f, Jolly);
             FloorLabel("Infinite survival", null, new Vector3(9f, 0, 16.5f), 0.3f, Jolly);
-            FloorLabel("best here: {best}\n\nTop scores\n{top}", null, new Vector3(9f, 0, 12.6f), 0.13f);
+            FloorLabel("best here on {difficulty}: {best}\n\nTop scores\n{top}", null, new Vector3(9f, 0, 12.6f), 0.13f);
             Prim(PrimitiveType.Cube, "ModeDivider", null, new Vector3(0, 0.01f, 16f), new Vector3(0.15f, 0.02f, 8f), Paper("Divider", new Color(0.78f, 0.74f, 0.66f), scenery: true));
             FloorLabel("Jump off to start", null, new Vector3(0, 0, 10.6f), 0.14f);
             FloorArrow(new Vector3(-4.2f, 0, 10.6f), 1);
@@ -190,6 +190,8 @@ namespace Demons.Editor
                 pad.AddComponent<ColorPad>().Index = i;
             }
             BuildHeadPedestals(cam);
+            FloorLabel("Difficulty\nstand on one", null, new Vector3(11.1f, 0, 9f), 0.12f);
+            BuildDifficultyPads();
             FloorLabel("Learn the mechanics", null, new Vector3(0, 0, 4f), 0.14f);
             FloorArrow(new Vector3(-4.6f, 0, 4f), -1);
             FloorArrow(new Vector3(4.6f, 0, 4f), -1);
@@ -294,6 +296,27 @@ namespace Demons.Editor
                 pedestal.Head = i;
                 Set(pedestal, "shown", shown.gameObject);
                 Set(pedestal, "label", root.GetComponentInChildren<TextMesh>());
+            }
+        }
+
+        // Across from the wardrobe, a pad per difficulty: the white disc tinted its colour, its name on the floor below in
+        // Jolly Lodger.
+        static void BuildDifficultyPads()
+        {
+            Color[] tints = { new(0.45f, 0.85f, 0.5f), new(0.98f, 0.8f, 0.08f), new(0.95f, 0.3f, 0.3f) };
+            for (int i = 0; i < Difficulties.Names.Length; i++)
+            {
+                var root = new GameObject($"DifficultyPad{i}").transform;
+                root.position = new Vector3(9.2f + i * 1.9f, 0, 7f);
+                var disc = Prim(PrimitiveType.Cylinder, "Pad", root, new Vector3(0, 0.01f, 0), new Vector3(0.9f, 0.01f, 0.9f), Unlit("Arrow", Color.white));
+                FloorLabel(Difficulties.Names[i], root, new Vector3(0, 0, -0.8f), 0.11f, Jolly);
+                var pad = root.gameObject.AddComponent<DifficultyPad>();
+                pad.Level = (Difficulty)i;
+                Set(pad, "pad", disc.transform);
+                Set(pad, "label", root.GetComponentInChildren<TextMesh>());
+                var so = new SerializedObject(pad);
+                so.FindProperty("tint").colorValue = tints[i];
+                so.ApplyModifiedPropertiesWithoutUndo();
             }
         }
 

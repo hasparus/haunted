@@ -10,6 +10,7 @@ namespace Demons
         TextMesh text;
         int seenPlayers = -1;
         float seenBest = -1;
+        Difficulty seenDifficulty;
         string seenTop;
 
         void Awake()
@@ -20,16 +21,19 @@ namespace Demons
 
         void Update()
         {
-            float best = PlayerPrefs.GetFloat(Progression.BestKey, 0);
-            if (seenPlayers == LocalPlayers.All.Count && seenBest == best && seenTop == HighScores.Top) return;
+            var difficulty = Difficulties.Current;
+            float best = PlayerPrefs.GetFloat(Progression.BestKeyFor(difficulty), 0);
+            if (seenPlayers == LocalPlayers.All.Count && seenBest == best && seenDifficulty == difficulty && seenTop == HighScores.Top) return;
             seenPlayers = LocalPlayers.All.Count;
             seenBest = best;
+            seenDifficulty = difficulty;
             seenTop = HighScores.Top;
             text.text = Template
                 .Replace("{grab}", LocalPlayers.Keys(p => p.Grab))
                 .Replace("{haunt}", LocalPlayers.Keys(p => p.Use))
                 .Replace("{dash}", LocalPlayers.Keys(p => p.Dash))
                 .Replace("{best}", best.ToString("0"))
+                .Replace("{difficulty}", Difficulties.Name(difficulty))
                 .Replace("{top}", string.IsNullOrEmpty(HighScores.Top) ? "no scores yet" : HighScores.Top);
         }
     }

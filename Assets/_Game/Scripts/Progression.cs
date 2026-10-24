@@ -22,6 +22,9 @@ namespace Demons
         }
         public const string BestKey = "survival_best";
 
+        // Normal keeps the key from before difficulties, so its best carries over.
+        public static string BestKeyFor(Difficulty d) => d == Difficulty.Normal ? BestKey : $"{BestKey}_{Difficulties.Name(d).ToLowerInvariant()}";
+
         static readonly string[] Days = { "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY" };
 
         static readonly string[] DayCards =
@@ -105,7 +108,11 @@ namespace Demons
         Feature lastInterrupt;
         bool over, heardInverted, taughtCracks;
         float dayStartInfluence;
+        // Added to the week's goals after a change of difficulty, so only what's left of them scales.
+        float goalShift;
         int cracksToday, weekStars;
+        // The easiest difficulty played this run: Survival's best is kept for it, and an easy run isn't sent to the leaderboard.
+        Difficulty easiest;
         readonly float[] dayStartPrestige = new float[Scoring.MaxDemons];
         int signers;
         float typingSince;
@@ -118,10 +125,12 @@ namespace Demons
 
         public float Goal => DayGoal.Value > 0 ? DayGoal.Value : GoalFor(Day.Value);
 
-        static float GoalFor(int day)
+        static float GoalFor(int day) => GoalFor(day, Difficulties.Current);
+
+        static float GoalFor(int day, Difficulty difficulty)
         {
             var b = Balance.I;
-            float scale = b.goalScaleByDemons[Mathf.Clamp(Demon.All.Count - 1, 0, b.goalScaleByDemons.Length - 1)];
+            float scale = b.goalScaleByDemons[Mathf.Clamp(Demon.All.Count - 1, 0, b.goalScaleByDemons.Length - 1)] * Difficulties.By(b.goalScaleByDifficulty, difficulty);
             return Mathf.Round(b.dayGoals[Mathf.Min(day, b.dayGoals.Length - 1)] * scale);
         }
         public string DayTitle => Title(Day.Value);
@@ -161,13 +170,61 @@ namespace Demons
 
         public NetworkVariable<double> StartedAt = new();
 
-        // Belt distance travelled by time t. Survival speeds the belt up linearly instead of crowding it.
+        // The belt's pace changes with the difficulty: After it from Since (when the belt had run From), Before it until then.
+        public struct BeltPace : INetworkSerializeByMemcpy
+        {
+            public double Since, From;
+            public Difficulty Before, After;
+        }
+
+        public NetworkVariable<BeltPace> Pace = new();
+
+        // Belt distance travelled by time t, carried on across a change of difficulty without a jump.
         public double BeltTravel(double t)
         {
+            var pace = Pace.Value;
+            var d = t >= pace.Since ? pace.After : pace.Before;
+            return pace.From + Travel(d, t) - Travel(d, pace.Since);
+        }
+
+        // At one difficulty throughout. Survival speeds the belt up linearly instead of crowding it.
+        double Travel(Difficulty d, double t)
+        {
             var b = Balance.I;
-            if (Mode.Value != GameMode.Survival) return t * b.beltSpeed;
-            double start = StartedAt.Value, e = System.Math.Max(0, t - start);
-            return b.beltSpeed * (System.Math.Min(t, start) + 0.75 * e + e * e / (2 * b.survivalRampSeconds));
+            double speed = b.beltSpeed * Difficulties.By(b.beltScaleByDifficulty, d);
+            if (Mode.Value != GameMode.Survival) return t * speed;
+            double start = StartedAt.Value, e = System.Math.Max(0, t - start), ramp = b.survivalRampSeconds * Difficulties.By(b.rampScaleByDifficulty, d);
+            return speed * (System.Math.Min(t, start) + 0.75 * e + e * e / (2 * ramp));
+        }
+
+        // Server, as the difficulty changes to d (usually from the menu, while paused).
+        public void Repace(Difficulty d)
+        {
+            double now = Now;
+            var pace = Pace.Value;
+            var was = pace.After;
+            if (now > pace.Since)
+            {
+                // A thought put on the belt before the last change would measure across two of them: it starts over where it is.
+                foreach (var p in Pebble.All)
+                    if (p.State.Value == PebbleState.OnBelt && p.BeltSince.Value < pace.Since) p.Rebase();
+                pace = new BeltPace { Since = now, From = BeltTravel(now), Before = pace.After };
+            }
+            pace.After = d;
+            Pace.Value = pace;
+            if (over) return;
+            if (Mode.Value == GameMode.Week && DayGoal.Value > 0)
+            {
+                var scale = Balance.I.goalScaleByDifficulty;
+                float left = (DayGoal.Value - dayStartInfluence) * Difficulties.By(scale, d) / Difficulties.By(scale, was);
+                DayGoal.Value = Mathf.Round(dayStartInfluence + left);
+                goalShift = DayGoal.Value - GoalFor(Day.Value, d);
+            }
+            // Turning it up never ends the run on the spot.
+            Cracks.Value = Mathf.Min(Cracks.Value, Difficulties.MaxCracksAt(d) - 1);
+            if (d >= easiest) return;
+            easiest = d;
+            Best.Value = PlayerPrefs.GetFloat(BestKeyFor(d), 0);
         }
 
 
@@ -195,7 +252,7 @@ namespace Demons
                 var b = Balance.I;
                 if (now > was)
                 {
-                    CameraRig.Shake(now >= b.maxCracks ? 1 : b.crackShakeBase + b.crackShakeStep * now);
+                    CameraRig.Shake(now >= Difficulties.MaxCracks ? 1 : b.crackShakeBase + b.crackShakeStep * now);
                     Audio.Play(Sounds.I.crackOpen);
                 }
                 else if (now == was - 1) Audio.Play(Sounds.I.seal);
@@ -214,7 +271,7 @@ namespace Demons
             Stars.Value = 0;
             Cracks.Value = 0;
             Sealing.Value = 0;
-            dayStartInfluence = 0;
+            dayStartInfluence = goalShift = 0;
             cracksToday = weekStars = 0;
             CardStars.Value = -1;
             System.Array.Clear(dayStartPrestige, 0, dayStartPrestige.Length);
@@ -223,15 +280,17 @@ namespace Demons
             PillAt.Value = 0;
             Interrupt.Value = Feature.None;
             PenArrived.Value = false;
-            Best.Value = PlayerPrefs.GetFloat(BestKey, 0);
+            easiest = Difficulties.Chosen;
+            Best.Value = PlayerPrefs.GetFloat(BestKeyFor(easiest), 0);
             startTime = Now;
             StartedAt.Value = startTime;
+            Pace.Value = new BeltPace { Before = easiest, After = easiest };
             nextCall = Now + 20;
             nextPill = Now + 30;
             nextInterrupt = Now + 8;
             ShowCard(Mode.Value == GameMode.Week
                 ? DayCards[0]
-                : "INFINITE SURVIVAL\nIt starts easy. It doesn't stay easy.", hold: true);
+                : $"INFINITE SURVIVAL\nIt starts easy. It doesn't stay easy.{(easiest == Difficulty.Normal ? "" : $"\n\nOn {Difficulties.Name(easiest)}.")}", hold: true);
         }
 
         // Held cards pause the game until someone gets back to work; game time stands still, so they leave right after.
@@ -271,7 +330,7 @@ namespace Demons
             Cracks.Value++;
             cracksToday++;
             Sealing.Value = 0;
-            if (Cracks.Value >= Balance.I.maxCracks)
+            if (Cracks.Value >= Difficulties.MaxCracks)
             {
                 if (Mode.Value == GameMode.Survival) Fired();
                 else GoodDay();
@@ -279,7 +338,7 @@ namespace Demons
             else if (!taughtCracks && Mode.Value == GameMode.Week)
             {
                 taughtCracks = true;
-                ShowCard($"HE'S COPING\nUnhaunted thoughts help him. {Balance.I.maxCracks} cracks and he has a good day.", 5, hold: true);
+                ShowCard($"HE'S COPING\nUnhaunted thoughts help him. {Difficulties.MaxCracks} cracks and he has a good day.", 5, hold: true);
             }
         }
 
@@ -314,8 +373,9 @@ namespace Demons
         {
             PlayerPrefs.Save();
             signers = Demon.All.FindAll(d => !Bots.IsBot(d)).Count;
-            bool assisted = Bots.All.Count > 0;
-            End($"Peak revenue {Scoring.Zloty(Peak.Value)}  ·  best {Scoring.Zloty(Best.Value)}", System.Array.FindAll(Balance.I.survivalStarSeconds, s => Elapsed >= s).Length);
+            bool assisted = Bots.All.Count > 0 || easiest < Difficulty.Normal;
+            var on = easiest == Difficulty.Normal ? "" : $"  ·  {Difficulties.Name(easiest)}";
+            End($"Peak revenue {Scoring.Zloty(Peak.Value)}  ·  best {Scoring.Zloty(Best.Value)}{on}", System.Array.FindAll(Balance.I.survivalStarSeconds, s => Elapsed >= s).Length);
             if (Peak.Value > 0 && signers > 0 && !assisted)
             {
                 Signing.Value = true;
@@ -359,7 +419,7 @@ namespace Demons
             float influence = GameState.Instance.Influence.Value;
             if (Mode.Value == GameMode.Week)
             {
-                if (DayGoal.Value <= 0 && Demon.All.Count > 0) DayGoal.Value = GoalFor(Day.Value);
+                if (DayGoal.Value <= 0 && Demon.All.Count > 0) DayGoal.Value = GoalFor(Day.Value) + goalShift;
                 if (DayGoal.Value > 0 && influence >= DayGoal.Value)
                 {
                     weekStars += DayStars;
@@ -369,7 +429,7 @@ namespace Demons
                         int stars = DayStars;
                         cracksToday = 0;
                         Day.Value++;
-                        DayGoal.Value = GoalFor(Day.Value);
+                        DayGoal.Value = GoalFor(Day.Value) + goalShift;
                         Cracks.Value = 0;
                         Sealing.Value = 0;
                         dayStartInfluence = influence;
@@ -401,7 +461,7 @@ namespace Demons
                 if (Peak.Value > Best.Value)
                 {
                     Best.Value = Peak.Value;
-                    PlayerPrefs.SetFloat(BestKey, Best.Value);
+                    PlayerPrefs.SetFloat(BestKeyFor(easiest), Best.Value);
                 }
             }
 
@@ -414,17 +474,19 @@ namespace Demons
                 else if (PillAt.Value >= nextPill && Now >= PillAt.Value)
                 {
                     PillTaken();
-                    nextPill = Now + Balance.I.pillTime + Random.Range(Balance.I.pillGapMin, Balance.I.pillGapMax);
+                    nextPill = Now + Balance.I.pillTime + Random.Range(Balance.I.pillGapMin, Balance.I.pillGapMax) * Gaps;
                 }
             }
 
             if (Has(Feature.Phone) && Now >= nextCall)
             {
-                nextCall = Now + Random.Range(Balance.I.phoneGapMin, Balance.I.phoneGapMax);
+                nextCall = Now + Random.Range(Balance.I.phoneGapMin, Balance.I.phoneGapMax) * Gaps;
                 var idle = Station.All.FindAll(s => s.Kind == StationKind.Desk && !s.Ringing.Value);
                 if (idle.Count > 0) idle[Random.Range(0, idle.Count)].Ring();
             }
         }
+
+        static float Gaps => Difficulties.By(Balance.I.gapScaleByDifficulty);
 
         void Interrupts()
         {
@@ -436,7 +498,7 @@ namespace Demons
                 float gap = Mode.Value == GameMode.Survival
                     ? Mathf.Lerp(b.interruptGapMax, b.interruptGapMin, Elapsed / b.survivalHardAt)
                     : b.interruptGapMin;
-                nextInterrupt = Now + gap * Random.Range(0.75f, 1.25f);
+                nextInterrupt = Now + gap * Gaps * Random.Range(0.75f, 1.25f);
                 return;
             }
             bool light = Has(Feature.Therapist), pen = Has(Feature.Pen);

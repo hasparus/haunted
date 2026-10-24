@@ -49,7 +49,7 @@ namespace Demons
         static double Now => Net.Now;
         public float BeltDistance => BeltFrom.Value + (float)(Belt.Travel(Now) - Belt.Travel(BeltSince.Value));
         bool Idle => State.Value is PebbleState.Floor or PebbleState.OnStation;
-        double ForgetIn => LastTouched.Value + Balance.I.forgetTime - Now;
+        double ForgetIn => LastTouched.Value + Difficulties.ForgetTime - Now;
         bool Shaking => Idle && ForgetIn < Balance.I.warnTime;
         public double TimeLeft => Idle ? ForgetIn : double.MaxValue;
         public float BeltLeft => Belt.Instance.Length - BeltDistance;
@@ -497,6 +497,13 @@ namespace Demons
         }
 
         public void Touch() => LastTouched.Value = Now;
+
+        // Server: measures its travel along the belt from here and now, as the belt's pace changes.
+        public void Rebase()
+        {
+            BeltFrom.Value = BeltDistance;
+            BeltSince.Value = Now;
+        }
 
         void ReachHost()
         {
