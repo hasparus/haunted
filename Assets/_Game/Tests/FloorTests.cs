@@ -35,6 +35,15 @@ namespace Demons.Tests
         }
 
         [Test]
+        public void ArchedBridgesRiseMidSpanAndMeetTheIslandsLevel()
+        {
+            state.Arches = new[] { new GameState.Arch { Span = new Rect(-2, 4, 4, 2), AlongX = true, Rise = 0.3f } };
+            Assert.AreEqual(0.3f, state.FloorHeight(new Vector3(0, 0, 5)), 1e-4f);
+            Assert.AreEqual(0, state.FloorHeight(new Vector3(-1.999f, 0, 5)), 1e-2f);
+            Assert.AreEqual(0, state.FloorHeight(new Vector3(-5, 0, 5)), "on an island");
+        }
+
+        [Test]
         public void WithoutIslandsTheWholeRoomIsFloor()
         {
             state.Floor = new Rect[0];

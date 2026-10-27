@@ -313,20 +313,63 @@ namespace Demons.Editor
             var root = new GameObject("Islands").transform;
             foreach (var r in islands)
                 Prim(PrimitiveType.Cube, "Island", root, new Vector3(r.center.x, -depth / 2, r.center.y), new Vector3(r.width, depth, r.height), floor, collider: true);
-            // Flat on top, in slices thick at the banks and thin mid-span, so an arch shows underneath.
-            const int slices = 16;
+            const float rise = 0.3f, sag = 0.6f;
             foreach (var (r, alongX) in bridges)
             {
-                float length = alongX ? r.width : r.height, start = alongX ? r.xMin : r.yMin, slice = length / slices;
-                for (int i = 0; i < slices; i++)
-                {
-                    float t = (i + 0.5f) / slices, along = start + slice * (i + 0.5f), thick = 0.3f + (depth - 0.3f) * (1 - Mathf.Sin(t * Mathf.PI));
-                    var at = alongX ? new Vector3(along, -thick / 2, r.center.y) : new Vector3(r.center.x, -thick / 2, along);
-                    var size = alongX ? new Vector3(slice, thick, r.height) : new Vector3(r.width, thick, slice);
-                    Prim(PrimitiveType.Cube, "Bridge", root, at, size, floor, collider: true);
-                }
+                // The collider stays flat at floor level for thrown thoughts; demons ride the deck by FloorHeight.
+                var bridge = new GameObject("Bridge", typeof(MeshFilter), typeof(MeshRenderer), typeof(BoxCollider));
+                bridge.transform.SetParent(root, false);
+                bridge.transform.SetPositionAndRotation(new Vector3(r.center.x, 0, r.center.y), Quaternion.Euler(0, alongX ? 0 : -90, 0));
+                float length = alongX ? r.width : r.height, width = alongX ? r.height : r.width;
+                bridge.GetComponent<MeshFilter>().sharedMesh = BridgeMesh(length, width, rise, sag, depth);
+                var box = bridge.GetComponent<BoxCollider>();
+                box.center = new Vector3(0, -0.15f, 0);
+                box.size = new Vector3(length, 0.3f, width);
+                bridge.GetComponent<MeshRenderer>().sharedMaterial = floor;
             }
             state.Floor = islands.Concat(bridges.Select(b => b.r)).ToArray();
+            state.Arches = bridges.Select(b => new GameState.Arch { Span = b.r, AlongX = b.alongX, Rise = rise }).ToArray();
+        }
+
+        // A bridge in one piece along x, its deck rising over the gap and an arch underneath, banks as deep as the islands.
+        // Each face maps 0-1 across, so the paper shader inks only its edges; the ends hide inside the islands.
+        static Mesh BridgeMesh(float length, float width, float rise, float sag, float depth)
+        {
+            const int n = 24;
+            var vertices = new List<Vector3>();
+            var uvs = new List<Vector2>();
+            var triangles = new List<int>();
+            float half = width / 2;
+            Vector3 At(float t, float y, float z) => new((t - 0.5f) * length, y, z);
+            float Top(float t) => rise * Mathf.Sin(t * Mathf.PI);
+            float Bottom(float t) => sag * Mathf.Sin(t * Mathf.PI) - depth;
+
+            void Strip(System.Func<float, Vector3> a, System.Func<float, Vector3> b, bool flip)
+            {
+                int start = vertices.Count;
+                for (int i = 0; i <= n; i++)
+                {
+                    float t = i / (float)n;
+                    vertices.Add(a(t));
+                    vertices.Add(b(t));
+                    uvs.Add(new Vector2(t, 0));
+                    uvs.Add(new Vector2(t, 1));
+                }
+                for (int i = 0, k = start; i < n; i++, k += 2)
+                    triangles.AddRange(flip ? new[] { k, k + 2, k + 1, k + 1, k + 2, k + 3 } : new[] { k, k + 1, k + 2, k + 1, k + 3, k + 2 });
+            }
+
+            Strip(t => At(t, Top(t), -half), t => At(t, Top(t), half), false);
+            Strip(t => At(t, Bottom(t), -half), t => At(t, Bottom(t), half), true);
+            Strip(t => At(t, Bottom(t), -half), t => At(t, Top(t), -half), false);
+            Strip(t => At(t, Bottom(t), half), t => At(t, Top(t), half), true);
+            var mesh = new Mesh { name = "Bridge" };
+            mesh.SetVertices(vertices);
+            mesh.SetUVs(0, uvs);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
         }
 
         // The workload lever: a knobbed stick on a pedestal like the wardrobe's, its difficulty's name on the floor below.

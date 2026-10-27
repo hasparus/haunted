@@ -13,6 +13,16 @@ namespace Demons
         public Vector2 RoomHalfExtents = new(8.5f, 5.5f);
         // Islands and bridges demons can stand on, as x/z rects; none means the whole room.
         public Rect[] Floor = { };
+        // Bridges whose decks rise over the gap, so demons crossing them walk up and down.
+        public Arch[] Arches = { };
+
+        [System.Serializable]
+        public struct Arch
+        {
+            public Rect Span;
+            public bool AlongX;
+            public float Rise;
+        }
         [SerializeField] string startSceneWhenAllFall;
 
         bool loading;
@@ -30,6 +40,14 @@ namespace Demons
             foreach (var r in Floor)
                 if (r.Contains(new Vector2(p.x, p.z))) return true;
             return false;
+        }
+
+        public float FloorHeight(Vector3 p)
+        {
+            foreach (var a in Arches)
+                if (a.Span.Contains(new Vector2(p.x, p.z)))
+                    return a.Rise * Mathf.Sin(Mathf.PI * (a.AlongX ? Mathf.InverseLerp(a.Span.xMin, a.Span.xMax, p.x) : Mathf.InverseLerp(a.Span.yMin, a.Span.yMax, p.z)));
+            return 0;
         }
 
         // The closest point at least inset in from the floor's edge.

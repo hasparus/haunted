@@ -476,6 +476,7 @@ namespace Demons
                 rb.constraints = RigidbodyConstraints.FreezeRotation;
                 return;
             }
+            if (state && Mathf.Abs(p.y - state.FloorHeight(p)) > 0.001f) rb.position = new Vector3(p.x, state.FloorHeight(p), p.z);
             if (input == null) return;
             var m = input.Move.ReadValue<Vector2>();
             if (Progression.Instance && Progression.Instance.Inverted || Time.time < flippedUntil) m = -m;
