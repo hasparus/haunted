@@ -310,8 +310,9 @@ namespace Demons
 
         static void StepDifficulty(int step)
         {
-            int count = Difficulties.Names.Length;
-            Difficulties.Set((Difficulty)(((int)Difficulties.Current + step % count + count) % count));
+            int count = Difficulties.Names.Length, next = (int)Difficulties.Current + step;
+            // Wraps around in Headquarters; mid-run Set only takes it down.
+            Difficulties.Set((Difficulty)(Progression.Instance && Progression.Instance.IsSpawned ? Mathf.Clamp(next, 0, count - 1) : (next % count + count) % count));
         }
 
         static float StepLevel(float level, int step, float max) => Mathf.Clamp(Mathf.Round(level * 100) + step, 0, max * 100) / 100f;

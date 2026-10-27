@@ -4,8 +4,8 @@ namespace Demons
 {
     public enum Difficulty : byte { Easy, Normal, Hard }
 
-    // The room's difficulty: picked on the headquarters' pads or in the menu by whoever hosts, remembered for next time,
-    // and taking effect mid-run too. Balance's ByDifficulty tables are indexed by it.
+    // The room's difficulty: picked on the headquarters' workload lever or in the menu by whoever hosts, remembered for next time,
+    // and only lowered mid-run. Balance's ByDifficulty tables are indexed by it.
     public static class Difficulties
     {
         const string Key = "difficulty";
@@ -32,16 +32,17 @@ namespace Demons
 
         public static T By<T>(T[] byDifficulty, Difficulty d) => byDifficulty[Mathf.Clamp((int)d, 0, byDifficulty.Length - 1)];
 
-        public static int MaxCracks => MaxCracksAt(Current);
-
-        public static int MaxCracksAt(Difficulty d) => Mathf.Max(1, Balance.I.maxCracks + By(Balance.I.extraCracksByDifficulty, d));
+        public static int MaxCracks => Mathf.Max(1, Balance.I.maxCracks + By(Balance.I.extraCracksByDifficulty));
 
         public static float ForgetTime => Balance.I.forgetTime * By(Balance.I.forgetScaleByDifficulty);
+
+        // Mid-run it only goes down.
+        public static bool CanSet(Difficulty d) => Progression.Instance is not { IsSpawned: true } || d < Current;
 
         // Server: the room plays at d from now on, and the next one starts there.
         public static void Set(Difficulty d)
         {
-            if (Current == d) return;
+            if (Current == d || !CanSet(d)) return;
             Chosen = d;
             PlayerPrefs.SetInt(Key, (int)d);
             PlayerPrefs.Save();

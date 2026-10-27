@@ -94,13 +94,13 @@ namespace Demons
         // The reachable spot farthest from the light; running straight away just pins you in a corner.
         static Vector3 Escape(Vector3 me, Vector3 light)
         {
-            var room = GameState.Instance.RoomHalfExtents - new Vector2(1.2f, 1.2f);
+            var state = GameState.Instance;
             Vector3 best = me;
             float bestDistance = -1;
             for (int i = 0; i < 8; i++)
             {
                 var p = me + Quaternion.Euler(0, i * 45, 0) * Vector3.forward * 4;
-                p = new Vector3(Mathf.Clamp(p.x, -room.x, room.x), 0, Mathf.Clamp(p.z, -room.y, room.y));
+                p = state.NearestFloor(p, 1.2f);
                 float distance = Dist(p, light);
                 if (distance > bestDistance) (best, bestDistance) = (p, distance);
             }
@@ -235,9 +235,7 @@ namespace Demons
 
             doing = "duckling";
             Release();
-            var half = state.RoomHalfExtents - Vector2.one;
-            var behind = leader.transform.position - leader.transform.forward * 1.2f;
-            behind = new Vector3(Mathf.Clamp(behind.x, -half.x, half.x), 0, Mathf.Clamp(behind.z, -half.y, half.y));
+            var behind = state.NearestFloor(leader.transform.position - leader.transform.forward * 1.2f, 1);
             float gap = Dist(d.transform.position, behind);
             if (gap < 0.4f)
             {

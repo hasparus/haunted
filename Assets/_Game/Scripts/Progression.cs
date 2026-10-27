@@ -22,9 +22,6 @@ namespace Demons
         }
         public const string BestKey = "survival_best";
 
-        // Normal keeps the key from before difficulties, so its best carries over.
-        public static string BestKeyFor(Difficulty d) => d == Difficulty.Normal ? BestKey : $"{BestKey}_{Difficulties.Name(d).ToLowerInvariant()}";
-
         static readonly string[] Days = { "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY" };
 
         static readonly string[] DayCards =
@@ -88,6 +85,7 @@ namespace Demons
         // The therapist and the pen take turns; at most one interrupts at a time.
         public NetworkVariable<Feature> Interrupt = new();
         public NetworkVariable<float> Best = new();
+        // Survival's score: each new peak of revenue, scaled by the difficulty it was reached on.
         public NetworkVariable<float> Peak = new();
         public NetworkVariable<bool> Review = new();
         public NetworkVariable<int> Stars = new();
@@ -111,8 +109,7 @@ namespace Demons
         // Added to the week's goals after a change of difficulty, so only what's left of them scales.
         float goalShift;
         int cracksToday, weekStars;
-        // The easiest difficulty played this run: Survival's best is kept for it, and an easy run isn't sent to the leaderboard.
-        Difficulty easiest;
+        float peakInfluence;
         readonly float[] dayStartPrestige = new float[Scoring.MaxDemons];
         int signers;
         float typingSince;
@@ -220,11 +217,6 @@ namespace Demons
                 DayGoal.Value = Mathf.Round(dayStartInfluence + left);
                 goalShift = DayGoal.Value - GoalFor(Day.Value, d);
             }
-            // Turning it up never ends the run on the spot.
-            Cracks.Value = Mathf.Min(Cracks.Value, Difficulties.MaxCracksAt(d) - 1);
-            if (d >= easiest) return;
-            easiest = d;
-            Best.Value = PlayerPrefs.GetFloat(BestKeyFor(d), 0);
         }
 
 
@@ -266,7 +258,7 @@ namespace Demons
             Mode.Value = NextMode;
             Day.Value = 0;
             DayGoal.Value = 0;
-            Peak.Value = 0;
+            Peak.Value = peakInfluence = 0;
             Review.Value = false;
             Stars.Value = 0;
             Cracks.Value = 0;
@@ -280,17 +272,17 @@ namespace Demons
             PillAt.Value = 0;
             Interrupt.Value = Feature.None;
             PenArrived.Value = false;
-            easiest = Difficulties.Chosen;
-            Best.Value = PlayerPrefs.GetFloat(BestKeyFor(easiest), 0);
+            var difficulty = Difficulties.Chosen;
+            Best.Value = PlayerPrefs.GetFloat(BestKey, 0);
             startTime = Now;
             StartedAt.Value = startTime;
-            Pace.Value = new BeltPace { Before = easiest, After = easiest };
+            Pace.Value = new BeltPace { Before = difficulty, After = difficulty };
             nextCall = Now + 20;
             nextPill = Now + 30;
             nextInterrupt = Now + 8;
             ShowCard(Mode.Value == GameMode.Week
                 ? DayCards[0]
-                : $"INFINITE SURVIVAL\nIt starts easy. It doesn't stay easy.{(easiest == Difficulty.Normal ? "" : $"\n\nOn {Difficulties.Name(easiest)}.")}", hold: true);
+                : $"INFINITE SURVIVAL\nIt starts easy. It doesn't stay easy.{(difficulty == Difficulty.Normal ? "" : $"\n\nOn {Difficulties.Name(difficulty)}.")}", hold: true);
         }
 
         // Held cards pause the game until someone gets back to work; game time stands still, so they leave right after.
@@ -373,9 +365,8 @@ namespace Demons
         {
             PlayerPrefs.Save();
             signers = Demon.All.FindAll(d => !Bots.IsBot(d)).Count;
-            bool assisted = Bots.All.Count > 0 || easiest < Difficulty.Normal;
-            var on = easiest == Difficulty.Normal ? "" : $"  ·  {Difficulties.Name(easiest)}";
-            End($"Peak revenue {Scoring.Zloty(Peak.Value)}  ·  best {Scoring.Zloty(Best.Value)}{on}", System.Array.FindAll(Balance.I.survivalStarSeconds, s => Elapsed >= s).Length);
+            bool assisted = Bots.All.Count > 0;
+            End($"Score {Scoring.Zloty(Peak.Value)}  ·  best {Scoring.Zloty(Best.Value)}", System.Array.FindAll(Balance.I.survivalStarSeconds, s => Elapsed >= s).Length);
             if (Peak.Value > 0 && signers > 0 && !assisted)
             {
                 Signing.Value = true;
@@ -457,11 +448,15 @@ namespace Demons
                     if (arriving.card != null) ShowCard(arriving.card, 3, hold: true);
                     if (stage == UnlockDay(Feature.Pill)) nextPill = Now + 12;
                 }
-                if (influence > Peak.Value) Peak.Value = influence;
+                if (influence > peakInfluence)
+                {
+                    Peak.Value += (influence - peakInfluence) * Difficulties.By(Balance.I.scoreScaleByDifficulty);
+                    peakInfluence = influence;
+                }
                 if (Peak.Value > Best.Value)
                 {
                     Best.Value = Peak.Value;
-                    PlayerPrefs.SetFloat(BestKeyFor(easiest), Best.Value);
+                    PlayerPrefs.SetFloat(BestKey, Best.Value);
                 }
             }
 

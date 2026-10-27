@@ -11,6 +11,8 @@ namespace Demons
 
         [SerializeField] Demon demonPrefab;
         public Vector2 RoomHalfExtents = new(8.5f, 5.5f);
+        // Islands and bridges demons can stand on, as x/z rects; none means the whole room.
+        public Rect[] Floor = { };
         [SerializeField] string startSceneWhenAllFall;
 
         bool loading;
@@ -22,12 +24,36 @@ namespace Demons
         // Only the lobby's top edge starts a level; every other fall respawns.
         public bool StartsLevel(Vector3 p) => IsLobby && p.z > RoomHalfExtents.y;
 
+        public bool OnFloor(Vector3 p)
+        {
+            if (Floor.Length == 0) return Mathf.Abs(p.x) <= RoomHalfExtents.x && Mathf.Abs(p.z) <= RoomHalfExtents.y;
+            foreach (var r in Floor)
+                if (r.Contains(new Vector2(p.x, p.z))) return true;
+            return false;
+        }
+
+        // The closest point at least inset in from the floor's edge.
+        public Vector3 NearestFloor(Vector3 p, float inset)
+        {
+            if (Floor.Length == 0)
+                return new Vector3(Mathf.Clamp(p.x, inset - RoomHalfExtents.x, RoomHalfExtents.x - inset), p.y, Mathf.Clamp(p.z, inset - RoomHalfExtents.y, RoomHalfExtents.y - inset));
+            Vector3 best = p;
+            float nearest = float.MaxValue;
+            foreach (var r in Floor)
+            {
+                var q = new Vector3(Mathf.Clamp(p.x, r.xMin + inset, r.xMax - inset), p.y, Mathf.Clamp(p.z, r.yMin + inset, r.yMax - inset));
+                float d = (q - p).sqrMagnitude;
+                if (d < nearest) (best, nearest) = (q, d);
+            }
+            return best;
+        }
+
         public Vector3 SpawnOrigin = new(0, 0, -2.5f);
 
         public Vector3 SpawnPoint(int slot) => SpawnOrigin + new Vector3(-2.25f + slot * 1.5f, 0, 0);
 
         public NetworkVariable<float> Influence = new();
-        // Set by the host: on the headquarters' pads, from the menu, or carried over from the last room.
+        // Set by the host: on the headquarters' workload lever, from the menu, or carried over from the last room.
         public NetworkVariable<Difficulty> DifficultyLevel = new(Difficulty.Normal);
         public NetworkVariable<double> PausedFor = new(), PausedAt = new(-1);
         // The slot of a demon whose player has the game paused, or -1 (a card holding it, or nobody's demon).

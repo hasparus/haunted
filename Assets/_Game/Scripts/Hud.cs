@@ -349,7 +349,7 @@ namespace Demons
                 infoShown = infoNow;
                 // Normal goes unsaid.
                 var on = infoNow.difficulty == Difficulty.Normal ? "" : $"{Difficulties.Name(infoNow.difficulty)}  ·  ";
-                UI.Set(dayInfo, !progress ? "" : on + (week ? $"goal {Scoring.Zloty(infoNow.value)}" : $"best {Scoring.Zloty(infoNow.value)}"));
+                UI.Set(dayInfo, !progress ? "" : week ? $"{on}goal {Scoring.Zloty(infoNow.value)}" : $"best {Scoring.Zloty(infoNow.value)}");
             }
             if (state.Influence.Value != revenueShown)
             {

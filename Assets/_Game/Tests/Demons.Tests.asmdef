@@ -1,6 +1,6 @@
 {
   "name": "Demons.Tests",
-  "references": ["Demons", "UnityEngine.TestRunner", "UnityEditor.TestRunner"],
+  "references": ["Demons", "Unity.Netcode.Runtime", "UnityEngine.TestRunner", "UnityEditor.TestRunner"],
   "includePlatforms": ["Editor"],
   "overrideReferences": true,
   "precompiledReferences": ["nunit.framework.dll"],

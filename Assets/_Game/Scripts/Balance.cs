@@ -122,6 +122,8 @@ namespace Demons
         public float[] forgetScaleByDifficulty = { 1.5f, 1f, 0.75f };
         [Tooltip("Gaps between interruptions, pills and calls are multiplied by these.")]
         public float[] gapScaleByDifficulty = { 1.5f, 1f, 0.75f };
+        [Tooltip("Survival's score counts revenue at these rates.")]
+        public float[] scoreScaleByDifficulty = { 0.6f, 1f, 1.4f };
 
         static Balance instance;
 

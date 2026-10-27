@@ -126,6 +126,11 @@ namespace Demons
             for (int x = 0; x < width; x++)
             for (int z = 0; z < height; z++)
             {
+                if (!GameState.Instance.OnFloor(ToWorld(z * width + x)))
+                {
+                    blocked[x, z] = true;
+                    continue;
+                }
                 int n = Physics.OverlapBoxNonAlloc(ToWorld(z * width + x) + Vector3.up * 0.6f, extents, hits);
                 for (int i = 0; i < n; i++)
                     if (!hits[i].attachedRigidbody && !hits[i].isTrigger)

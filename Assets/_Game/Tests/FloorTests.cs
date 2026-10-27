@@ -1,0 +1,46 @@
+using NUnit.Framework;
+using UnityEngine;
+
+namespace Demons.Tests
+{
+    public class FloorTests
+    {
+        GameState state;
+
+        [SetUp]
+        public void SetUp()
+        {
+            state = new GameObject("GameState").AddComponent<GameState>();
+            state.RoomHalfExtents = new Vector2(10, 10);
+            state.Floor = new[] { new Rect(-10, 0, 8, 10), new Rect(2, 0, 8, 10), new Rect(-2, 4, 4, 2) };
+        }
+
+        [TearDown]
+        public void TearDown() => Object.DestroyImmediate(state.gameObject);
+
+        [Test]
+        public void GapsBetweenIslandsAreNotFloor()
+        {
+            Assert.IsTrue(state.OnFloor(new Vector3(-5, 0, 5)));
+            Assert.IsTrue(state.OnFloor(new Vector3(0, 0, 5)), "the bridge");
+            Assert.IsFalse(state.OnFloor(new Vector3(0, 0, 2)), "beside the bridge");
+            Assert.IsFalse(state.OnFloor(new Vector3(-5, 0, -1)), "inside the room, off every island");
+        }
+
+        [Test]
+        public void FallingIntoAGapRespawnsOnTheClosestIsland()
+        {
+            Assert.AreEqual(new Vector3(-2.8f, 0, 2), state.NearestFloor(new Vector3(-1.5f, 0, 2), 0.8f));
+            Assert.AreEqual(new Vector3(0, 0, 4.8f), state.NearestFloor(new Vector3(0, 0, 3.5f), 0.8f));
+        }
+
+        [Test]
+        public void WithoutIslandsTheWholeRoomIsFloor()
+        {
+            state.Floor = new Rect[0];
+            Assert.IsTrue(state.OnFloor(new Vector3(-9, 0, -9)));
+            Assert.IsFalse(state.OnFloor(new Vector3(0, 0, 11)));
+            Assert.AreEqual(new Vector3(9.2f, 0, 0), state.NearestFloor(new Vector3(12, 0, 0), 0.8f));
+        }
+    }
+}
