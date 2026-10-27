@@ -17,13 +17,15 @@ namespace Demons
 
         MaterialPropertyBlock block;
         float angle, swing;
+        Difficulty shown;
         LocalPlayer pressFor;
         string pressText;
 
         void Awake()
         {
             block = new MaterialPropertyBlock();
-            angle = LeanFor(Difficulties.Current);
+            shown = Difficulties.Current;
+            angle = LeanFor(shown);
         }
 
         static float LeanFor(Difficulty d) => Mathf.Lerp(Lean, -Lean, (int)d / (Difficulties.Names.Length - 1f));
@@ -50,6 +52,11 @@ namespace Demons
         void Update()
         {
             var d = Difficulties.Current;
+            if (d != shown)
+            {
+                shown = d;
+                Audio.Play(Sounds.I.menuChange, transform.position);
+            }
             // An underdamped spring: it snaps over, overshoots and settles.
             float dt = Mathf.Min(Time.unscaledDeltaTime, 1 / 30f);
             swing += ((LeanFor(d) - angle) * 500 - swing * 20) * dt;

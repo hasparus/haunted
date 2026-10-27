@@ -435,8 +435,9 @@ namespace Demons
             return ringMesh = new Mesh { name = "Ring", vertices = vertices, normals = normals, triangles = triangles };
         }
 
-        // Dash-throws keep the dash speed for a moment after the dash ends.
-        Vector3 Momentum => Time.time < dashUntil + 0.15f ? transform.forward * Balance.I.dashSpeed : rb.linearVelocity;
+        // A dash carries on for a moment after it ends, gliding off its speed: dash-throws keep it, and the demon clears gaps.
+        bool Leaping => Time.time < dashUntil + 0.15f;
+        Vector3 Momentum => Leaping ? transform.forward * Balance.I.dashSpeed : rb.linearVelocity;
 
         public void Respawn() => Respawn(GameState.Instance.SpawnPoint(Slot.Value));
 
@@ -470,7 +471,7 @@ namespace Demons
             }
             var state = GameState.Instance;
             var p = transform.position;
-            if (state && !state.OnFloor(p))
+            if (state && !Leaping && !state.OnFloor(p))
             {
                 falling = true;
                 respawnAt = state.StartsLevel(p) ? float.PositiveInfinity : Time.time + 1;

@@ -378,11 +378,12 @@ namespace Demons.Editor
             Color[] tints = { new(0.35f, 0.7f, 0.95f), new(0.98f, 0.8f, 0.08f), new(0.75f, 0.4f, 0.95f) };
             var root = new GameObject("DifficultyDial").transform;
             root.position = at;
-            var stand = Prim(PrimitiveType.Cylinder, "Pedestal", root, new Vector3(0, 0.3f, 0), new Vector3(0.7f, 0.3f, 0.7f), Paper("Pedestal", new Color(0.66f, 0.61f, 0.53f)), collider: true);
+            var stand = Prim(PrimitiveType.Cylinder, "Pedestal", root, new Vector3(0, 0.15f, 0), new Vector3(0.7f, 0.15f, 0.7f), Paper("Pedestal", new Color(0.66f, 0.61f, 0.53f)), collider: true);
             stand.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
-            var lever = Point("Lever", root, new Vector3(0, 0.6f, 0));
-            Prim(PrimitiveType.Cube, "Stick", lever, new Vector3(0, 0.3f, 0), new Vector3(0.08f, 0.6f, 0.08f), Paper("Pedestal", new Color(0.66f, 0.61f, 0.53f)));
-            var knob = Prim(PrimitiveType.Sphere, "Knob", lever, new Vector3(0, 0.62f, 0), Vector3.one * 0.3f, Unlit("Knob", Color.white));
+            var lever = Point("Lever", root, new Vector3(0, 0.3f, 0));
+            // Unlit like the knob: Paper would draw the stick at the pedestal's depth, under its top.
+            Prim(PrimitiveType.Cube, "Stick", lever, new Vector3(0, 0.4f, 0), new Vector3(0.08f, 0.8f, 0.08f), Unlit("Stick", new Color(0.3f, 0.27f, 0.23f)));
+            var knob = Prim(PrimitiveType.Sphere, "Knob", lever, new Vector3(0, 0.82f, 0), Vector3.one * 0.3f, Unlit("Knob", Color.white));
             FloorLabel(Difficulties.Name(Difficulty.Normal), root, new Vector3(0, 0, -0.95f), 0.13f, Jolly);
             var dial = root.gameObject.AddComponent<DifficultyDial>();
             Set(dial, "lever", lever);
