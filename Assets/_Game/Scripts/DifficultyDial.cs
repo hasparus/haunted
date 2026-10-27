@@ -16,10 +16,17 @@ namespace Demons
         [SerializeField] Color[] tints;
 
         MaterialPropertyBlock block;
+        float angle, swing;
         LocalPlayer pressFor;
         string pressText;
 
-        void Awake() => block = new MaterialPropertyBlock();
+        void Awake()
+        {
+            block = new MaterialPropertyBlock();
+            angle = LeanFor(Difficulties.Current);
+        }
+
+        static float LeanFor(Difficulty d) => Mathf.Lerp(Lean, -Lean, (int)d / (Difficulties.Names.Length - 1f));
 
         void OnEnable() => Instance = this;
 
@@ -43,8 +50,11 @@ namespace Demons
         void Update()
         {
             var d = Difficulties.Current;
-            float lean = Mathf.Lerp(Lean, -Lean, (int)d / (Difficulties.Names.Length - 1f));
-            lever.localRotation = Quaternion.RotateTowards(lever.localRotation, Quaternion.Euler(0, 0, lean), 240 * Time.unscaledDeltaTime);
+            // An underdamped spring: it snaps over, overshoots and settles.
+            float dt = Mathf.Min(Time.unscaledDeltaTime, 1 / 30f);
+            swing += ((LeanFor(d) - angle) * 500 - swing * 20) * dt;
+            angle += swing * dt;
+            lever.localRotation = Quaternion.Euler(0, 0, angle);
             string press = null;
             foreach (var demon in Demon.All)
                 if (demon.IsOwner && demon.Carrying.Value == Net.None && Near(demon.transform.position) && LocalPlayers.Find(demon.LocalIndex.Value) is { } player)
