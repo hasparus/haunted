@@ -31,6 +31,7 @@ namespace Demons
         readonly float[] angle = new float[2], reach = { 1, 1 };
         MaterialPropertyBlock block;
         float flash, walked, throwAt = -10, throwSide, noiseSeed;
+        int lastFrame;
         Vector3 lastPosition;
         bool sideways, facingLeft, facingAway;
         RigState state;
@@ -169,6 +170,14 @@ namespace Demons
             bool walking = speed > 0.4f && transform.position.y > -0.5f;
             if (walking) walked += speed * Time.deltaTime;
             int frame = Mathf.FloorToInt(walked / Stride) % 4;
+            // One step a cycle, as the full stride lands, so every client hears every demon walk in step with its drawing.
+            // Both feet would be a dozen a second at a run. A teleport isn't a step.
+            if (walking && frame != lastFrame && frame == 3 && moved.magnitude < 2)
+            {
+                Audio.Play(Sounds.I.step, transform.position, Sounds.I.stepVolume);
+                Fx.Puff(transform.position);
+            }
+            lastFrame = frame;
             legs.sprite = sideways ? (walking ? sideWalk[frame] : legsSideStand) : walking ? walk[frame] : legsStand;
             legs.flipX = facingLeft;
 

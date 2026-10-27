@@ -76,7 +76,7 @@ namespace Demons
             return source;
         }
 
-        public static void Play(AudioClip[] clips, Vector3? at = null) => Play(Any(clips), at, Sounds.I.sfxVolume * SoundLevel, Sounds.I.pitchJitter);
+        public static void Play(AudioClip[] clips, Vector3? at = null, float volume = 1) => Play(Any(clips), at, Sounds.I.sfxVolume * SoundLevel * volume, Sounds.I.pitchJitter);
 
         // For cues the designer orders mildest first: worse situations pick later clips.
         public static void Play(AudioClip[] clips, int severity, Vector3? at = null) => Play(Nth(clips, severity), at, Sounds.I.sfxVolume * SoundLevel, Sounds.I.pitchJitter);

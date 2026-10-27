@@ -48,8 +48,7 @@ MonoBehaviour:
   respawn:
   - {fileID: 8300000, guid: fd887eccb9e65964babc18f4c4944a2b, type: 3}
   step:
-  - {fileID: 8300000, guid: 1c37aabce4e97f342b669632c2c3f948, type: 3}
-  stepLength: 1.5
+  - {fileID: 8300000, guid: 3febbc0d0122c4ff3807815fee102398, type: 3}
   drop:
   - {fileID: 8300000, guid: fd887eccb9e65964babc18f4c4944a2b, type: 3}
   place:

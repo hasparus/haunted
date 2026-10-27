@@ -88,8 +88,6 @@ namespace Demons
         float respawnAt, nextPick;
         int wiggle;
         bool usingHeld;
-        Vector3 lastFeet;
-        float stride;
 
         static bool Frozen => GameState.Instance && GameState.Instance.Paused;
         Vector3 fallFrom;
@@ -326,7 +324,6 @@ namespace Demons
                 fallen = down;
                 Audio.Play(down ? Sounds.I.fall : Sounds.I.respawn, transform.position);
             }
-            Footsteps(down);
             if (!IsOwner || input == null) return;
             if (usingHeld && !input.Use.enabled)
             {
@@ -393,20 +390,6 @@ namespace Demons
             markerBlock ??= new MaterialPropertyBlock();
             markerBlock.SetVector(FeetId, markerFeet);
             marker.GetComponent<Renderer>().SetPropertyBlock(markerBlock);
-        }
-
-        // From the transform rather than input, so every client hears every demon walk. Teleports don't count.
-        void Footsteps(bool down)
-        {
-            var feet = Flat(transform.position);
-            float moved = (feet - lastFeet).magnitude;
-            lastFeet = feet;
-            if (down || moved > 2) return;
-            stride += moved;
-            if (stride < Sounds.I.stepLength) return;
-            stride = 0;
-            Audio.Play(Sounds.I.step, transform.position);
-            Fx.Puff(transform.position);
         }
 
         const float MarkerRadius = 0.5f;
