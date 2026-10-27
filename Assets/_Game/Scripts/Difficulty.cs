@@ -36,20 +36,24 @@ namespace Demons
 
         public static float ForgetTime => Balance.I.forgetTime * By(Balance.I.forgetScaleByDifficulty);
 
-        // Mid-run it only goes down.
-        public static bool CanSet(Difficulty d) => Progression.Instance is not { IsSpawned: true } || d < Current;
-
-        // Anyone: asks the room to play at d.
-        public static void Choose(Difficulty d)
+        // Anyone: turns the room's difficulty by step. The host decides: in Headquarters it wraps around, mid-run it only goes down.
+        public static void Step(int step)
         {
-            if (GameState.Instance is { IsSpawned: true, IsServer: false } room) room.ChooseDifficultyRpc(d);
-            else Set(d);
+            if (GameState.Instance is { IsSpawned: true, IsServer: false } room)
+            {
+                room.StepDifficultyRpc(step);
+                return;
+            }
+            int count = Names.Length, next = (int)Current + step;
+            bool running = Progression.Instance is { IsSpawned: true };
+            var d = (Difficulty)(running ? Mathf.Clamp(next, 0, count - 1) : (next % count + count) % count);
+            if (d == Current || running && d > Current) return;
+            Set(d);
         }
 
-        // Server: the room plays at d from now on, and the next one starts there.
-        public static void Set(Difficulty d)
+        // The room plays at d from now on, and the next one starts there.
+        static void Set(Difficulty d)
         {
-            if (Current == d || !CanSet(d)) return;
             Chosen = d;
             PlayerPrefs.SetInt(Key, (int)d);
             PlayerPrefs.Save();

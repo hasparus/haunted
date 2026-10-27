@@ -560,7 +560,7 @@ namespace Demons
         void TurnDialRpc()
         {
             if (!Bots.IsBot(this) && DifficultyDial.Near(transform.position))
-                Difficulties.Set((Difficulty)(((int)Difficulties.Current + 1) % Difficulties.Names.Length));
+                Difficulties.Step(1);
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]

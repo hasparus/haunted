@@ -129,7 +129,7 @@ namespace Demons
         }
 
         [Rpc(SendTo.Server)]
-        public void ChooseDifficultyRpc(Difficulty d) => Difficulties.Set(d);
+        public void StepDifficultyRpc(int step) => Difficulties.Step(step);
 
         [Rpc(SendTo.Server)]
         public void LetGoRpc()

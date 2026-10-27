@@ -251,7 +251,7 @@ namespace Demons
             for (int i = 0; i < players.Count; i++) AddPlayer(list, players[i], i + 1);
 
             var game = UI.Box("group", panel);
-            AddRow(game, "Difficulty", StepDifficulty, null).Add(Value(Difficulties.Name(Difficulties.Current), StepDifficulty));
+            AddRow(game, "Difficulty", Difficulties.Step, null).Add(Value(Difficulties.Name(Difficulties.Current), Difficulties.Step));
 
             var display = UI.Box("group", panel);
             Action<int> scale = StepScale;
@@ -302,13 +302,6 @@ namespace Demons
                 if (Debug.isDebugBuild && Resources.Load<TextAsset>("commit") is { } commit) version += " \u00b7 " + commit.text.Trim();
                 return version;
             }
-        }
-
-        static void StepDifficulty(int step)
-        {
-            int count = Difficulties.Names.Length, next = (int)Difficulties.Current + step;
-            // Wraps around in Headquarters; mid-run Set only takes it down.
-            Difficulties.Choose((Difficulty)(Progression.Instance && Progression.Instance.IsSpawned ? Mathf.Clamp(next, 0, count - 1) : (next % count + count) % count));
         }
 
         static float StepLevel(float level, int step, float max) => Mathf.Clamp(Mathf.Round(level * 100) + step, 0, max * 100) / 100f;
