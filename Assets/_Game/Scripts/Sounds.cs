@@ -42,7 +42,7 @@ namespace Demons
         [Tooltip("Falls off the edge")] public AudioClip[] fall;
         [Tooltip("Back on the floor after a fall")] public AudioClip[] respawn;
         [Tooltip("Each time a foot lands in the walk cycle, random variant")] public AudioClip[] step;
-        [Range(0, 1), Tooltip("Footsteps, on top of sfxVolume")] public float stepVolume = 0.35f;
+        [Range(0, 1), Tooltip("Footsteps, on top of sfxVolume")] public float stepVolume = 0.5f;
 
         [Header("Thoughts")]
         [Tooltip("Lands on the floor")] public AudioClip[] drop;
