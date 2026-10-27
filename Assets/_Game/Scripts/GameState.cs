@@ -129,6 +129,9 @@ namespace Demons
         }
 
         [Rpc(SendTo.Server)]
+        public void StepDifficultyRpc(int step) => Difficulties.Step(step);
+
+        [Rpc(SendTo.Server)]
         public void LetGoRpc()
         {
             if (Held.Value && NetworkManager.ServerTime.Time - heldSince >= HoldGrace) LetGo();
