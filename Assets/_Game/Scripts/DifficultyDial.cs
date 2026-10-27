@@ -69,7 +69,7 @@ namespace Demons
             lever.localRotation = Quaternion.Euler(0, 0, angle);
             string press = null;
             foreach (var demon in Demon.All)
-                if (demon.IsOwner && demon.IsOwnedByServer && demon.Carrying.Value == Net.None && Near(demon.transform.position) && LocalPlayers.Find(demon.LocalIndex.Value) is { } player)
+                if (demon.IsOwner && demon.Carrying.Value == Net.None && Near(demon.transform.position) && LocalPlayers.Find(demon.LocalIndex.Value) is { } player)
                 {
                     press = Press(player);
                     break;

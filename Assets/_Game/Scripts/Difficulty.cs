@@ -4,8 +4,8 @@ namespace Demons
 {
     public enum Difficulty : byte { Easy, Normal, Hard }
 
-    // The room's difficulty: picked on the headquarters' workload lever or in the menu by whoever hosts, remembered for next time,
-    // and only lowered mid-run. Balance's ByDifficulty tables are indexed by it.
+    // The room's difficulty: picked on the headquarters' workload lever or in the menu by anyone in the room, remembered by the
+    // host for next time, and only lowered mid-run. Balance's ByDifficulty tables are indexed by it.
     public static class Difficulties
     {
         const string Key = "difficulty";
@@ -38,6 +38,13 @@ namespace Demons
 
         // Mid-run it only goes down.
         public static bool CanSet(Difficulty d) => Progression.Instance is not { IsSpawned: true } || d < Current;
+
+        // Anyone: asks the room to play at d.
+        public static void Choose(Difficulty d)
+        {
+            if (GameState.Instance is { IsSpawned: true, IsServer: false } room) room.ChooseDifficultyRpc(d);
+            else Set(d);
+        }
 
         // Server: the room plays at d from now on, and the next one starts there.
         public static void Set(Difficulty d)
