@@ -44,8 +44,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 154aac2b8cc920c41b7bd3db85d17ddc, type: 3}
   colorPick:
   - {fileID: 8300000, guid: 154aac2b8cc920c41b7bd3db85d17ddc, type: 3}
-  fall:
-  - {fileID: 8300000, guid: d30a1c62413487e4aa4302a6d28cbf75, type: 3}
+  fall: []
   respawn:
   - {fileID: 8300000, guid: 5c7bb206616cae24d9d0a0a9e0763288, type: 3}
   step:
