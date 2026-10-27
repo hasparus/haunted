@@ -133,9 +133,11 @@ namespace Demons
                 lastWind = Time.unscaledTime;
                 Fx.Wind(transform.position, transform.forward);
             }
+            // The body stays on the physics floor; the drawing walks up and over arched bridges.
+            var rest = new Vector3(0, GameState.Instance ? GameState.Instance.FloorHeight(transform.position) : 0, 0);
             if (Time.unscaledTime < frozenUntil) visual.position = frozenAt;
-            else if (visual.localPosition != Vector3.zero)
-                visual.localPosition = Vector3.MoveTowards(visual.localPosition, Vector3.zero, Time.unscaledDeltaTime * 25);
+            else if (visual.localPosition != rest)
+                visual.localPosition = Vector3.MoveTowards(visual.localPosition, rest, Time.unscaledDeltaTime * 25);
             float flash = flashStrength * Mathf.Clamp01(1 - (Time.unscaledTime - flashAt) / 0.18f);
             if (flash == flashShown) return;
             flashShown = flash;
@@ -476,7 +478,6 @@ namespace Demons
                 rb.constraints = RigidbodyConstraints.FreezeRotation;
                 return;
             }
-            if (state && Mathf.Abs(p.y - state.FloorHeight(p)) > 0.001f) rb.position = new Vector3(p.x, state.FloorHeight(p), p.z);
             if (input == null) return;
             var m = input.Move.ReadValue<Vector2>();
             if (Progression.Instance && Progression.Instance.Inverted || Time.time < flippedUntil) m = -m;
