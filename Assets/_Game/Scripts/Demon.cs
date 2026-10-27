@@ -133,9 +133,11 @@ namespace Demons
                 lastWind = Time.unscaledTime;
                 Fx.Wind(transform.position, transform.forward);
             }
+            // The body stays on the physics floor; the drawing walks up and over arched bridges.
+            var rest = new Vector3(0, GameState.Instance ? GameState.Instance.FloorHeight(transform.position) : 0, 0);
             if (Time.unscaledTime < frozenUntil) visual.position = frozenAt;
-            else if (visual.localPosition != Vector3.zero)
-                visual.localPosition = Vector3.MoveTowards(visual.localPosition, Vector3.zero, Time.unscaledDeltaTime * 25);
+            else if (visual.localPosition != rest)
+                visual.localPosition = Vector3.MoveTowards(visual.localPosition, rest, Time.unscaledDeltaTime * 25);
             float flash = flashStrength * Mathf.Clamp01(1 - (Time.unscaledTime - flashAt) / 0.18f);
             if (flash == flashShown) return;
             flashShown = flash;
@@ -342,6 +344,7 @@ namespace Demons
             if (input.Grab.WasPressedThisFrame())
             {
                 if (Carrying.Value == Net.None && HeadPedestal.Near(transform.position, this) is { } pedestal) PickHeadRpc(pedestal.Head);
+                else if (IsOwnedByServer && Carrying.Value == Net.None && DifficultyDial.Near(transform.position)) TurnDialRpc();
                 else GrabRpc(transform.position, transform.forward, Momentum);
             }
             if (input.Use.WasPressedThisFrame())
@@ -363,6 +366,7 @@ namespace Demons
 
             // A free head in reach wins, as it does for grabbing.
             Component target = Carrying.Value == Net.None ? HeadPedestal.Near(transform.position, this) : null;
+            if (!target && IsOwnedByServer && Carrying.Value == Net.None && DifficultyDial.Near(transform.position)) target = DifficultyDial.Instance;
             if (!target) target = GrabTarget();
             if (!target && Carrying.Value == Net.None) target = UseTarget();
             // A thought cooking in the pot can still be taken out, but isn't pointed at.
@@ -431,8 +435,9 @@ namespace Demons
             return ringMesh = new Mesh { name = "Ring", vertices = vertices, normals = normals, triangles = triangles };
         }
 
-        // Dash-throws keep the dash speed for a moment after the dash ends.
-        Vector3 Momentum => Time.time < dashUntil + 0.15f ? transform.forward * Balance.I.dashSpeed : rb.linearVelocity;
+        // A dash carries on for a moment after it ends, gliding off its speed: dash-throws keep it, and the demon clears gaps.
+        bool Leaping => Time.time < dashUntil + 0.15f;
+        Vector3 Momentum => Leaping ? transform.forward * Balance.I.dashSpeed : rb.linearVelocity;
 
         public void Respawn() => Respawn(GameState.Instance.SpawnPoint(Slot.Value));
 
@@ -465,13 +470,12 @@ namespace Demons
                 return;
             }
             var state = GameState.Instance;
-            var room = state ? state.RoomHalfExtents : Vector2.positiveInfinity;
             var p = transform.position;
-            if (Mathf.Abs(p.x) > room.x || Mathf.Abs(p.z) > room.y)
+            if (state && !Leaping && !state.OnFloor(p))
             {
                 falling = true;
                 respawnAt = state.StartsLevel(p) ? float.PositiveInfinity : Time.time + 1;
-                fallFrom = new Vector3(Mathf.Clamp(p.x, 0.8f - room.x, room.x - 0.8f), 0, Mathf.Clamp(p.z, 0.8f - room.y, room.y - 0.8f));
+                fallFrom = state.NearestFloor(new Vector3(p.x, 0, p.z), 0.8f);
                 rb.constraints = RigidbodyConstraints.FreezeRotation;
                 return;
             }
@@ -550,6 +554,14 @@ namespace Demons
         public void PickHeadRpc(int head)
         {
             if (head >= 0 && head < DemonRig.Heads && !HeadTaken(head, this)) Head.Value = head;
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+        void TurnDialRpc()
+        {
+            // The host's to change, like the menu row.
+            if (IsOwnedByServer && !Bots.IsBot(this) && DifficultyDial.Near(transform.position))
+                Difficulties.Set((Difficulty)(((int)Difficulties.Current + 1) % Difficulties.Names.Length));
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]

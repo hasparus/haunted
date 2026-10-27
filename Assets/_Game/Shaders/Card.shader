@@ -8,6 +8,7 @@ Shader "Haunted/Card"
         _Flash("Flash", Range(0, 1)) = 0
         _Boil("Line boil", Range(0, 1)) = 1
         _Aloft("Drawn this far nearer than where it stands (m): flying things that must stay in front", Float) = 0
+        _Ledge("Fallen into the void: the floor edge in front of it (z, height), w 1", Vector) = (0, 0, 0, 0)
         _Blur("Out of focus (uv radius)", Float) = 0
     }
 
@@ -36,22 +37,23 @@ Shader "Haunted/Card"
             CBUFFER_START(UnityPerMaterial)
                 half _Flash, _Boil;
                 float _Aloft, _Blur;
+                float4 _Ledge;
             CBUFFER_END
             float _MindTime;
             float4 _PoolCenter;
             // Light spilling from open cracks (xz, unused, strength), set by MindFx: warm daylight, Don't Starve's falloff.
-            float4 _CrackGlows[5];
+            float4 _CrackGlows[7];
             half3 CrackLight(float2 xz)
             {
                 half sum = 0;
-                for (int g = 0; g < 5; g++)
+                for (int g = 0; g < 7; g++)
                     sum += _CrackGlows[g].w * exp(-0.9 * pow(length(xz - _CrackGlows[g].xy) / 3.8, 2.2));
                 return half3(1, 0.91, 0.69) * sum;
             }
 
 
             struct Attributes { float4 positionOS : POSITION; half4 color : COLOR; float2 uv : TEXCOORD0; };
-            struct Varyings { float4 positionCS : SV_POSITION; half4 color : COLOR; float2 uv : TEXCOORD0; float2 feet : TEXCOORD1; };
+            struct Varyings { float4 positionCS : SV_POSITION; half4 color : COLOR; float2 uv : TEXCOORD0; float2 feet : TEXCOORD1; float3 positionWS : TEXCOORD2; };
 
             Varyings Vert(Attributes v)
             {
@@ -66,6 +68,7 @@ Shader "Haunted/Card"
                 float3 feet = Underneath(TransformObjectToWorld(float3(0, 0, 0)));
                 o.positionCS.z = SortedZ(o.positionCS, PushedBack(feet, -_Aloft));
                 o.feet = feet.xz;
+                o.positionWS = TransformObjectToWorld(pos);
                 return o;
             }
 
@@ -80,6 +83,14 @@ Shader "Haunted/Card"
 
             half4 Frag(Varyings i) : SV_Target
             {
+                // Fallen into the void, it drops out of sight behind the floor's edge in front of it: hidden where the
+                // view passes below that edge. Only the camera's height and z count, so the islands beside it never cut it.
+                if (_Ledge.w > 0)
+                {
+                    float3 eye = _WorldSpaceCameraPos;
+                    float t = (_Ledge.x - eye.z) / (i.positionWS.z - eye.z);
+                    if (t > 0 && t < 1 && eye.y + (i.positionWS.y - eye.y) * t < _Ledge.y) discard;
+                }
                 float boil = floor(_MindTime * 2.5) * 3.1;
                 float2 uv = i.uv + (float2(Noise(i.uv * 14 + boil), Noise(i.uv * 14 + 7 + boil)) - 0.5) * 0.004 * _Boil;
                 half4 c = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);

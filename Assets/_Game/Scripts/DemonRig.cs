@@ -19,13 +19,14 @@ namespace Demons
         const float Behind = -0.01f, LegsAt = 0, BodyAt = 0.004f, TieAt = 0.008f, HeadAt = 0.012f, FaceAt = 0.016f, Front = 0.02f;
         const float BodyWidth = 1.35f, Stride = 0.22f, Grip = 0.21f;
         static readonly Vector2 Shoulder = new(0.086f * BodyWidth, 0.68f), SideShoulder = new(0, 0.69f);
-        static readonly int FlashId = Shader.PropertyToID("_Flash"), AloftId = Shader.PropertyToID("_Aloft");
+        static readonly int FlashId = Shader.PropertyToID("_Flash"), AloftId = Shader.PropertyToID("_Aloft"), LedgeId = Shader.PropertyToID("_Ledge");
 
         static Sprite legsStand, legsSideStand, bodyFront, bodyBack, bodySide, tieArt, armSide, gripSide;
         static Sprite[] walk, sideWalk, headFront, headBack, headSide, faces, sideFaces, armFront, armBack, gripFront, gripBack;
         static Material card;
 
         SpriteRenderer legs, body, tie, head, face;
+        Vector4 ledge;
         readonly SpriteRenderer[] arms = new SpriteRenderer[2], grips = new SpriteRenderer[2];
         readonly float[] angle = new float[2], reach = { 1, 1 };
         MaterialPropertyBlock block;
@@ -251,6 +252,9 @@ namespace Demons
 
         void Sort()
         {
+            var game = GameState.Instance;
+            ledge = transform.position.y < -0.01f && game && game.LedgeBefore(transform.position) is { } z
+                ? new Vector4(z, game.FloorHeight(new Vector3(transform.position.x, 0, z - 0.01f)), 0, 1) : Vector4.zero;
             Set(legs, LegsAt);
             Set(body, BodyAt);
             Set(tie, TieAt);
@@ -273,6 +277,7 @@ namespace Demons
             r.GetPropertyBlock(block);
             block.SetFloat(AloftId, aloft);
             block.SetFloat(FlashId, flash);
+            block.SetVector(LedgeId, ledge);
             r.SetPropertyBlock(block);
         }
     }

@@ -22,7 +22,7 @@ namespace Demons
         static readonly int FxTime = Shader.PropertyToID("_MindFxTime"), Wobble = Shader.PropertyToID("_MindWobble"),
             Inverted = Shader.PropertyToID("_MindInverted"), Clock = Shader.PropertyToID("_MindTime"), CardRect = Shader.PropertyToID("_CardRect"), CardFire = Shader.PropertyToID("_CardFire"), CardBurnId = Shader.PropertyToID("_CardBurn"),
             PoolCenter = Shader.PropertyToID("_PoolCenter"), RipplesId = Shader.PropertyToID("_Ripples"), GlowsId = Shader.PropertyToID("_CrackGlows");
-        static readonly Vector4[] glows = new Vector4[5];
+        static readonly Vector4[] glows = new Vector4[7];
 
         const float RippleTime = 0.6f;
         static readonly Vector4[] ripples = new Vector4[4];
@@ -66,7 +66,7 @@ namespace Demons
         {
             var progress = Progression.Instance && Progression.Instance.IsSpawned ? Progression.Instance : null;
             float dt = Time.unscaledDeltaTime;
-            float danger = progress ? (float)progress.Cracks.Value / Balance.I.maxCracks : 0;
+            float danger = progress ? (float)progress.Cracks.Value / Difficulties.MaxCracks : 0;
             Mind = Mathf.MoveTowards(Mind, Mathf.Max(Mood.Gloom * 0.5f, danger), dt);
             fxTime += dt * 0.2f * (1 - (1 - Mind) * (1 - Mind));
             inverted = Mathf.MoveTowards(inverted, progress && progress.Inverted || Demon.AnyLocalFlipped ? 1 : 0, dt * 3);

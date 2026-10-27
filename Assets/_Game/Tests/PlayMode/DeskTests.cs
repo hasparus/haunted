@@ -44,6 +44,7 @@ namespace Demons.PlayTests
         public IEnumerator DeskIsHauntableFromEverySide()
         {
             Progression.NextMode = GameMode.Week;
+            Difficulties.Chosen = Difficulty.Normal;
             SceneManager.LoadScene("Office");
             yield return Until(() => GameState.Instance && GameState.Instance.IsSpawned, 10, "Office never came online");
             yield return Until(() => !GameState.Instance.Paused, 10, "the opening card never let go");

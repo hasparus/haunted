@@ -231,7 +231,7 @@ namespace Demons
             var joins = LocalPlayers.JoinOptions().ConvertAll(o => o.key == "A" ? "A on a gamepad" : o.key);
             var key = new StringBuilder().Append(string.Join(",", joins)).Append(CameraRig.ShakeEnabled)
                 .Append(ScaleIndex).Append(NetBootstrap.Instance && NetBootstrap.Instance.Online).Append(Screen.fullScreen).Append(Mood.Effects).Append(MindFx.Distortion).Append(Audio.MusicLevel).Append(Audio.SoundLevel)
-                .Append(Progression.Instance && Progression.Instance.IsSpawned);
+                .Append(Progression.Instance && Progression.Instance.IsSpawned).Append(Difficulties.Current).Append(SetsDifficulty);
             foreach (var p in players) key.Append('|').Append(p.Index).Append(p.Scheme).Append(LocalPlayers.DemonOf(p) is { } d ? d.ColorIndex.Value : -1);
             foreach (var d in Demon.All) key.Append(',').Append(d.ColorIndex.Value);
             if (key.ToString() == shape) return;
@@ -249,6 +249,10 @@ namespace Demons
             list.EnableInClassList("players--split", players.Count > 1);
             panel.Add(list);
             for (int i = 0; i < players.Count; i++) AddPlayer(list, players[i], i + 1);
+
+            var game = UI.Box("group", panel);
+            Action<int> difficulty = SetsDifficulty ? StepDifficulty : null;
+            AddRow(game, "Difficulty", difficulty, null).Add(Value(Difficulties.Name(Difficulties.Current), difficulty));
 
             var display = UI.Box("group", panel);
             Action<int> scale = StepScale;
@@ -299,6 +303,16 @@ namespace Demons
                 if (Debug.isDebugBuild && Resources.Load<TextAsset>("commit") is { } commit) version += " \u00b7 " + commit.text.Trim();
                 return version;
             }
+        }
+
+        // The host's to change; online guests just see it.
+        static bool SetsDifficulty => GameState.Instance is not { IsSpawned: true, IsServer: false };
+
+        static void StepDifficulty(int step)
+        {
+            int count = Difficulties.Names.Length, next = (int)Difficulties.Current + step;
+            // Wraps around in Headquarters; mid-run Set only takes it down.
+            Difficulties.Set((Difficulty)(Progression.Instance && Progression.Instance.IsSpawned ? Mathf.Clamp(next, 0, count - 1) : (next % count + count) % count));
         }
 
         static float StepLevel(float level, int step, float max) => Mathf.Clamp(Mathf.Round(level * 100) + step, 0, max * 100) / 100f;

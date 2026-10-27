@@ -20,7 +20,7 @@ namespace Demons
         readonly float[] scoreSeen = new float[Scoring.MaxDemons];
         readonly List<Demon> chips = new();
         (int day, bool week) dayShown = (int.MinValue, false);
-        (bool week, float value) infoShown = (false, float.NaN);
+        (bool week, float value, Difficulty difficulty) infoShown = (false, float.NaN, Difficulty.Normal);
         float revenueShown = float.NaN;
         (int players, bool lobby, bool typing) hintFor = (-1, false, false);
         List<(string text, bool key)> hint;
@@ -237,7 +237,7 @@ namespace Demons
             if (!live || state.IsLobby)
             {
                 UI.Show(crackPips, false);
-                lights.Refresh(0, 0, Balance.I.maxCracks);
+                lights.Refresh(0, 0, Difficulties.MaxCracks);
             }
             if (live && !state.IsLobby) RefreshTop(state, progress);
 
@@ -343,11 +343,13 @@ namespace Demons
                 dayShown = dayNow;
                 UI.Set(day, !progress ? "" : week ? progress.DayTitle : "Survival");
             }
-            var infoNow = (week, !progress ? float.NaN : week ? progress.Goal : progress.Best.Value);
+            var infoNow = (week, value: !progress ? float.NaN : week ? progress.Goal : progress.Best.Value, difficulty: Difficulties.Current);
             if (infoNow != infoShown)
             {
                 infoShown = infoNow;
-                UI.Set(dayInfo, !progress ? "" : week ? $"goal {Scoring.Zloty(infoNow.Item2)}" : $"best {Scoring.Zloty(infoNow.Item2)}");
+                // Normal goes unsaid.
+                var on = infoNow.difficulty == Difficulty.Normal ? "" : $"{Difficulties.Name(infoNow.difficulty)}  ·  ";
+                UI.Set(dayInfo, !progress ? "" : week ? $"{on}goal {Scoring.Zloty(infoNow.value)}" : $"best {Scoring.Zloty(infoNow.value)}");
             }
             if (state.Influence.Value != revenueShown)
             {
@@ -388,7 +390,7 @@ namespace Demons
         // Pips under the revenue: lit for each open crack, the newest shrinking as demon ink seals it.
         void RefreshCracks(Progression progress)
         {
-            int max = Balance.I.maxCracks, open = progress ? progress.Cracks.Value : 0;
+            int max = Difficulties.MaxCracks, open = progress ? progress.Cracks.Value : 0;
             float sealing = progress ? progress.Sealing.Value : 0;
             lights.Refresh(open, sealing, max);
             UI.Show(crackPips, progress);

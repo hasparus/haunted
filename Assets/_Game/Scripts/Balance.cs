@@ -84,7 +84,7 @@ namespace Demons
         public float phoneGapMax = 35f;
 
         [Header("Cracks")]
-        [Tooltip("Open cracks of light it takes to lose: downsized in Survival, the day restarts in the Week. Unhaunted and forgotten thoughts open them.")]
+        [Tooltip("Open cracks of light it takes to lose on Normal: downsized in Survival, the day restarts in the Week. Unhaunted and forgotten thoughts open them.")]
         public int maxCracks = 5;
         [Tooltip("Influence delivered to seal the newest crack.")]
         public float influencePerSeal = 3f;
@@ -108,6 +108,22 @@ namespace Demons
         public float penSession = 16f;
         public float interruptGapMin = 10f;
         public float interruptGapMax = 35f;
+
+        [Header("Difficulty")]
+        [Tooltip("Each table is Easy, Normal, Hard. Added to maxCracks.")]
+        public int[] extraCracksByDifficulty = { 2, 0, -1 };
+        [Tooltip("Day goals are multiplied by these.")]
+        public float[] goalScaleByDifficulty = { 0.7f, 1f, 1.3f };
+        [Tooltip("The belt runs this much faster, so thoughts also come this much sooner.")]
+        public float[] beltScaleByDifficulty = { 0.8f, 1f, 1.2f };
+        [Tooltip("Survival's ramp takes this much longer to add each 1x of belt speed.")]
+        public float[] rampScaleByDifficulty = { 1.5f, 1f, 0.7f };
+        [Tooltip("forgetTime is multiplied by these.")]
+        public float[] forgetScaleByDifficulty = { 1.5f, 1f, 0.75f };
+        [Tooltip("Gaps between interruptions, pills and calls are multiplied by these.")]
+        public float[] gapScaleByDifficulty = { 1.5f, 1f, 0.75f };
+        [Tooltip("Survival's score counts revenue at these rates.")]
+        public float[] scoreScaleByDifficulty = { 0.6f, 1f, 1.4f };
 
         static Balance instance;
 

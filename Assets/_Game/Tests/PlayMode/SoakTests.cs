@@ -28,9 +28,10 @@ namespace Demons.PlayTests
             yield return null;
         }
 
-        static IEnumerator StartOffice(GameMode mode, int bots)
+        static IEnumerator StartOffice(GameMode mode, int bots, Difficulty difficulty = Difficulty.Normal)
         {
             Progression.NextMode = mode;
+            Difficulties.Chosen = difficulty;
             SceneManager.LoadScene("Office");
             float waited = 0;
             while ((!GameState.Instance || !GameState.Instance.IsSpawned) && waited < 10)
@@ -98,23 +99,40 @@ namespace Demons.PlayTests
 
         // Not an assertion: measures how long two autopilots take per day, for tuning the goals.
         [UnityTest, Explicit, Timeout(1500000)]
-        public IEnumerator WeekPacing()
+        public IEnumerator WeekPacing([Values] Difficulty difficulty)
         {
             // Spawns and timers run on network time, which ignores timeScale, so measure at real speed.
             Time.timeScale = 1;
-            yield return StartOffice(GameMode.Week, 2);
+            yield return StartOffice(GameMode.Week, 2, difficulty);
             float start = Time.time;
-            int day = 0;
-            while (Time.time - start < 1200 && SceneManager.GetActiveScene().name == "Office")
+            int day = 0, cracks = 0;
+            while (Time.time - start < 900 && SceneManager.GetActiveScene().name == "Office")
             {
-                if (Progression.Instance && Progression.Instance.Day.Value != day)
+                if (Progression.Instance is { } run)
                 {
-                    day = Progression.Instance.Day.Value;
-                    Debug.Log($"[pacing] reached day {day} at {Time.time - start:0}s, influence {GameState.Instance.Influence.Value:0.0}");
+                    cracks = Mathf.Max(cracks, run.Cracks.Value);
+                    if (run.Day.Value != day)
+                    {
+                        day = run.Day.Value;
+                        Debug.Log($"[pacing] {difficulty} reached day {day} at {Time.time - start:0}s, influence {GameState.Instance.Influence.Value:0.0}, most cracks open {cracks}");
+                        cracks = 0;
+                    }
                 }
                 yield return null;
             }
-            Debug.Log($"[pacing] stopped at day {day} after {Time.time - start:0}s, scene {SceneManager.GetActiveScene().name}");
+            Debug.Log($"[pacing] {difficulty} stopped at day {day} after {Time.time - start:0}s, scene {SceneManager.GetActiveScene().name}");
+        }
+
+        // Not an assertion: how long three autopilots last in Survival and what they score, for tuning the difficulties.
+        [UnityTest, Explicit, Timeout(1000000)]
+        public IEnumerator SurvivalPacing([Values] Difficulty difficulty)
+        {
+            Time.timeScale = 1;
+            yield return StartOffice(GameMode.Survival, 3, difficulty);
+            float start = Time.time;
+            while (Time.time - start < 600 && !Progression.Instance.Review.Value) yield return null;
+            var run = Progression.Instance;
+            Debug.Log($"[pacing] {difficulty} survival {(run.Review.Value ? "fired" : "still going")} at {Time.time - start:0}s, score {run.Peak.Value:0.0}, influence {GameState.Instance.Influence.Value:0.0}, cracks {run.Cracks.Value}");
         }
     }
 }

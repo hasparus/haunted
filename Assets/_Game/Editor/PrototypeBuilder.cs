@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Unity.Netcode;
 using Unity.Netcode.Components;
 using UnityEditor;
@@ -161,13 +162,13 @@ namespace Demons.Editor
 
         static void BuildHeadquarters(Pebble pebble, Demon demon, NetworkPrefabsList prefabs)
         {
-            var half = new Vector2(18f, 20f);
-            var spawn = new Vector3(0, 0, 7f);
+            var half = new Vector2(24.5f, 20f);
+            var spawn = new Vector3(0, 0, 8.5f);
             var cam = NewRoom(pebble, demon, prefabs, half, walls: false, beltZ: -1.5f, beltStart: -19.3f, beltEnd: 3f);
             desksBuilt = 0;
             var rig = cam.gameObject.AddComponent<CameraRig>();
-            rig.Focus = new Vector3(0, 0, 11.4f);
-            rig.IdleExtents = new Vector3(14f, 0, 3.8f);
+            rig.Focus = new Vector3(0, 0, 11f);
+            rig.IdleExtents = new Vector3(24.5f, 0, 4.5f);
             cam.transform.position = spawn + new Vector3(0, 15, -12.5f);
 
             var state = Object.FindAnyObjectByType<GameState>();
@@ -175,24 +176,25 @@ namespace Demons.Editor
             var so = new SerializedObject(state);
             so.FindProperty("startSceneWhenAllFall").stringValue = "Office";
             so.ApplyModifiedPropertiesWithoutUndo();
+            BuildIslands(state);
 
-            FloorLabel("First week at work", null, new Vector3(-9f, 0, 16.5f), 0.3f, Jolly);
-            FloorLabel("Infinite survival", null, new Vector3(9f, 0, 16.5f), 0.3f, Jolly);
-            FloorLabel("best here: {best}\n\nTop scores\n{top}", null, new Vector3(9f, 0, 12.6f), 0.13f);
-            Prim(PrimitiveType.Cube, "ModeDivider", null, new Vector3(0, 0.01f, 16f), new Vector3(0.15f, 0.02f, 8f), Paper("Divider", new Color(0.78f, 0.74f, 0.66f), scenery: true));
+            FloorLabel("First week at work", null, new Vector3(-4.5f, 0, 16.5f), 0.26f, Jolly);
+            FloorLabel("Infinite survival", null, new Vector3(4.5f, 0, 16.5f), 0.26f, Jolly);
+            FloorLabel("best here: {best}\n\nTop scores\n{top}", null, new Vector3(4.5f, 0, 13.8f), 0.13f);
+            Prim(PrimitiveType.Cube, "ModeDivider", null, new Vector3(0, 0.01f, 16.25f), new Vector3(0.15f, 0.02f, 7.5f), Paper("Divider", new Color(0.78f, 0.74f, 0.66f), scenery: true));
             FloorLabel("Jump off to start", null, new Vector3(0, 0, 10.6f), 0.14f);
             FloorArrow(new Vector3(-4.2f, 0, 10.6f), 1);
             FloorArrow(new Vector3(4.2f, 0, 10.6f), 1);
-            FloorLabel("Wardrobe\nstand on a color", null, new Vector3(-11.1f, 0, 9f), 0.12f);
+            FloorLabel("Wardrobe\nstand on a color", null, new Vector3(WardrobeX + 3 * WardrobeStep, 0, 10.3f), 0.12f);
             for (int i = 0; i < Demon.Palette.Length; i++)
             {
-                var pad = Prim(PrimitiveType.Cylinder, $"ColorPad{i}", null, new Vector3(-15f + i * 1.3f, 0.01f, 7f), new Vector3(0.9f, 0.01f, 0.9f), Unlit($"Pad{i}", Demon.Palette[i]));
+                var pad = Prim(PrimitiveType.Cylinder, $"ColorPad{i}", null, new Vector3(WardrobeX + i * WardrobeStep, 0.01f, 8.2f), new Vector3(0.9f, 0.01f, 0.9f), Unlit($"Pad{i}", Demon.Palette[i]));
                 pad.AddComponent<ColorPad>().Index = i;
             }
             BuildHeadPedestals(cam);
-            FloorLabel("Learn the mechanics", null, new Vector3(0, 0, 4f), 0.14f);
-            FloorArrow(new Vector3(-4.6f, 0, 4f), -1);
-            FloorArrow(new Vector3(4.6f, 0, 4f), -1);
+            BuildDifficultyDial(new Vector3(15.5f, 0, 9.4f));
+            FloorLabel("Learn the mechanics", null, new Vector3(5.35f, 0, 6.9f), 0.12f);
+            FloorArrow(new Vector3(5.35f, 0, 3.5f), -1);
 
             var go = new GameObject("Headquarters");
             go.AddComponent<NetworkObject>();
@@ -266,11 +268,11 @@ namespace Demons.Editor
         // Lodger. Grabbing beside one puts it on.
         static void BuildHeadPedestals(Camera cam)
         {
-            const float scale = 0.8f, z = 4.6f;
+            const float scale = 0.8f, z = 5.4f;
             for (int i = 0; i < DemonRig.Heads; i++)
             {
                 // Evenly across the colour row's span, the first under its first pad and the last under its last.
-                var at = new Vector3(-15f + i * (6 * 1.3f) / (DemonRig.Heads - 1), 0, z);
+                var at = new Vector3(WardrobeX + i * (6 * WardrobeStep) / (DemonRig.Heads - 1), 0, z);
                 var root = new GameObject($"Head{i}").transform;
                 root.position = at;
                 var stand = Prim(PrimitiveType.Cylinder, "Pedestal", root, new Vector3(0, 0.3f, 0), new Vector3(0.7f, 0.3f, 0.7f), Paper("Pedestal", new Color(0.66f, 0.61f, 0.53f)), collider: true);
@@ -295,6 +297,103 @@ namespace Demons.Editor
                 Set(pedestal, "shown", shown.gameObject);
                 Set(pedestal, "label", root.GetComponentInChildren<TextMesh>());
             }
+        }
+
+        const float WardrobeX = -21.9f, WardrobeStep = 1.1f;
+
+        // Headquarters stands on islands over the void, joined by bridges: the launch deck to the north, whose top edge
+        // starts a level; the wardrobe to the west; the workload lever to the east; the training floor to the south.
+        static void BuildIslands(GameState state)
+        {
+            const float depth = 1.6f;
+            Rect[] islands = { new(-10, 6, 20, 14), new(-24.2f, 2.8f, 11.2f, 9.5f), new(13, 6.6f, 5, 5), new(-18, -20, 36, 20) };
+            (Rect r, bool alongX)[] bridges = { (new(-13, 7.3f, 3, 2.8f), true), (new(10, 7.3f, 3, 2.8f), true), (new(3.6f, 0, 3.5f, 6), false) };
+            Object.DestroyImmediate(GameObject.Find("Floor"));
+            var floor = Paper("Floor", new Color(0.3f, 0.35f, 0.37f), tiles: true, scenery: true);
+            var root = new GameObject("Islands").transform;
+            foreach (var r in islands)
+                Prim(PrimitiveType.Cube, "Island", root, new Vector3(r.center.x, -depth / 2, r.center.y), new Vector3(r.width, depth, r.height), floor, collider: true);
+            const float rise = 0.3f, sag = 0.6f;
+            foreach (var (r, alongX) in bridges)
+            {
+                // The collider stays flat at floor level for thrown thoughts; demons ride the deck by FloorHeight.
+                var bridge = new GameObject("Bridge", typeof(MeshFilter), typeof(MeshRenderer), typeof(BoxCollider));
+                bridge.transform.SetParent(root, false);
+                bridge.transform.SetPositionAndRotation(new Vector3(r.center.x, 0, r.center.y), Quaternion.Euler(0, alongX ? 0 : -90, 0));
+                float length = alongX ? r.width : r.height, width = alongX ? r.height : r.width;
+                bridge.GetComponent<MeshFilter>().sharedMesh = BridgeMesh(length, width, rise, sag, depth);
+                var box = bridge.GetComponent<BoxCollider>();
+                box.center = new Vector3(0, -0.15f, 0);
+                box.size = new Vector3(length, 0.3f, width);
+                bridge.GetComponent<MeshRenderer>().sharedMaterial = floor;
+            }
+            state.Floor = islands.Concat(bridges.Select(b => b.r)).ToArray();
+            state.Arches = bridges.Select(b => new GameState.Arch { Span = b.r, AlongX = b.alongX, Rise = rise }).ToArray();
+        }
+
+        // A bridge in one piece along x, its deck rising over the gap and an arch underneath, banks as deep as the islands.
+        // Each face maps 0-1 across, so the paper shader inks only its edges; the ends hide inside the islands.
+        static Mesh BridgeMesh(float length, float width, float rise, float sag, float depth)
+        {
+            const int n = 24;
+            var vertices = new List<Vector3>();
+            var uvs = new List<Vector2>();
+            var triangles = new List<int>();
+            float half = width / 2;
+            Vector3 At(float t, float y, float z) => new((t - 0.5f) * length, y, z);
+            float Top(float t) => rise * Mathf.Sin(t * Mathf.PI);
+            float Bottom(float t) => sag * Mathf.Sin(t * Mathf.PI) - depth;
+
+            void Strip(System.Func<float, Vector3> a, System.Func<float, Vector3> b, bool flip)
+            {
+                int start = vertices.Count;
+                for (int i = 0; i <= n; i++)
+                {
+                    float t = i / (float)n;
+                    vertices.Add(a(t));
+                    vertices.Add(b(t));
+                    uvs.Add(new Vector2(t, 0));
+                    uvs.Add(new Vector2(t, 1));
+                }
+                for (int i = 0, k = start; i < n; i++, k += 2)
+                    triangles.AddRange(flip ? new[] { k, k + 2, k + 1, k + 1, k + 2, k + 3 } : new[] { k, k + 1, k + 2, k + 1, k + 3, k + 2 });
+            }
+
+            Strip(t => At(t, Top(t), -half), t => At(t, Top(t), half), false);
+            Strip(t => At(t, Bottom(t), -half), t => At(t, Bottom(t), half), true);
+            Strip(t => At(t, Bottom(t), -half), t => At(t, Top(t), -half), false);
+            Strip(t => At(t, Bottom(t), half), t => At(t, Top(t), half), true);
+            var mesh = new Mesh { name = "Bridge" };
+            mesh.SetVertices(vertices);
+            mesh.SetUVs(0, uvs);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        // The workload lever: a knobbed stick on a pedestal like the wardrobe's, its difficulty's name on the floor below.
+        static void BuildDifficultyDial(Vector3 at)
+        {
+            Color[] tints = { new(0.35f, 0.7f, 0.95f), new(0.98f, 0.8f, 0.08f), new(0.75f, 0.4f, 0.95f) };
+            var root = new GameObject("DifficultyDial").transform;
+            root.position = at;
+            var stand = Prim(PrimitiveType.Cylinder, "Pedestal", root, new Vector3(0, 0.15f, 0), new Vector3(0.7f, 0.15f, 0.7f), Paper("Pedestal", new Color(0.66f, 0.61f, 0.53f)), collider: true);
+            stand.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            var lever = Point("Lever", root, new Vector3(0, 0.3f, 0));
+            // Unlit like the knob: Paper would draw the stick at the pedestal's depth, under its top.
+            Prim(PrimitiveType.Cube, "Stick", lever, new Vector3(0, 0.4f, 0), new Vector3(0.08f, 0.8f, 0.08f), Unlit("Stick", new Color(0.3f, 0.27f, 0.23f)));
+            var knob = Prim(PrimitiveType.Sphere, "Knob", lever, new Vector3(0, 0.82f, 0), Vector3.one * 0.3f, Unlit("Knob", Color.white));
+            FloorLabel(Difficulties.Name(Difficulty.Normal), root, new Vector3(0, 0, -0.95f), 0.13f, Jolly);
+            var dial = root.gameObject.AddComponent<DifficultyDial>();
+            Set(dial, "lever", lever);
+            Set(dial, "knob", knob.GetComponent<Renderer>());
+            Set(dial, "label", root.GetComponentInChildren<TextMesh>());
+            var so = new SerializedObject(dial);
+            var colors = so.FindProperty("tints");
+            colors.arraySize = tints.Length;
+            for (int i = 0; i < tints.Length; i++) colors.GetArrayElementAtIndex(i).colorValue = tints[i];
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // What each mechanic's workstation says on the floor, and how far in front of the workstation, in the
