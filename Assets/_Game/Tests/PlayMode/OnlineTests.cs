@@ -38,6 +38,7 @@ namespace Demons.PlayTests
         {
             // Two editors on one machine also trip over the editor's own tooling; only the game's state decides these tests.
             LogAssert.ignoreFailingMessages = true;
+            Difficulties.Chosen = Difficulty.Normal;
             SceneManager.LoadScene("Headquarters");
             yield return Until(() => GameState.Instance && GameState.Instance.IsSpawned, 10, "Headquarters never came online");
             bot.Press(GamepadButton.South);

@@ -18,14 +18,13 @@ namespace Demons
         MaterialPropertyBlock block;
         float angle, swing;
         Difficulty shown;
+        bool? fromRoom;
         LocalPlayer pressFor;
         string pressText;
 
         void Awake()
         {
             block = new MaterialPropertyBlock();
-            shown = Difficulties.Current;
-            angle = LeanFor(shown);
         }
 
         static float LeanFor(Difficulty d) => Mathf.Lerp(Lean, -Lean, (int)d / (Difficulties.Names.Length - 1f));
@@ -52,10 +51,16 @@ namespace Demons
         void Update()
         {
             var d = Difficulties.Current;
-            if (d != shown)
+            bool room = GameState.Instance && GameState.Instance.IsSpawned;
+            if (d != shown || room != fromRoom)
             {
-                shown = d;
-                Audio.Play(Sounds.I.menuChange, transform.position);
+                // Arriving, or joining a room, it shows the setting at once; only a turn in the room springs it over with a click.
+                if (room == fromRoom) Audio.Play(Sounds.I.menuChange, transform.position);
+                else (angle, swing) = (LeanFor(d), 0);
+                (shown, fromRoom) = (d, room);
+                label.color = tints[(int)d];
+                block.SetColor(BaseColorId, tints[(int)d]);
+                knob.SetPropertyBlock(block);
             }
             // An underdamped spring: it snaps over, overshoots and settles.
             float dt = Mathf.Min(Time.unscaledDeltaTime, 1 / 30f);
@@ -64,17 +69,13 @@ namespace Demons
             lever.localRotation = Quaternion.Euler(0, 0, angle);
             string press = null;
             foreach (var demon in Demon.All)
-                if (demon.IsOwner && demon.Carrying.Value == Net.None && Near(demon.transform.position) && LocalPlayers.Find(demon.LocalIndex.Value) is { } player)
+                if (demon.IsOwner && demon.IsOwnedByServer && demon.Carrying.Value == Net.None && Near(demon.transform.position) && LocalPlayers.Find(demon.LocalIndex.Value) is { } player)
                 {
                     press = Press(player);
                     break;
                 }
             var text = press != null ? string.Format(press, Difficulties.Name(d)) : Difficulties.Name(d);
-            if (label.text == text) return;
-            label.text = text;
-            label.color = tints[(int)d];
-            block.SetColor(BaseColorId, tints[(int)d]);
-            knob.SetPropertyBlock(block);
+            if (label.text != text) label.text = text;
         }
     }
 }

@@ -30,7 +30,7 @@ namespace Demons
         List<Vector3> path;
         Vector3 pathGoal;
         float repathAt, stuckFor, sidestepUntil, nextDash, nextTap, arrivedAt = float.MaxValue;
-        Vector3 lastPos;
+        Vector3 lastPos, at;
         Vector2 sidestep;
 
         public void Think(Bot bot)
@@ -38,6 +38,7 @@ namespace Demons
             bot.held.Clear();
             bot.Stick = Vector2.zero;
             var d = bot.Demon;
+            if (d) at = d.transform.position;
             if (!d)
             {
                 Release();
@@ -59,14 +60,18 @@ namespace Demons
                 Steer(bot, d, Escape(d.transform.position, light.transform.position), arrive: false);
                 return;
             }
-            if (FollowHumansOffLedge(bot, d) || Duckling(bot, d)) return;
+            if (FollowHumansOffLedge(bot, d) || Duckling(bot, d))
+            {
+                Release();
+                return;
+            }
 
             var best = new Task { Score = float.MinValue };
             foreach (var task in Tasks(d))
             {
                 // Claimed by another bot, unless this one is clearly nearer: then it takes over instead of idling in the way.
                 if (task.Claim != null && claims.TryGetValue(task.Claim, out var owner) && owner != this
-                    && Dist(d.transform.position, task.Goal) + 1.5f > Dist(owner.lastPos, task.Goal)) continue;
+                    && Dist(d.transform.position, task.Goal) + 1.5f > Dist(owner.at, task.Goal)) continue;
                 float score = task.Score + (task.Claim != null && task.Claim == claimed || Dist(task.Goal, pathGoal) < 0.75f ? 1.5f : 0);
                 if (score > best.Score) (best, best.Score) = (task, score);
             }
@@ -116,6 +121,7 @@ namespace Demons
         {
             if ((object)claimed != null && claims.TryGetValue(claimed, out var owner) && owner == this) claims.Remove(claimed);
             claimed = null;
+            arrivedAt = float.MaxValue;
         }
 
         IEnumerable<Task> Tasks(Demon d)

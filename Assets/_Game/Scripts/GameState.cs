@@ -54,8 +54,9 @@ namespace Demons
         // fallen at p drops out of sight behind.
         public float? LedgeBefore(Vector3 p)
         {
+            if (Floor.Length == 0) return Mathf.Abs(p.x) <= RoomHalfExtents.x && RoomHalfExtents.y <= p.z ? RoomHalfExtents.y : null;
             float? ledge = null;
-            foreach (var r in Floor.Length == 0 ? new[] { new Rect(-RoomHalfExtents, RoomHalfExtents * 2) } : Floor)
+            foreach (var r in Floor)
                 if (p.x >= r.xMin && p.x <= r.xMax && r.yMax <= p.z && (ledge == null || r.yMax > ledge)) ledge = r.yMax;
             return ledge;
         }

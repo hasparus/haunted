@@ -22,7 +22,7 @@ namespace Demons
         static readonly int FxTime = Shader.PropertyToID("_MindFxTime"), Wobble = Shader.PropertyToID("_MindWobble"),
             Inverted = Shader.PropertyToID("_MindInverted"), Clock = Shader.PropertyToID("_MindTime"), CardRect = Shader.PropertyToID("_CardRect"), CardFire = Shader.PropertyToID("_CardFire"), CardBurnId = Shader.PropertyToID("_CardBurn"),
             PoolCenter = Shader.PropertyToID("_PoolCenter"), RipplesId = Shader.PropertyToID("_Ripples"), GlowsId = Shader.PropertyToID("_CrackGlows");
-        static readonly Vector4[] glows = new Vector4[5];
+        static readonly Vector4[] glows = new Vector4[7];
 
         const float RippleTime = 0.6f;
         static readonly Vector4[] ripples = new Vector4[4];

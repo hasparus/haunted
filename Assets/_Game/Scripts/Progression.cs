@@ -213,9 +213,12 @@ namespace Demons
             if (Mode.Value == GameMode.Week && DayGoal.Value > 0)
             {
                 var scale = Balance.I.goalScaleByDifficulty;
-                float left = (DayGoal.Value - dayStartInfluence) * Difficulties.By(scale, d) / Difficulties.By(scale, was);
-                DayGoal.Value = Mathf.Round(dayStartInfluence + left);
-                goalShift = DayGoal.Value - GoalFor(Day.Value, d);
+                float ratio = Difficulties.By(scale, d) / Difficulties.By(scale, was);
+                // Only what's still to earn rescales, so lowering it never ends the day on the spot; the days after are set
+                // as if this one had been at d all along.
+                goalShift = Mathf.Round(dayStartInfluence + (DayGoal.Value - dayStartInfluence) * ratio) - GoalFor(Day.Value, d);
+                float influence = GameState.Instance.Influence.Value;
+                DayGoal.Value = Mathf.Ceil(influence + Mathf.Max(0, DayGoal.Value - influence) * ratio);
             }
         }
 

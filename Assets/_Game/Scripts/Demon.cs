@@ -344,7 +344,7 @@ namespace Demons
             if (input.Grab.WasPressedThisFrame())
             {
                 if (Carrying.Value == Net.None && HeadPedestal.Near(transform.position, this) is { } pedestal) PickHeadRpc(pedestal.Head);
-                else if (Carrying.Value == Net.None && DifficultyDial.Near(transform.position)) TurnDialRpc();
+                else if (IsOwnedByServer && Carrying.Value == Net.None && DifficultyDial.Near(transform.position)) TurnDialRpc();
                 else GrabRpc(transform.position, transform.forward, Momentum);
             }
             if (input.Use.WasPressedThisFrame())
@@ -366,7 +366,7 @@ namespace Demons
 
             // A free head in reach wins, as it does for grabbing.
             Component target = Carrying.Value == Net.None ? HeadPedestal.Near(transform.position, this) : null;
-            if (!target && Carrying.Value == Net.None && DifficultyDial.Near(transform.position)) target = DifficultyDial.Instance;
+            if (!target && IsOwnedByServer && Carrying.Value == Net.None && DifficultyDial.Near(transform.position)) target = DifficultyDial.Instance;
             if (!target) target = GrabTarget();
             if (!target && Carrying.Value == Net.None) target = UseTarget();
             // A thought cooking in the pot can still be taken out, but isn't pointed at.
@@ -559,7 +559,8 @@ namespace Demons
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
         void TurnDialRpc()
         {
-            if (!Bots.IsBot(this) && DifficultyDial.Near(transform.position))
+            // The host's to change, like the menu row.
+            if (IsOwnedByServer && !Bots.IsBot(this) && DifficultyDial.Near(transform.position))
                 Difficulties.Set((Difficulty)(((int)Difficulties.Current + 1) % Difficulties.Names.Length));
         }
 

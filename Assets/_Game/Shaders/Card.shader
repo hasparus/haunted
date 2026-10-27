@@ -42,11 +42,11 @@ Shader "Haunted/Card"
             float _MindTime;
             float4 _PoolCenter;
             // Light spilling from open cracks (xz, unused, strength), set by MindFx: warm daylight, Don't Starve's falloff.
-            float4 _CrackGlows[5];
+            float4 _CrackGlows[7];
             half3 CrackLight(float2 xz)
             {
                 half sum = 0;
-                for (int g = 0; g < 5; g++)
+                for (int g = 0; g < 7; g++)
                     sum += _CrackGlows[g].w * exp(-0.9 * pow(length(xz - _CrackGlows[g].xy) / 3.8, 2.2));
                 return half3(1, 0.91, 0.69) * sum;
             }
