@@ -29,7 +29,7 @@ namespace Demons
         public string Doing => doing ?? $"{(chosen.Claim ? chosen.Claim.name : "-")} {chosen.Act} {chosen.Button} score {chosen.Score:0.0} at {chosen.Goal:F1} carrying {carrying}";
         List<Vector3> path;
         Vector3 pathGoal;
-        float repathAt, stuckFor, sidestepUntil, nextDash, nextTap;
+        float repathAt, stuckFor, sidestepUntil, nextDash, nextTap, arrivedAt = float.MaxValue;
         Vector3 lastPos;
         Vector2 sidestep;
 
@@ -64,7 +64,9 @@ namespace Demons
             var best = new Task { Score = float.MinValue };
             foreach (var task in Tasks(d))
             {
-                if (task.Claim != null && claims.TryGetValue(task.Claim, out var owner) && owner != this) continue;
+                // Claimed by another bot, unless this one is clearly nearer: then it takes over instead of idling in the way.
+                if (task.Claim != null && claims.TryGetValue(task.Claim, out var owner) && owner != this
+                    && Dist(d.transform.position, task.Goal) + 1.5f > Dist(owner.lastPos, task.Goal)) continue;
                 float score = task.Score + (task.Claim != null && task.Claim == claimed || Dist(task.Goal, pathGoal) < 0.75f ? 1.5f : 0);
                 if (score > best.Score) (best, best.Score) = (task, score);
             }
@@ -86,9 +88,12 @@ namespace Demons
             carrying = d.Carrying.Value != Net.None;
             if (Steer(bot, d, best.Goal))
             {
+                arrivedAt = Mathf.Min(arrivedAt, Time.time);
                 if (best.Act == Act.Hold) bot.held.Add(best.Button);
-                else TapNow(bot, best.Button);
+                // Grab takes whatever's nearest in front, so it waits until that's what it came for, or a second has passed.
+                else if (best.Claim is not Component wanted || d.GrabTarget() == wanted || Time.time - arrivedAt > 1) TapNow(bot, best.Button);
             }
+            else arrivedAt = float.MaxValue;
         }
 
         // The reachable spot farthest from the light; running straight away just pins you in a corner.
@@ -123,6 +128,8 @@ namespace Demons
                 yield break;
             }
 
+            // Unhaunted thoughts on the belt with nobody going for them come before joining someone else's desk.
+            bool beltNeedsHands = Pebble.All.Exists(p => p.State.Value == PebbleState.OnBelt && p.Stamps.Value == 0 && !claims.ContainsKey(p));
             foreach (var s in Station.All)
             {
                 if (s.Locked) continue;
@@ -139,7 +146,9 @@ namespace Demons
                 bool done = p.Hauntable && s.Workers.Value == 0 &&
                     (s.Kind != StationKind.Desk ? !needsMe && (s.Kind == StationKind.Hammer || p.Stamps.Value != 0) : Scoring.StampCount(p.Stamps.Value) >= DesiredStamps(p));
                 float urgency = threatened ? 6 : Urgency(p);
-                if (needsMe && !threatened)
+                // Two at a desk make a combo, unless the belt needs hands; a third does something else.
+                int others = Scoring.StampCount((byte)(s.Workers.Value & ~d.SlotBit));
+                if (needsMe && !threatened && (s.Kind != StationKind.Desk || others == 0 || others == 1 && !beltNeedsHands))
                 {
                     float combo = s.Workers.Value != 0 ? 2.5f * p.Weight : 0;
                     var at = s.Kind == StationKind.Hammer ? s.SidePoint(FreeSide(s, d)) : s.Slot.position;
@@ -221,7 +230,7 @@ namespace Demons
         bool Duckling(Bot bot, Demon d)
         {
             var state = GameState.Instance;
-            if (!state || !state.IsLobby) return false;
+            if (!state || !state.IsLobby || !Demon.All.Exists(o => !Bots.IsBot(o))) return false;
             Demon leader = null;
             for (int i = Bots.All.FindIndex(b => b.brain == this) - 1; i >= 0 && !leader; i--) leader = Bots.All[i].Demon;
             if (!leader)
@@ -252,8 +261,9 @@ namespace Demons
             var me = d.transform.position;
             if (arrive && d.InReach(goal) && Dist(me, goal) < Balance.I.reach * 0.8f)
             {
+                // Just past the stick's dead zone: it turns to face the goal, edging in.
                 var face = goal - me;
-                bot.Stick = new Vector2(face.x, face.z).normalized * 0.05f;
+                bot.Stick = new Vector2(face.x, face.z).normalized * 0.2f;
                 return true;
             }
 

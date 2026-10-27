@@ -111,7 +111,7 @@ namespace Demons
 
         [Header("Difficulty")]
         [Tooltip("Each table is Easy, Normal, Hard. Added to maxCracks.")]
-        public int[] extraCracksByDifficulty = { 2, 0, -2 };
+        public int[] extraCracksByDifficulty = { 2, 0, -1 };
         [Tooltip("Day goals are multiplied by these.")]
         public float[] goalScaleByDifficulty = { 0.7f, 1f, 1.3f };
         [Tooltip("The belt runs this much faster, so thoughts also come this much sooner.")]
