@@ -44,6 +44,14 @@ namespace Demons.Tests
         }
 
         [Test]
+        public void TheLedgeInFrontIsTheNearestFloorEdgeAcrossTheSameX()
+        {
+            Assert.AreEqual(6f, state.LedgeBefore(new Vector3(0, -1, 8)), "behind the bridge");
+            Assert.AreEqual(10f, state.LedgeBefore(new Vector3(-5, -1, 12)), "behind an island");
+            Assert.IsNull(state.LedgeBefore(new Vector3(0, -1, 3)), "in front of the bridge, nothing in front of it");
+        }
+
+        [Test]
         public void WithoutIslandsTheWholeRoomIsFloor()
         {
             state.Floor = new Rect[0];

@@ -50,6 +50,16 @@ namespace Demons
             return 0;
         }
 
+        // The z of the floor's far edge nearest in front of p (the camera looks along +z), across p's x: what something
+        // fallen at p drops out of sight behind.
+        public float? LedgeBefore(Vector3 p)
+        {
+            float? ledge = null;
+            foreach (var r in Floor.Length == 0 ? new[] { new Rect(-RoomHalfExtents, RoomHalfExtents * 2) } : Floor)
+                if (p.x >= r.xMin && p.x <= r.xMax && r.yMax <= p.z && (ledge == null || r.yMax > ledge)) ledge = r.yMax;
+            return ledge;
+        }
+
         // The closest point at least inset in from the floor's edge.
         public Vector3 NearestFloor(Vector3 p, float inset)
         {
