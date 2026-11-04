@@ -30,6 +30,9 @@ jobs:
       matrix:
         mode: [editmode, playmode]
     steps:
+      # The Unity image, the project and the swap don't fit beside the runner's preinstalled SDKs.
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
       # Unity's import can run out of memory on hosted runners.
       - name: Add swap
         run: |
@@ -73,6 +76,9 @@ jobs:
     name: Linux build
     runs-on: ubuntu-latest
     steps:
+      # The Unity image, the project and the swap don't fit beside the runner's preinstalled SDKs.
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
       # Unity's import can run out of memory on hosted runners.
       - name: Add swap
         run: |
