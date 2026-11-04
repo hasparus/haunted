@@ -4,13 +4,14 @@
 #   tools/unity test [editmode|playmode|all] [unity args...]   results in TestResults/<mode>.xml, failures printed
 #   tools/unity build <BuildTarget> [--dev] [unity args...]     the player in Builds/<BuildTarget>/
 #   tools/unity run [unity args...]                              anything else, e.g. -executeMethod Some.Method -quit
+#   tools/unity deactivate                                       hand this machine's license seat back
 #
 # For example: tools/unity test editmode -testFilter TouchTests, or tools/unity build StandaloneLinux64.
 # Play tests marked Explicit (soak, perf, online) only run when -testFilter names them.
 #
 # The editor is the version in ProjectSettings/ProjectVersion.txt, found at $UNITY_EDITOR, in Unity Hub's default
 # folders, or in /opt/unity (tools/install-unity.sh). It must be licensed: on a desktop, sign in to Unity Hub once; on a
-# headless machine, set UNITY_LICENSE to the contents of a Unity_lic.ulf (the secret CI uses) and it's activated here.
+# headless machine, set UNITY_EMAIL and UNITY_PASSWORD and it's activated here (see activate below).
 # Close the project in the editor first: Unity won't open one project twice.
 # Unity's full log goes to Logs/<command>.log; only what matters is printed.
 set -uo pipefail
@@ -34,26 +35,62 @@ find_editor() {
 
 unity=$(find_editor) || exit 1
 
-case "$(uname)" in
-  Darwin) license_dir="/Library/Application Support/Unity" ;;
-  *) license_dir="$HOME/.local/share/unity3d/Unity" ;;
-esac
+# A license, activated once per machine from the environment, the way game-ci does it:
+#   UNITY_EMAIL + UNITY_PASSWORD                 a Personal seat (an account without two-factor sign-in)
+#   UNITY_EMAIL + UNITY_PASSWORD + UNITY_SERIAL  a Pro or Plus seat
+#   UNITY_LICENSE                                a Unity_lic.ulf, which only works on the machine it was issued to
+# Each activation holds one of the account's seats until `tools/unity deactivate` hands it back.
+licensed() {
+  for dir in "$HOME/.local/share/unity3d" "$HOME/.config/unity3d" "/Library/Application Support/Unity"; do
+    [ -d "$dir" ] && [ -n "$(find "$dir" \( -name Unity_lic.ulf -o -name UnityEntitlementLicense.xml \) -print -quit 2>/dev/null)" ] && return 0
+  done
+  return 1
+}
 
-# A license file from $UNITY_LICENSE, activated once per machine.
+licensing_client() {
+  find "$(dirname "$unity")/.." -name Unity.Licensing.Client -type f -perm -u+x -print -quit 2>/dev/null
+}
+
 activate() {
-  [ -n "${UNITY_LICENSE:-}" ] && [ ! -f "$license_dir/Unity_lic.ulf" ] || return 0
-  echo "Activating the Unity license from UNITY_LICENSE"
+  licensed && return 0
   mkdir -p Logs
-  local file
-  file=$(mktemp)
-  printf '%s' "$UNITY_LICENSE" | tr -d '\r' > "$file"
-  "$unity" -batchmode -nographics -quit -manualLicenseFile "$file" -logFile Logs/activate.log
-  local status=$?
-  rm -f "$file"
+  local log=Logs/activate.log status
+  if [ -n "${UNITY_EMAIL:-}" ] && [ -n "${UNITY_PASSWORD:-}" ] && [ -n "${UNITY_SERIAL:-}" ]; then
+    echo "Activating Unity with a serial for $UNITY_EMAIL"
+    "$unity" -batchmode -nographics -quit -serial "$UNITY_SERIAL" -username "$UNITY_EMAIL" -password "$UNITY_PASSWORD" -logFile "$log"
+    status=$?
+  elif [ -n "${UNITY_EMAIL:-}" ] && [ -n "${UNITY_PASSWORD:-}" ]; then
+    echo "Activating a Unity Personal seat for $UNITY_EMAIL"
+    "$(licensing_client)" --activate-all --include-personal --username "$UNITY_EMAIL" --password "$UNITY_PASSWORD" > "$log" 2>&1
+    status=$?
+    # The client can succeed without assigning a seat.
+    grep -qiE "No seat available|No license activation found" "$log" && status=1
+  elif [ -n "${UNITY_LICENSE:-}" ]; then
+    echo "Activating the Unity license file in UNITY_LICENSE"
+    local file
+    file=$(mktemp)
+    printf '%s' "$UNITY_LICENSE" | tr -d '\r' > "$file"
+    "$unity" -batchmode -nographics -quit -manualLicenseFile "$file" -logFile "$log"
+    status=$?
+    rm -f "$file"
+  else
+    return 0
+  fi
   if [ $status -ne 0 ]; then
-    echo "Activation failed ($status); see Logs/activate.log" >&2
+    echo "Activation failed ($status); see $log" >&2
+    grep -iE "error|seat|machine binding" "$log" | head -5 >&2
     exit 1
   fi
+}
+
+deactivate() {
+  if [ -z "${UNITY_EMAIL:-}" ] || [ -z "${UNITY_PASSWORD:-}" ]; then
+    echo "Set UNITY_EMAIL and UNITY_PASSWORD to hand the seat back." >&2
+    exit 1
+  fi
+  mkdir -p Logs
+  "$unity" -batchmode -nographics -quit -returnlicense -username "$UNITY_EMAIL" -password "$UNITY_PASSWORD" -logFile Logs/deactivate.log &&
+    echo "Returned this machine's Unity seat"
 }
 
 # Runs Unity on the project, logging to Logs/$1.log; on failure prints the errors and the end of the log.
@@ -67,6 +104,9 @@ unity_run() {
     echo "Unity exited with $status; full log in $log" >&2
     grep -E "error CS[0-9]+|Scripts have compiler errors|No valid Unity Editor license|Exception:|\[BuildScript\]" "$log" | sort -u | head -40 >&2
     tail -n 15 "$log" >&2
+    if grep -q "No valid Unity Editor license" "$log"; then
+      echo "No Unity license here: set UNITY_EMAIL and UNITY_PASSWORD (see the top of tools/unity)." >&2
+    fi
   fi
   return $status
 }
@@ -137,8 +177,11 @@ case "$command" in
     activate
     unity_run run "$@"
     ;;
+  deactivate)
+    deactivate
+    ;;
   *)
-    sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
+    awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
     exit 1
     ;;
 esac
