@@ -19,7 +19,7 @@ namespace Demons
     {
         public static readonly List<LocalPlayer> All = new();
 
-        static LocalPlayer[] preview;
+        static LocalPlayer[] preview, touchPreview;
 
         public static LocalPlayer Find(int index)
         {
@@ -35,6 +35,7 @@ namespace Demons
         {
             var options = new List<(string, string)>();
             if (Humans >= Scoring.MaxDemons) return options;
+            if (TouchControls.Active && !All.Exists(p => p.Scheme == "Touch")) options.Add(("Tap", "touch"));
             if (Keyboard.current is { } kb)
             {
                 var taken = All.FindAll(p => p.Device == kb).ConvertAll(p => p.Scheme);
@@ -50,8 +51,9 @@ namespace Demons
         public static string Keys(Func<LocalPlayer, InputAction> action)
         {
             preview ??= new[] { Create("Solo", null), Create("Arrows", null), Create("WASD", null), Create("Gamepad", null) };
+            touchPreview ??= new[] { Create("Touch", null) };
             var lines = new List<string>();
-            foreach (var p in All.Count > 0 ? All.ToArray() : preview)
+            foreach (var p in All.Count > 0 ? All.ToArray() : TouchControls.Active ? touchPreview : preview)
             {
                 var line = KeysOf(p, action);
                 if (!lines.Contains(line)) lines.Add(line);
@@ -68,7 +70,7 @@ namespace Demons
             return string.Join(" / ", names);
         }
 
-        static string KeyName(LocalPlayer p, InputAction a, int i) => a.bindings[i].effectivePath switch
+        static string KeyName(LocalPlayer p, InputAction a, int i) => p.Scheme == "Touch" ? TouchControls.ButtonName(a.bindings[i].effectivePath) : a.bindings[i].effectivePath switch
         {
             "<Keyboard>/rightShift" => "RShift",
             "<Keyboard>/leftShift" => "LShift",
@@ -108,7 +110,8 @@ namespace Demons
                 if (AnyPressed(kb.leftShiftKey, kb.qKey) || (!InBrowser && kb.leftCtrlKey.wasPressedThisFrame)) TryJoin("WASD", kb);
             }
             foreach (var pad in Gamepad.all)
-                if (pad.buttonSouth.wasPressedThisFrame) TryJoin("Gamepad", pad);
+                if (pad.buttonSouth.wasPressedThisFrame && !TouchControls.IsPad(pad)) TryJoin("Gamepad", pad);
+            if (TouchControls.JoinPressed && TouchControls.Pad != null) TryJoin("Touch", TouchControls.Pad);
         }
 
         public static Demon DemonOf(LocalPlayer player) => Demon.All.Find(d => d.IsOwner && d.IsSpawned && d.LocalIndex.Value == player.Index);
@@ -132,6 +135,7 @@ namespace Demons
             "Solo" => "Solo keyboard",
             "WASD" => "Keyboard, left half",
             "Arrows" => "Keyboard, right half",
+            "Touch" => "Touch screen",
             _ => "Gamepad",
         };
 
@@ -234,6 +238,13 @@ namespace Demons
                         p.Use.AddBinding("<Keyboard>/leftCtrl");
                         p.Dash.AddBinding("<Keyboard>/leftAlt");
                     }
+                    break;
+                // The on-screen controls' virtual gamepad (TouchControls), with only the buttons drawn on screen.
+                case "Touch":
+                    p.Move.AddBinding("<Gamepad>/leftStick");
+                    p.Grab.AddBinding("<Gamepad>/buttonSouth");
+                    p.Use.AddBinding("<Gamepad>/buttonWest");
+                    p.Dash.AddBinding("<Gamepad>/buttonEast");
                     break;
                 default:
                     p.Move.AddBinding("<Gamepad>/leftStick");

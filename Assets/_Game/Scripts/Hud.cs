@@ -25,6 +25,7 @@ namespace Demons
         (int players, bool lobby, bool typing) hintFor = (-1, false, false);
         List<(string text, bool key)> hint;
         bool signFocused, codeFocused, reviewing;
+        (Vector4 safe, bool touch) insetFor = (new Vector4(-1, -1, -1, -1), false);
         StarRow reviewStars;
         DayCard card;
 
@@ -216,6 +217,11 @@ namespace Demons
                 if (e.keyCode is KeyCode.Return or KeyCode.KeypadEnter && Progression.Instance) Progression.Instance.Sign();
             }, TrickleDown.TrickleDown);
             sign.Add(signature);
+            // Phones' keyboards don't all send Enter.
+            UI.Button("Sign", () =>
+            {
+                if (Progression.Instance) Progression.Instance.Sign();
+            }, sign).AddToClassList("button--primary");
             signHint = UI.Text("Enter or A to submit. Leave it empty to skip.", "sign-hint");
             review.Add(signHint);
             signWait = UI.Text("The host is signing the leaderboard...", "sign-hint");
@@ -227,6 +233,7 @@ namespace Demons
         void Update()
         {
             if (top == null) return;
+            Inset();
             RefreshPopups();
             var state = GameState.Instance;
             bool live = state && state.IsSpawned;
@@ -331,7 +338,26 @@ namespace Demons
                 hint = live ? JoinHint(state) : null;
                 if (hint != null) RefreshFooter(hint);
             }
-            UI.Show(footer.parent, hint != null && !Menu.Open);
+            // Touch players join from the overlay, which says so, and pause from its button.
+            UI.Show(footer.parent, hint != null && !Menu.Open && !TouchControls.Shown);
+            UI.Set(signHint, TouchControls.Active ? "Leave it empty to skip." : "Enter or A to submit. Leave it empty to skip.");
+        }
+
+        // The corners stay clear of notches and rounded screen corners, and the day's title of the touch pause button.
+        void Inset()
+        {
+            var now = (safe: UI.SafeInsets(hud), touch: TouchControls.Shown);
+            if (now == insetFor) return;
+            insetFor = now;
+            var s = now.safe;
+            top.style.marginLeft = s.x + (now.touch ? 64 : 0);
+            top.style.marginTop = s.y;
+            scores.parent.style.marginRight = s.z;
+            scores.parent.style.marginTop = s.y;
+            net.style.marginRight = s.z;
+            net.style.marginTop = s.y;
+            footer.parent.style.marginLeft = s.x;
+            footer.parent.style.marginBottom = s.w;
         }
 
         void RefreshTop(GameState state, Progression progress)

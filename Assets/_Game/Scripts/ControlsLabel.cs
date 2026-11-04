@@ -9,6 +9,7 @@ namespace Demons
 
         TextMesh text;
         int seenPlayers = -1;
+        bool seenTouch;
         float seenBest = -1;
         string seenTop;
 
@@ -21,8 +22,9 @@ namespace Demons
         void Update()
         {
             float best = PlayerPrefs.GetFloat(Progression.BestKey, 0);
-            if (seenPlayers == LocalPlayers.All.Count && seenBest == best && seenTop == HighScores.Top) return;
+            if (seenPlayers == LocalPlayers.All.Count && seenTouch == TouchControls.Active && seenBest == best && seenTop == HighScores.Top) return;
             seenPlayers = LocalPlayers.All.Count;
+            seenTouch = TouchControls.Active;
             seenBest = best;
             seenTop = HighScores.Top;
             text.text = Template

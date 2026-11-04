@@ -789,3 +789,177 @@
     margin: 2px 0 0 0;
     padding: 0;
 }
+
+/* Touch controls (TouchControls.cs): a floating stick on the left, a gamepad's face of buttons on the right. */
+
+.touch {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.touch-stick {
+    position: absolute;
+    width: 168px;
+    height: 168px;
+    border-radius: 84px;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(11, 30, 79, 0.28);
+    border-width: 3px;
+    border-color: rgba(255, 255, 255, 0.22);
+    opacity: 0.55;
+    transition-property: opacity;
+    transition-duration: 0.12s;
+}
+
+.touch-stick--live {
+    opacity: 1;
+    transition-duration: 0s;
+}
+
+.touch-knob {
+    width: 72px;
+    height: 72px;
+    border-radius: 36px;
+    background-color: rgba(255, 255, 255, 0.82);
+    border-width: 3px;
+    border-color: var(--navy);
+}
+
+.touch-button {
+    position: absolute;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(11, 30, 79, 0.55);
+    border-width: 3px;
+    border-color: rgba(255, 255, 255, 0.35);
+    transition-property: scale, background-color, border-color;
+    transition-duration: 0.08s, 0.08s, 0.15s;
+}
+
+.touch-button--grab {
+    right: 36px;
+    bottom: 40px;
+    width: 128px;
+    height: 128px;
+    border-radius: 64px;
+}
+
+.touch-button--haunt {
+    right: 182px;
+    bottom: 28px;
+    width: 112px;
+    height: 112px;
+    border-radius: 56px;
+}
+
+.touch-button--dash {
+    right: 52px;
+    bottom: 190px;
+    width: 92px;
+    height: 92px;
+    border-radius: 46px;
+}
+
+.touch-label {
+    font-size: 34px;
+    color: var(--ink);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+    -unity-text-align: middle-center;
+    margin: 0;
+    padding: 0;
+}
+
+.touch-button--haunt .touch-label {
+    font-size: 31px;
+}
+
+.touch-button--dash .touch-label {
+    font-size: 27px;
+}
+
+/* Something in reach for this button to act on. */
+.touch-button--ready {
+    border-color: var(--yellow);
+}
+
+.touch-button--ready .touch-label {
+    color: var(--yellow);
+}
+
+.touch-button--held {
+    scale: 0.92 0.92;
+    background-color: var(--yellow);
+    border-color: var(--yellow);
+}
+
+.touch-button--held .touch-label {
+    color: var(--navy);
+    text-shadow: 0 0 0 rgba(0, 0, 0, 0);
+}
+
+.touch-button--cooling .touch-label {
+    opacity: 0.45;
+}
+
+.touch-ring {
+    position: absolute;
+    left: -3px;
+    right: -3px;
+    top: -3px;
+    bottom: -3px;
+}
+
+.touch-pause {
+    position: absolute;
+    left: 16px;
+    top: 14px;
+    width: 56px;
+    height: 56px;
+    border-radius: 28px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(11, 30, 79, 0.55);
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.touch-pause-bar {
+    width: 6px;
+    height: 20px;
+    margin: 0 3px;
+    border-radius: 2px;
+    background-color: var(--ink);
+}
+
+.touch-pause.touch-button--held {
+    background-color: var(--yellow);
+}
+
+.touch-pause.touch-button--held .touch-pause-bar {
+    background-color: var(--navy);
+}
+
+.touch-caption {
+    position: absolute;
+    right: 320px;
+    bottom: 70px;
+    font-size: 30px;
+    color: var(--yellow);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    margin: 0;
+    padding: 0;
+}
+
+/* Nobody plays from this screen yet: the controls wait, dimmed, for the first tap. */
+.touch--waiting .touch-button {
+    opacity: 0.6;
+}
+
+.panel--touch .arrow {
+    opacity: 1;
+}

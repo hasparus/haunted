@@ -134,6 +134,8 @@ namespace Demons
             }
             if (!Open || scrim == null) return;
 
+            // No hover on glass: a row's arrows show without it.
+            panel.EnableInClassList("panel--touch", TouchControls.Active);
             Rebuild();
             // Polled: the held arrow is rebuilt away as its value changes, so it never sees the release.
             if (Pointer.current == null || !Pointer.current.press.isPressed) pointerHeld = 0;
@@ -231,7 +233,7 @@ namespace Demons
             var joins = LocalPlayers.JoinOptions().ConvertAll(o => o.key == "A" ? "A on a gamepad" : o.key);
             var key = new StringBuilder().Append(string.Join(",", joins)).Append(CameraRig.ShakeEnabled)
                 .Append(ScaleIndex).Append(NetBootstrap.Instance && NetBootstrap.Instance.Online).Append(Screen.fullScreen).Append(Mood.Effects).Append(MindFx.Distortion).Append(Audio.MusicLevel).Append(Audio.SoundLevel)
-                .Append(Progression.Instance && Progression.Instance.IsSpawned).Append(Difficulties.Current);
+                .Append(Progression.Instance && Progression.Instance.IsSpawned).Append(Difficulties.Current).Append(TouchControls.Active);
             foreach (var p in players) key.Append('|').Append(p.Index).Append(p.Scheme).Append(LocalPlayers.DemonOf(p) is { } d ? d.ColorIndex.Value : -1);
             foreach (var d in Demon.All) key.Append(',').Append(d.ColorIndex.Value);
             if (key.ToString() == shape) return;
@@ -257,7 +259,8 @@ namespace Demons
             Action<int> scale = StepScale;
             AddRow(display, "Resolution", scale, null).Add(Value($"{Scales[ScaleIndex] * 100:0}%", scale));
             Action<int> fullscreen = _ => Screen.fullScreen = !Screen.fullScreen;
-            AddRow(display, "Fullscreen", fullscreen, null).Add(Value(Screen.fullScreen ? "On" : "Off", fullscreen));
+            // Apps on phones are always full screen; a phone's browser isn't.
+            if (!NativeMobile) AddRow(display, "Fullscreen", fullscreen, null).Add(Value(Screen.fullScreen ? "On" : "Off", fullscreen));
             Action<int> effects = _ => Mood.Effects = !Mood.Effects;
             AddRow(display, "Effects", effects, null).Add(Value(Mood.Effects ? "On" : "Off", effects));
             Action<int> distortion = _ => MindFx.Distortion = !MindFx.Distortion;
@@ -283,12 +286,16 @@ namespace Demons
                     Hide();
                     boot.Leave();
                 });
-            if (!LocalPlayers.InBrowser && !Application.isEditor) AddRow(actions, "Quit", null, Application.Quit);
+            // Phones leave apps from the home screen, and Apple turns down apps that quit themselves.
+            if (!LocalPlayers.InBrowser && !Application.isEditor && !NativeMobile) AddRow(actions, "Quit", null, Application.Quit);
 
             if (joins.Count > 0) panel.Add(Line("Add a player:", joins.ToArray()));
-            panel.Add(Line("Move", "Arrows / D-pad", "Change", "Left / Right", "Select", "Enter / A", "Close", "Esc / B"));
+            if (TouchControls.Active) panel.Add(Line("Tap a setting's arrows to change it, or outside to close."));
+            else panel.Add(Line("Move", "Arrows / D-pad", "Change", "Left / Right", "Select", "Enter / A", "Close", "Esc / B"));
             Focus(Mathf.Clamp(cursor, 0, rows.Count - 1));
         }
+
+        static bool NativeMobile => Application.platform is RuntimePlatform.IPhonePlayer or RuntimePlatform.Android;
 
         static string version;
 

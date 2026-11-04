@@ -54,6 +54,9 @@ namespace Demons
 
         public bool Dashing => Time.unscaledTime < windUntil;
 
+        // 0 just after a dash, 1 once the next one is ready.
+        public float DashCharge => Balance.I.dashCooldown <= 0 ? 1 : Mathf.Clamp01(1 - (nextDash - Time.time) / Balance.I.dashCooldown);
+
         public NetworkVariable<int> Slot = new(-1);
         public NetworkVariable<int> LocalIndex = new(-1);
         public NetworkVariable<int> ColorIndex = new();
