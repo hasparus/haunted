@@ -790,6 +790,53 @@
     padding: 0;
 }
 
+/* The HUD's corners, kept inside the screen's safe area (UI.FitSafeArea). */
+.hud-safe {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+/* Touch players' pause button; the day's title moves over for it. */
+.hud-pause {
+    position: absolute;
+    left: 16px;
+    top: 14px;
+    width: 56px;
+    height: 56px;
+    margin: 0;
+    padding: 0;
+    border-radius: 28px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(11, 30, 79, 0.55);
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.hud-pause:active {
+    background-color: var(--yellow);
+}
+
+.hud-pause-bar {
+    width: 6px;
+    height: 20px;
+    margin: 0 3px;
+    border-radius: 2px;
+    background-color: var(--ink);
+}
+
+.hud-pause:active .hud-pause-bar {
+    background-color: var(--navy);
+}
+
+.hud-safe--touch .hud-top {
+    left: 84px;
+}
+
 /* Touch controls (TouchControls.cs): a floating stick on the left, a gamepad's face of buttons on the right. */
 
 .touch {
@@ -911,37 +958,6 @@
     right: -3px;
     top: -3px;
     bottom: -3px;
-}
-
-.touch-pause {
-    position: absolute;
-    left: 16px;
-    top: 14px;
-    width: 56px;
-    height: 56px;
-    border-radius: 28px;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    background-color: rgba(11, 30, 79, 0.55);
-    border-width: 2px;
-    border-color: rgba(255, 255, 255, 0.35);
-}
-
-.touch-pause-bar {
-    width: 6px;
-    height: 20px;
-    margin: 0 3px;
-    border-radius: 2px;
-    background-color: var(--ink);
-}
-
-.touch-pause.touch-button--held {
-    background-color: var(--yellow);
-}
-
-.touch-pause.touch-button--held .touch-pause-bar {
-    background-color: var(--navy);
 }
 
 .touch-caption {

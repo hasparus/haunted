@@ -37,6 +37,8 @@ namespace Demons
         {
             Open = false;
             ApplyScale();
+            // Phones cap native apps at 30 fps by default, which makes the touch stick feel heavy.
+            if (NativeMobile) Application.targetFrameRate = 60;
             instance = UI.Create<Menu>("Menu", 100);
         }
 
@@ -58,8 +60,14 @@ namespace Demons
 
         static InputDevice opener;
 
-        static void ShowFor(InputDevice by)
+        // Opens the menu for the player on that device, or closes it.
+        public static void Toggle(InputDevice by)
         {
+            if (Open)
+            {
+                Hide();
+                return;
+            }
             opener = by;
             SetOpen(true);
         }
@@ -127,15 +135,9 @@ namespace Demons
             InputDevice by = kb != null && kb.escapeKey.wasPressedThisFrame ? kb : null;
             foreach (var pad in Gamepad.all)
                 if (!Bots.IsBot(pad) && pad.startButton.wasPressedThisFrame) by = pad;
-            if (by != null)
-            {
-                if (Open) Hide();
-                else ShowFor(by);
-            }
+            if (by != null) Toggle(by);
             if (!Open || scrim == null) return;
 
-            // No hover on glass: a row's arrows show without it.
-            panel.EnableInClassList("panel--touch", TouchControls.Active);
             Rebuild();
             // Polled: the held arrow is rebuilt away as its value changes, so it never sees the release.
             if (Pointer.current == null || !Pointer.current.press.isPressed) pointerHeld = 0;
@@ -241,6 +243,8 @@ namespace Demons
 
             panel.Clear();
             rows.Clear();
+            // No hover on glass: a row's arrows show without it.
+            panel.EnableInClassList("panel--touch", TouchControls.Active);
             var head = UI.Box("menu-head", panel);
             head.Add(UI.Text("Paused", "title", UI.Jolly));
             head.Add(Text(Version, "version"));

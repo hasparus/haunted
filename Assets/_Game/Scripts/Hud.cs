@@ -25,7 +25,6 @@ namespace Demons
         (int players, bool lobby, bool typing) hintFor = (-1, false, false);
         List<(string text, bool key)> hint;
         bool signFocused, codeFocused, reviewing;
-        (Vector4 safe, bool touch) insetFor = (new Vector4(-1, -1, -1, -1), false);
         StarRow reviewStars;
         DayCard card;
 
@@ -49,6 +48,9 @@ namespace Demons
         CrackLights lights;
         VisualElement world;
         VisualElement hud;
+        // What sits in the screen's corners, kept inside its safe area.
+        VisualElement corners, bottom;
+        Button pause;
         string lastCard;
         int cardIn, reviewIn, cardStarsSeen = -2;
         readonly List<(Label label, Vector3 at, float born)> popups = new();
@@ -136,18 +138,25 @@ namespace Demons
             world = UI.Box("hud-layer", hud);
             world.pickingMode = PickingMode.Ignore;
 
-            top = UI.Box("hud-top", hud);
+            corners = UI.Box("hud-safe", hud);
+            // For touch players, who have no Esc or Start.
+            pause = new Button(() => Menu.Toggle(TouchControls.Pad));
+            pause.AddToClassList("hud-pause");
+            UI.Box("hud-pause-bar", pause);
+            UI.Box("hud-pause-bar", pause);
+            corners.Add(pause);
+            top = UI.Box("hud-top", corners);
             day = UI.Text("", "hud-day", UI.Jolly);
             top.Add(day);
             dayInfo = UI.Text("", "hud-day-info", UI.Jolly);
             top.Add(dayInfo);
-            var right = UI.Box("hud-right", hud);
+            var right = UI.Box("hud-right", corners);
             revenue = UI.Text("", "hud-revenue", UI.Jolly);
             right.Add(revenue);
-            crackPips = UI.Box("hud-cracks", hud);
+            crackPips = UI.Box("hud-cracks", corners);
             scores = UI.Box("hud-scores", right);
 
-            net = UI.Box("hud-net", hud);
+            net = UI.Box("hud-net", corners);
             offline = UI.Box("hud-net-row", net);
             UI.Button("Host online", () => NetBootstrap.Instance.Host(), offline);
             UI.Button("Join online", () => NetBootstrap.Instance.BeginJoin(), offline);
@@ -227,13 +236,18 @@ namespace Demons
             signWait = UI.Text("The host is signing the leaderboard...", "sign-hint");
             review.Add(signWait);
 
-            footer = UI.Box("footer", UI.Box("hud-footer", hud));
+            bottom = UI.Box("hud-safe", hud);
+            footer = UI.Box("footer", UI.Box("hud-footer", bottom));
         }
 
         void Update()
         {
             if (top == null) return;
-            Inset();
+            UI.FitSafeArea(corners);
+            UI.FitSafeArea(bottom);
+            // Touch players pause from the corner, where the day's title makes room, and join from the overlay, which says how.
+            UI.Show(pause, TouchControls.Shown);
+            corners.EnableInClassList("hud-safe--touch", TouchControls.Shown);
             RefreshPopups();
             var state = GameState.Instance;
             bool live = state && state.IsSpawned;
@@ -338,26 +352,7 @@ namespace Demons
                 hint = live ? JoinHint(state) : null;
                 if (hint != null) RefreshFooter(hint);
             }
-            // Touch players join from the overlay, which says so, and pause from its button.
             UI.Show(footer.parent, hint != null && !Menu.Open && !TouchControls.Shown);
-            UI.Set(signHint, TouchControls.Active ? "Leave it empty to skip." : "Enter or A to submit. Leave it empty to skip.");
-        }
-
-        // The corners stay clear of notches and rounded screen corners, and the day's title of the touch pause button.
-        void Inset()
-        {
-            var now = (safe: UI.SafeInsets(hud), touch: TouchControls.Shown);
-            if (now == insetFor) return;
-            insetFor = now;
-            var s = now.safe;
-            top.style.marginLeft = s.x + (now.touch ? 64 : 0);
-            top.style.marginTop = s.y;
-            scores.parent.style.marginRight = s.z;
-            scores.parent.style.marginTop = s.y;
-            net.style.marginRight = s.z;
-            net.style.marginTop = s.y;
-            footer.parent.style.marginLeft = s.x;
-            footer.parent.style.marginBottom = s.w;
         }
 
         void RefreshTop(GameState state, Progression progress)
@@ -537,6 +532,7 @@ namespace Demons
             UI.Show(signWait, signing && !mine);
             if (mine && !signFocused)
             {
+                UI.Set(signHint, TouchControls.Active ? "Leave it empty to skip." : "Enter or A to submit. Leave it empty to skip.");
                 signature.SetValueWithoutNotify(progress.Signature);
                 signature.schedule.Execute(() => signature.Focus());
             }

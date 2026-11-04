@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.EnhancedTouch;
 using UnityEngine.InputSystem.LowLevel;
+using UnityEngine.InputSystem.Utilities;
 using UnityEngine.UIElements;
 using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 using TouchPhase = UnityEngine.InputSystem.TouchPhase;
@@ -11,39 +13,28 @@ namespace Demons
 {
     // Phone and tablet controls. A stick that floats to wherever the left thumb lands, and on the right the buttons
     // laid out like a gamepad's face: Grab at the bottom (A), Haunt to its left (X), Dash above (B). Their labels say
-    // what a press would do right now, and they light up when there's something in reach to do it to.
-    // They drive a virtual gamepad, as the bots do, so everything that reads a player's actions works unchanged.
+    // what a press would do right now, and they light up for what the demon's ring points at.
+    // They drive a virtual gamepad, as the bots do, so joining, playing and the boss's cards work as on any pad.
     public class TouchControls : MonoBehaviour
     {
-        enum Control { None, Stick, Grab, Haunt, Dash, Pause }
-
         public static Gamepad Pad { get; private set; }
         // Touch is the input in use: from the first touch (from the start, on phones) until a key or a real gamepad is pressed.
         public static bool Active { get; private set; }
         public static bool Shown { get; private set; }
-        // Someone not playing yet touched a control this frame; LocalPlayers joins them.
-        public static bool JoinPressed { get; private set; }
 
         public const float StickRadius = 84;
         // The share of the stick's reach that already walks at full speed: thumbs on glass travel less than on a stick.
         public const float FullTilt = 0.8f;
 
-        static TouchControls instance;
-
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics()
         {
             Pad = null;
-            Active = Shown = JoinPressed = false;
+            Active = Shown = false;
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        static void Create()
-        {
-            // Phones cap native apps at 30 fps by default, which makes the stick feel heavy.
-            if (Application.isMobilePlatform && Application.platform != RuntimePlatform.WebGLPlayer) Application.targetFrameRate = 60;
-            instance = UI.Create<TouchControls>("Touch", 60);
-        }
+        static void Create() => UI.Create<TouchControls>("Touch", 60);
 
         public static bool IsPad(InputDevice device) => Pad != null && device == Pad;
 
@@ -61,83 +52,90 @@ namespace Demons
             "<Gamepad>/buttonSouth" => "GRAB",
             "<Gamepad>/buttonWest" => "HAUNT",
             "<Gamepad>/buttonEast" => "DASH",
-            _ => "the stick",
+            _ => path,
         };
 
         class Spot
         {
-            public Control Control;
+            public GamepadButton Button;
             public VisualElement Element;
             public Label Label;
         }
 
         VisualElement root, layer, stick, knob, caption;
-        readonly List<Spot> spots = new();
         Spot grab, haunt, dash;
+        Spot[] spots;
         DashRing ring;
 
-        readonly Dictionary<int, Control> touches = new();
-        readonly HashSet<Control> taps = new();
+        readonly Dictionary<int, Spot> pressing = new();
+        // Down and up between two frames: still a press, held for one.
+        readonly List<Spot> taps = new();
         int stickTouch = -1;
         Vector2 stickBase, stickAt;
         GamepadState sent;
-        bool anySent;
-        Vector4 insets = new(-1, -1, -1, -1);
+        IDisposable otherInput;
 
         void Awake()
         {
             EnhancedTouchSupport.Enable();
-            if (Application.isMobilePlatform) Active = true;
+            Active = Application.isMobilePlatform;
+            // Phones' on-screen keyboards are keyboards too, so only other platforms give way to keys.
+            otherInput = InputSystem.onAnyButtonPress.Call(control =>
+            {
+                var device = control.device;
+                if (device is Gamepad && device != Pad && !Bots.IsBot(device)) Active = false;
+                if (device is Keyboard && !Application.isMobilePlatform && !NetBootstrap.TypingCode && !Progression.Typing) Active = false;
+            });
         }
 
         void Start()
         {
             root = UI.Root(this);
             layer = UI.Box("touch", root);
-
             stick = UI.Box("touch-stick", layer);
             knob = UI.Box("touch-knob", stick);
-
-            grab = AddButton(Control.Grab, "touch-button--grab", "Grab");
-            haunt = AddButton(Control.Haunt, "touch-button--haunt", "Haunt");
-            dash = AddButton(Control.Dash, "touch-button--dash", "Dash");
-            ring = new DashRing();
-            dash.Element.Add(ring);
-
-            var pause = UI.Box("touch-pause", layer);
-            UI.Box("touch-pause-bar", pause);
-            UI.Box("touch-pause-bar", pause);
-            spots.Add(new Spot { Control = Control.Pause, Element = pause });
-
-            caption = UI.Text("Tap a button to join", "touch-caption", UI.Jolly);
+            grab = AddButton(GamepadButton.South, "touch-button--grab");
+            haunt = AddButton(GamepadButton.West, "touch-button--haunt");
+            dash = AddButton(GamepadButton.East, "touch-button--dash");
+            spots = new[] { grab, haunt, dash };
+            dash.Element.Add(ring = new DashRing());
+            caption = UI.Text("Tap Grab to join", "touch-caption", UI.Jolly);
             layer.Add(caption);
             UI.Show(layer, false);
         }
 
-        Spot AddButton(Control control, string cls, string text)
+        Spot AddButton(GamepadButton button, string cls)
         {
             var element = UI.Box("touch-button", layer);
             element.AddToClassList(cls);
-            var label = UI.Text(text, "touch-label", UI.Jolly);
+            var label = UI.Text("", "touch-label", UI.Jolly);
             element.Add(label);
-            var spot = new Spot { Control = control, Element = element, Label = label };
-            spots.Add(spot);
-            return spot;
+            return new Spot { Button = button, Element = element, Label = label };
         }
 
         void Update()
         {
-            JoinPressed = false;
             if (layer == null) return;
-            Notice();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // F7 makes the mouse a finger, to try the overlay on a desktop.
+            if (Keyboard.current is { f7Key: { wasPressedThisFrame: true } })
+            {
+                if (TouchSimulation.instance && TouchSimulation.instance.enabled) TouchSimulation.Disable();
+                else TouchSimulation.Enable();
+            }
+#endif
+            foreach (var t in Touch.activeTouches)
+                if (t.phase == TouchPhase.Began) Active = true;
+
             var state = GameState.Instance;
-            bool live = state && state.IsSpawned;
-            bool shown = Active && live && !Menu.Open && !Progression.Typing && !NetBootstrap.TypingCode;
+            bool shown = Active && state && state.IsSpawned && !Menu.Open && !Progression.Typing && !NetBootstrap.TypingCode;
             if (shown != Shown)
             {
                 Shown = shown;
                 UI.Show(layer, shown);
-                if (!shown) LetGoAll();
+                pressing.Clear();
+                taps.Clear();
+                stickTouch = -1;
             }
             if (!shown)
             {
@@ -146,62 +144,16 @@ namespace Demons
             }
 
             Pad ??= InputSystem.AddDevice<Gamepad>("Touch");
-            Inset();
+            UI.FitSafeArea(layer);
             Track();
-
             var player = LocalPlayers.All.Find(p => p.Device == Pad);
-            var demon = player != null ? LocalPlayers.DemonOf(player) : null;
-            Refresh(player, demon);
+            Refresh(player != null ? LocalPlayers.DemonOf(player) : null, player != null);
 
-            var held = new HashSet<Control>(taps);
-            foreach (var c in touches.Values) held.Add(c);
-            taps.Clear();
             var gamepad = new GamepadState { leftStick = stickTouch >= 0 ? StickValue(stickAt - stickBase, StickRadius) : Vector2.zero };
-            if (held.Contains(Control.Grab)) gamepad = gamepad.WithButton(GamepadButton.South);
-            if (held.Contains(Control.Haunt)) gamepad = gamepad.WithButton(GamepadButton.West);
-            if (held.Contains(Control.Dash)) gamepad = gamepad.WithButton(GamepadButton.East);
-            if (held.Contains(Control.Pause)) gamepad = gamepad.WithButton(GamepadButton.Start);
+            foreach (var spot in pressing.Values) gamepad = gamepad.WithButton(spot.Button);
+            foreach (var spot in taps) gamepad = gamepad.WithButton(spot.Button);
+            taps.Clear();
             Send(gamepad);
-        }
-
-        // Touch takes over at the first touch and gives way to a key or a real gamepad, so a tablet with a keyboard, or
-        // a Steam Deck, shows the overlay only while it's being used. Phones keep it: their on-screen keyboard is a keyboard too.
-        void Notice()
-        {
-            foreach (var t in Touch.activeTouches)
-                if (t.phase == TouchPhase.Began) Active = true;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            // F7 makes the mouse a finger, to try the overlay on a desktop.
-            if (Keyboard.current is { f7Key: { wasPressedThisFrame: true } })
-            {
-                if (TouchSimulation.instance && TouchSimulation.instance.enabled) TouchSimulation.Disable();
-                else TouchSimulation.Enable();
-                Active = TouchSimulation.instance && TouchSimulation.instance.enabled;
-                return;
-            }
-#endif
-            if (!Active) return;
-            bool typing = NetBootstrap.TypingCode || Progression.Typing;
-            if (!Application.isMobilePlatform && !typing && Keyboard.current is { anyKey: { wasPressedThisFrame: true } }) Active = false;
-            foreach (var pad in Gamepad.all)
-            {
-                if (pad == Pad || Bots.IsBot(pad)) continue;
-                if (pad.buttonSouth.wasPressedThisFrame || pad.buttonEast.wasPressedThisFrame || pad.buttonWest.wasPressedThisFrame
-                    || pad.buttonNorth.wasPressedThisFrame || pad.startButton.wasPressedThisFrame || pad.leftStick.ReadValue().magnitude > 0.5f)
-                    Active = false;
-            }
-        }
-
-        // Clear of notches, rounded corners and the home indicator.
-        void Inset()
-        {
-            var now = UI.SafeInsets(root);
-            if (now == insets) return;
-            insets = now;
-            layer.style.left = now.x;
-            layer.style.top = now.y;
-            layer.style.right = now.z;
-            layer.style.bottom = now.w;
         }
 
         void Track()
@@ -215,7 +167,8 @@ namespace Demons
                 switch (t.phase)
                 {
                     case TouchPhase.Began:
-                        Press(id, Hit(panel, at), at);
+                        if (ButtonAt(at) is { } button) pressing[id] = button;
+                        else if (InStickZone(panel, at)) Grip(id, at);
                         break;
                     case TouchPhase.Moved:
                     case TouchPhase.Stationary:
@@ -223,28 +176,17 @@ namespace Demons
                         break;
                     case TouchPhase.Ended:
                     case TouchPhase.Canceled:
-                        if (touches.Remove(id))
-                        {
-                            if (id == stickTouch) stickTouch = -1;
-                        }
-                        // Down and up between two frames: still a press, held for one.
-                        else if (t.phase == TouchPhase.Ended && Hit(panel, ToPanel(panel, t.startScreenPosition)) is var tapped && tapped is not (Control.None or Control.Stick))
-                        {
-                            taps.Add(tapped);
-                            JoinPressed |= tapped != Control.Pause;
-                        }
+                        if (id == stickTouch) stickTouch = -1;
+                        else if (!pressing.Remove(id) && t.phase == TouchPhase.Ended && ButtonAt(ToPanel(panel, t.startScreenPosition)) is { } tapped) taps.Add(tapped);
                         break;
                 }
             }
             PlaceStick();
         }
 
-        void Press(int id, Control control, Vector2 at)
+        // The stick lands under the thumb, kept far enough in from the edges to be seen whole.
+        void Grip(int id, Vector2 at)
         {
-            if (control == Control.None) return;
-            touches[id] = control;
-            if (control != Control.Pause) JoinPressed = true;
-            if (control != Control.Stick) return;
             stickTouch = id;
             var zone = layer.worldBound;
             float r = StickRadius;
@@ -266,7 +208,7 @@ namespace Demons
             bool live = stickTouch >= 0;
             float r = StickRadius;
             // At rest it waits low on the left, faint, so a newcomer knows where the thumb goes.
-            var center = live ? stickBase : new Vector2(zone.xMin + r + 44, zone.yMax - r - 40);
+            var center = live ? stickBase : new Vector2(zone.xMin + r + 44, zone.yMax - r - 56);
             stick.style.left = center.x - zone.xMin - r;
             stick.style.top = center.y - zone.yMin - r;
             stick.EnableInClassList("touch-stick--live", live);
@@ -274,57 +216,48 @@ namespace Demons
             knob.style.translate = new Translate(offset.x, offset.y);
         }
 
-        // Buttons win, nearest first and a little past their edge; then the pause button; then the left of the
-        // screen below the top bar, which belongs to the stick unless a real button or text field is there.
-        Control Hit(IPanel panel, Vector2 at)
+        // The nearest button, counting a little past its edge.
+        Spot ButtonAt(Vector2 at)
         {
             Spot best = null;
             float bestDistance = float.MaxValue;
             foreach (var spot in spots)
             {
                 var bound = spot.Element.worldBound;
-                float distance = Vector2.Distance(at, bound.center), reach = bound.width / 2 * (spot.Control == Control.Pause ? 1.4f : 1.2f);
-                if (distance < reach && distance < bestDistance) (best, bestDistance) = (spot, distance);
+                float distance = Vector2.Distance(at, bound.center);
+                if (distance < bound.width / 2 * 1.2f && distance < bestDistance) (best, bestDistance) = (spot, distance);
             }
-            if (best != null) return best.Control;
-            var zone = layer.worldBound;
-            if (at.x > zone.center.x || at.y < zone.yMin + zone.height * 0.18f || Interactive(panel.Pick(at))) return Control.None;
-            return Control.Stick;
+            return best;
         }
 
-        static bool Interactive(VisualElement picked)
+        // The left half of the screen below the top bar, wherever there's no real button or text field.
+        bool InStickZone(IPanel panel, Vector2 at)
         {
-            for (var e = picked; e != null; e = e.parent)
-                if (e is Button or TextField) return true;
-            return false;
+            var zone = layer.worldBound;
+            if (at.x > zone.center.x || at.y < zone.yMin + zone.height * 0.18f) return false;
+            for (var e = panel.Pick(at); e != null; e = e.parent)
+                if (e is Button or TextField) return false;
+            return true;
         }
 
         static Vector2 ToPanel(IPanel panel, Vector2 screen) => RuntimePanelUtils.ScreenToPanel(panel, new Vector2(screen.x, Screen.height - screen.y));
 
-        void Refresh(LocalPlayer player, Demon demon)
+        void Refresh(Demon demon, bool joined)
         {
-            UI.Show(caption, player == null && LocalPlayers.JoinOptions().Count > 0);
-            layer.EnableInClassList("touch--waiting", player == null);
-            foreach (var spot in spots) spot.Element.EnableInClassList("touch-button--held", touches.ContainsValue(spot.Control));
+            UI.Show(caption, !joined && LocalPlayers.JoinOptions().Count > 0);
+            layer.EnableInClassList("touch--waiting", !joined);
+            foreach (var spot in spots) spot.Element.EnableInClassList("touch-button--held", pressing.ContainsValue(spot));
 
-            if (!demon)
-            {
-                Label(grab, "Grab", false);
-                Label(haunt, "Haunt", false);
-                Label(dash, "Dash", false);
-                ring.Charge = 1;
-                return;
-            }
-            var at = demon.transform.position;
-            bool carrying = demon.Carrying.Value != Net.None;
-            var target = demon.GrabTarget();
-            bool takeable = !carrying && (HeadPedestal.Near(at, demon) || DifficultyDial.Near(at));
-            Label(grab, carrying ? (target ? "Place" : "Drop") : "Grab", carrying || target || takeable);
-            bool scribbled = demon.Scribble.Value > 0;
-            Label(haunt, scribbled ? "Mash!" : carrying ? "Throw" : "Haunt", scribbled || carrying || demon.UseTarget());
-            ring.Charge = demon.DashCharge;
+            bool carrying = demon && demon.Carrying.Value != Net.None;
+            // Without a thought in hand, a station the ring points at is one to haunt; anything else is one to take.
+            var target = demon ? demon.Target : null;
+            bool scribbled = demon && demon.Scribble.Value > 0;
+            Label(grab, carrying ? (target ? "Place" : "Drop") : "Grab", carrying || target && target is not Station);
+            Label(haunt, scribbled ? "Mash!" : carrying ? "Throw" : "Haunt", scribbled || carrying || target is Station);
+            float charge = demon ? demon.DashCharge : 1;
             Label(dash, "Dash", false);
-            dash.Element.EnableInClassList("touch-button--cooling", demon.DashCharge < 1);
+            dash.Element.EnableInClassList("touch-button--cooling", charge < 1);
+            ring.Charge = charge;
         }
 
         static void Label(Spot spot, string text, bool ready)
@@ -333,28 +266,20 @@ namespace Demons
             spot.Element.EnableInClassList("touch-button--ready", ready);
         }
 
-        void LetGoAll()
-        {
-            touches.Clear();
-            taps.Clear();
-            stickTouch = -1;
-        }
-
         // Only changes are queued, so an idle overlay never makes the virtual pad the current gamepad.
         void Send(GamepadState state)
         {
-            if (Pad == null || anySent && state.Equals(sent)) return;
+            if (Pad == null || state.Equals(sent)) return;
             sent = state;
-            anySent = true;
             InputSystem.QueueStateEvent(Pad, state);
         }
 
         void OnDestroy()
         {
+            otherInput?.Dispose();
             if (Pad != null) InputSystem.RemoveDevice(Pad);
             Pad = null;
             Shown = false;
-            if (instance == this) instance = null;
         }
 
         // The dash button's rim fills back in, clockwise from the top, as the dash recharges.

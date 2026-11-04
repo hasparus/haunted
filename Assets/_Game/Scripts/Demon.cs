@@ -54,6 +54,9 @@ namespace Demons
 
         public bool Dashing => Time.unscaledTime < windUntil;
 
+        // What the floor ring points at: a thought, head or lever to take, a spot to put the carried thought, or work to haunt.
+        public Component Target { get; private set; }
+
         // 0 just after a dash, 1 once the next one is ready.
         public float DashCharge => Balance.I.dashCooldown <= 0 ? 1 : Mathf.Clamp01(1 - (nextDash - Time.time) / Balance.I.dashCooldown);
 
@@ -372,6 +375,7 @@ namespace Demons
             // A thought cooking in the pot can still be taken out, but isn't pointed at.
             if (target is Pebble cooking && cooking.State.Value == PebbleState.OnStation
                 && Net.Find<Station>(cooking.Anchor.Value) is { Kind: StationKind.Pot } pot && pot.Workers.Value != 0) target = null;
+            Target = target;
             if (target)
             {
                 var p = target is Belt belt ? belt.PointAt(belt.FreeSpot(transform.position) ?? belt.DistanceAt(transform.position)) : target.transform.position;

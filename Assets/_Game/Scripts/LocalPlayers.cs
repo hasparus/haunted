@@ -35,7 +35,7 @@ namespace Demons
         {
             var options = new List<(string, string)>();
             if (Humans >= Scoring.MaxDemons) return options;
-            if (TouchControls.Active && !All.Exists(p => p.Scheme == "Touch")) options.Add(("Tap", "touch"));
+            if (TouchControls.Active && !All.Exists(p => p.Scheme == "Touch")) options.Add(("Tap Grab", "touch"));
             if (Keyboard.current is { } kb)
             {
                 var taken = All.FindAll(p => p.Device == kb).ConvertAll(p => p.Scheme);
@@ -109,9 +109,9 @@ namespace Demons
                 if (AnyPressed(kb.rightShiftKey, kb.slashKey) || (!InBrowser && kb.rightCtrlKey.wasPressedThisFrame)) TryJoin("Arrows", kb);
                 if (AnyPressed(kb.leftShiftKey, kb.qKey) || (!InBrowser && kb.leftCtrlKey.wasPressedThisFrame)) TryJoin("WASD", kb);
             }
+            // The touch controls' Grab is their pad's A.
             foreach (var pad in Gamepad.all)
-                if (pad.buttonSouth.wasPressedThisFrame && !TouchControls.IsPad(pad)) TryJoin("Gamepad", pad);
-            if (TouchControls.JoinPressed && TouchControls.Pad != null) TryJoin("Touch", TouchControls.Pad);
+                if (pad.buttonSouth.wasPressedThisFrame) TryJoin(TouchControls.IsPad(pad) ? "Touch" : "Gamepad", pad);
         }
 
         public static Demon DemonOf(LocalPlayer player) => Demon.All.Find(d => d.IsOwner && d.IsSpawned && d.LocalIndex.Value == player.Index);

@@ -83,17 +83,20 @@ namespace Demons
             return button;
         }
 
-        // Screen.safeArea (notches, rounded corners, the home indicator) as insets in panel units: left, top, right, bottom.
-        public static Vector4 SafeInsets(VisualElement element)
+        // Keeps an element that fills its parent clear of notches, rounded corners and the home indicator.
+        public static void FitSafeArea(VisualElement element)
         {
             var panel = element.panel;
             var safe = Screen.safeArea;
-            if (panel == null || safe.width <= 0 || safe.height <= 0) return Vector4.zero;
+            if (panel == null || safe.width <= 0 || safe.height <= 0) return;
             var topLeft = RuntimePanelUtils.ScreenToPanel(panel, new Vector2(safe.xMin, Screen.height - safe.yMax));
             var bottomRight = RuntimePanelUtils.ScreenToPanel(panel, new Vector2(safe.xMax, Screen.height - safe.yMin));
             var size = RuntimePanelUtils.ScreenToPanel(panel, new Vector2(Screen.width, Screen.height));
-            return new Vector4(Mathf.Max(0, Mathf.Round(topLeft.x)), Mathf.Max(0, Mathf.Round(topLeft.y)),
-                Mathf.Max(0, Mathf.Round(size.x - bottomRight.x)), Mathf.Max(0, Mathf.Round(size.y - bottomRight.y)));
+            // Inline styles ignore a value they already hold, so this is cheap to call every frame.
+            element.style.left = Mathf.Max(0, Mathf.Round(topLeft.x));
+            element.style.top = Mathf.Max(0, Mathf.Round(topLeft.y));
+            element.style.right = Mathf.Max(0, Mathf.Round(size.x - bottomRight.x));
+            element.style.bottom = Mathf.Max(0, Mathf.Round(size.y - bottomRight.y));
         }
 
         public static void Show(VisualElement element, bool visible)
