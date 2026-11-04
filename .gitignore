@@ -121,3 +121,5 @@ Assets/_Game/Resources/commit.txt.meta
 
 # Headless test results (tools/unity)
 /[Tt]est[Rr]esults/
+# CI keys its LFS cache on this list
+.lfs-assets-id
