@@ -22,14 +22,24 @@ sudo=""
 # What the editor links against that a slim image may lack.
 if command -v apt-get >/dev/null; then
   missing=()
-  for pkg in libglu1-mesa libgtk-3-0 libnss3 libxss1 libxtst6 libgbm1 libasound2t64 xz-utils; do
-    dpkg -s "$pkg" >/dev/null 2>&1 || missing+=("$pkg")
+  # Ubuntu 24.04 renamed some of them with a t64 suffix; either name will do.
+  for pkgs in libglu1-mesa libgtk-3-0t64:libgtk-3-0 libnss3 libxss1 libxtst6 libgbm1 libasound2t64:libasound2 xz-utils; do
+    found=""
+    for pkg in ${pkgs//:/ }; do dpkg -s "$pkg" >/dev/null 2>&1 && found=1; done
+    [ -n "$found" ] || missing+=("$pkgs")
   done
   if [ ${#missing[@]} -gt 0 ]; then
-    $sudo apt-get update -qq
-    # Older Ubuntus call it libasound2.
-    $sudo apt-get install -y -qq --no-install-recommends "${missing[@]}" ||
-      $sudo apt-get install -y -qq --no-install-recommends "${missing[@]/libasound2t64/libasound2}"
+    export DEBIAN_FRONTEND=noninteractive
+    $sudo apt-get update -qq >/dev/null
+    for pkgs in "${missing[@]}"; do
+      for pkg in ${pkgs//:/ }; do
+        if apt-cache show "$pkg" >/dev/null 2>&1; then
+          echo "Installing $pkg"
+          $sudo apt-get install -y -qq --no-install-recommends "$pkg" >/dev/null
+          break
+        fi
+      done
+    done
   fi
 fi
 
