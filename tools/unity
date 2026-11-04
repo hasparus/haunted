@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# Headless Unity for this project: tests and builds without opening the editor.
+#
+#   tools/unity test [editmode|playmode|all] [unity args...]   results in TestResults/<mode>.xml, failures printed
+#   tools/unity build <BuildTarget> [--dev] [unity args...]     the player in Builds/<BuildTarget>/
+#   tools/unity run [unity args...]                              anything else, e.g. -executeMethod Some.Method -quit
+#
+# For example: tools/unity test editmode -testFilter TouchTests, or tools/unity build StandaloneLinux64.
+# Play tests marked Explicit (soak, perf, online) only run when -testFilter names them.
+#
+# The editor is the version in ProjectSettings/ProjectVersion.txt, found at $UNITY_EDITOR, in Unity Hub's default
+# folders, or in /opt/unity (tools/install-unity.sh). It must be licensed: on a desktop, sign in to Unity Hub once; on a
+# headless machine, set UNITY_LICENSE to the contents of a Unity_lic.ulf (the secret CI uses) and it's activated here.
+# Close the project in the editor first: Unity won't open one project twice.
+# Unity's full log goes to Logs/<command>.log; only what matters is printed.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+
+version=$(sed -n 's/^m_EditorVersion: //p' ProjectSettings/ProjectVersion.txt)
+
+find_editor() {
+  for e in "${UNITY_EDITOR:-}" \
+    "/Applications/Unity/Hub/Editor/$version/Unity.app/Contents/MacOS/Unity" \
+    "$HOME/Unity/Hub/Editor/$version/Editor/Unity" \
+    "${UNITY_ROOT:-/opt/unity}/$version/Editor/Unity"; do
+    if [ -n "$e" ] && [ -x "$e" ]; then
+      echo "$e"
+      return
+    fi
+  done
+  echo "Unity $version isn't installed. Get it from Unity Hub, run tools/install-unity.sh (Linux), or set UNITY_EDITOR." >&2
+  exit 1
+}
+
+unity=$(find_editor) || exit 1
+
+case "$(uname)" in
+  Darwin) license_dir="/Library/Application Support/Unity" ;;
+  *) license_dir="$HOME/.local/share/unity3d/Unity" ;;
+esac
+
+# A license file from $UNITY_LICENSE, activated once per machine.
+activate() {
+  [ -n "${UNITY_LICENSE:-}" ] && [ ! -f "$license_dir/Unity_lic.ulf" ] || return 0
+  echo "Activating the Unity license from UNITY_LICENSE"
+  mkdir -p Logs
+  local file
+  file=$(mktemp)
+  printf '%s' "$UNITY_LICENSE" | tr -d '\r' > "$file"
+  "$unity" -batchmode -nographics -quit -manualLicenseFile "$file" -logFile Logs/activate.log
+  local status=$?
+  rm -f "$file"
+  if [ $status -ne 0 ]; then
+    echo "Activation failed ($status); see Logs/activate.log" >&2
+    exit 1
+  fi
+}
+
+# Runs Unity on the project, logging to Logs/$1.log; on failure prints the errors and the end of the log.
+unity_run() {
+  local log="Logs/$1.log"
+  shift
+  mkdir -p Logs
+  "$unity" -batchmode -nographics -projectPath "$PWD" -logFile "$log" "$@"
+  local status=$?
+  if [ $status -ne 0 ]; then
+    echo "Unity exited with $status; full log in $log" >&2
+    grep -E "error CS[0-9]+|Scripts have compiler errors|No valid Unity Editor license|Exception:|\[BuildScript\]" "$log" | sort -u | head -40 >&2
+    tail -n 15 "$log" >&2
+  fi
+  return $status
+}
+
+# Counts and failures from an NUnit results file.
+summarize() {
+  python3 - "$1" <<'EOF'
+import sys, xml.etree.ElementTree as ET
+run = ET.parse(sys.argv[1]).getroot()
+print(f"{run.get('passed')} passed, {run.get('failed')} failed, {run.get('skipped')} skipped of {run.get('total')} "
+      f"in {float(run.get('duration', 0)):.0f}s")
+for case in run.iter('test-case'):
+    if case.get('result') == 'Failed':
+        message = case.find('failure/message')
+        print(f"FAILED {case.get('fullname')}\n    {(message.text or '').strip()[:800]}")
+EOF
+}
+
+run_tests() {
+  local mode=$1 platform
+  shift
+  case "$mode" in
+    editmode) platform=EditMode ;;
+    playmode) platform=PlayMode ;;
+    *) echo "Test modes are editmode, playmode and all" >&2; exit 1 ;;
+  esac
+  local results="TestResults/$mode.xml"
+  mkdir -p TestResults
+  rm -f "$results"
+  echo "Running $platform tests"
+  unity_run "test-$mode" -runTests -testPlatform "$platform" -testResults "$PWD/$results" "$@"
+  local status=$?
+  if [ -f "$results" ]; then summarize "$results"; fi
+  return $status
+}
+
+command=${1:-}
+shift || true
+case "$command" in
+  test)
+    activate
+    mode=${1:-all}
+    [ $# -gt 0 ] && shift
+    if [ "$mode" = all ]; then
+      run_tests editmode "$@"
+      edit=$?
+      run_tests playmode "$@"
+      play=$?
+      [ $edit -eq 0 ] && [ $play -eq 0 ]
+    else
+      run_tests "$mode" "$@"
+    fi
+    ;;
+  build)
+    activate
+    target=${1:?"tools/unity build <BuildTarget>, e.g. StandaloneLinux64, WebGL, Android, iOS"}
+    shift
+    dev=()
+    if [ "${1:-}" = --dev ]; then
+      dev=(-development)
+      shift
+    fi
+    echo "Building $target"
+    unity_run "build-$target" -quit -buildTarget "$target" -executeMethod Demons.Editor.BuildScript.Build ${dev[@]+"${dev[@]}"} "$@" &&
+      grep "\[BuildScript\]" "Logs/build-$target.log"
+    ;;
+  run)
+    activate
+    unity_run run "$@"
+    ;;
+  *)
+    sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
+    exit 1
+    ;;
+esac

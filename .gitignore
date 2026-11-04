@@ -118,3 +118,6 @@ InitTestScene*.unity*
 
 Assets/_Game/Resources/commit.txt
 Assets/_Game/Resources/commit.txt.meta
+
+# Headless test results (tools/unity)
+/[Tt]est[Rr]esults/

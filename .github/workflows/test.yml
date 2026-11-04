@@ -1,0 +1,103 @@
+name: Tests
+
+# Headless edit and play mode tests on every push, and a headless Linux build through the same entry point as
+# tools/unity, so a change that only breaks the player (not the editor) fails here too. Pushes cover pull requests
+# from this repository; forks don't get the license secrets anyway.
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+
+env:
+  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+  UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+  UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+
+jobs:
+  test:
+    name: ${{ matrix.mode }} tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [editmode, playmode]
+    steps:
+      # Unity's import can run out of memory on hosted runners.
+      - name: Add swap
+        run: |
+          sudo fallocate -l 8G /extra-swap
+          sudo chmod 600 /extra-swap
+          sudo mkswap /extra-swap
+          sudo swapon /extra-swap
+      - uses: actions/checkout@v4
+
+      # LFS bandwidth is metered; the assets only download when they change.
+      - name: List LFS files
+        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+      - uses: actions/cache@v4
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-assets-id') }}
+          restore-keys: lfs-
+      - run: git lfs pull
+
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-test-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: Library-test-
+
+      - uses: game-ci/unity-test-runner@v4
+        id: tests
+        with:
+          testMode: ${{ matrix.mode }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: ${{ matrix.mode }} results
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ matrix.mode }}-results
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          retention-days: 7
+
+  build:
+    name: Linux build
+    runs-on: ubuntu-latest
+    steps:
+      # Unity's import can run out of memory on hosted runners.
+      - name: Add swap
+        run: |
+          sudo fallocate -l 8G /extra-swap
+          sudo chmod 600 /extra-swap
+          sudo mkswap /extra-swap
+          sudo swapon /extra-swap
+      - uses: actions/checkout@v4
+      - name: List LFS files
+        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+      - uses: actions/cache@v4
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-assets-id') }}
+          restore-keys: lfs-
+      - run: git lfs pull
+
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-StandaloneLinux64-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: Library-StandaloneLinux64-
+
+      - uses: game-ci/unity-builder@v4
+        with:
+          targetPlatform: StandaloneLinux64
+          buildMethod: Demons.Editor.BuildScript.Build
+          customParameters: -buildPath build/StandaloneLinux64
