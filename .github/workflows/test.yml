@@ -99,5 +99,7 @@ jobs:
       - uses: game-ci/unity-builder@v4
         with:
           targetPlatform: StandaloneLinux64
+          # A check, not a release: no version from tags.
+          versioning: None
           buildMethod: Demons.Editor.BuildScript.Build
           customParameters: -buildPath build/StandaloneLinux64
